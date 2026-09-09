@@ -1,0 +1,37 @@
+MAX-NOTIFY — START CODEX
+
+Run from the Git repository root.
+
+1. Update the repository:
+
+    git status
+    git pull --rebase
+
+2. Start Codex:
+
+    codex
+
+3. Paste this as the first message:
+
+Прочитай AGENTS.md, docs/DEVELOPMENT.md, docs/ROADMAP.md и при необходимости docs/ARCHITECTURE.md.
+
+Затем изучи git status, последние коммиты и текущее состояние проекта.
+
+Мы работаем в учебном режиме: код пишу я. Не изменяй файлы приложения и не реализуй задачу за меня без моего явного запроса.
+
+Сначала кратко скажи:
+1. где мы остановились;
+2. что сейчас важно понять;
+3. есть ли расхождения между документацией и реальным состоянием репозитория.
+
+После этого дай мне только ОДНО следующее практическое задание в формате AGENTS.md и остановись.
+
+Same-machine continuation, if available in your Codex CLI:
+
+    codex resume
+
+or:
+
+    codex resume --last
+
+For another machine, prefer a fresh session after git pull and use the first prompt above.
