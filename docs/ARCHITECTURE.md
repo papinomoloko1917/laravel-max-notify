@@ -2,23 +2,28 @@
 
 Status: initial architecture hypothesis.
 
-This document describes decisions we currently believe are appropriate. It is deliberately not a complete up-front design.
+This is direction, not a complete up-front design.
 
-When implementation proves a decision wrong, update this document.
+## Learning principle
 
----
+Do not implement the final architecture all at once.
 
-## 1. Product responsibility
+Use:
 
-`max-notify` receives events from Dahua cameras and notifies configured MAX Messenger recipients with camera snapshots.
+simple synchronous behavior
+→ understand real limitation
+→ introduce next mechanism
+→ refactor with evidence
 
-It also provides an authenticated administrative interface for configuration and event history.
+Queues and Redis should appear only after the synchronous webhook and slow external I/O are understood.
 
----
+## Product responsibility
 
-## 2. High-level flow
+`max-notify` receives Dahua camera events and notifies configured MAX Messenger recipients with camera snapshots.
 
-Target direction:
+It also provides an authenticated administrative UI.
+
+## Likely mature flow
 
 ```text
 Dahua camera
@@ -32,36 +37,27 @@ Laravel webhook endpoint
     +--> duplicate protection
     |
     v
-dispatch queue job
+queue job
     |
     v
-Redis queue
+queue backend (likely Redis)
     |
     v
-Process camera event
+process camera event
     |
-    +--> Dahua client -> snapshot
+    +--> Dahua HTTP client -> snapshot
     |
-    +--> MAX client -> upload/send
+    +--> MAX HTTP client -> upload/send
     |
     v
-persist useful event status/history
+persist useful event history
 ```
 
-The exact point at which event history is written will be decided while implementing the workflow.
+This is NOT the implementation order.
 
----
+## Web UI
 
-## 3. Web UI
-
-Technology:
-
-- Laravel;
-- Livewire 4;
-- Flux UI;
-- Tailwind CSS 4.
-
-The administrative interface is intended for human users.
+Use Laravel + Livewire 4 + Flux UI + Tailwind CSS 4.
 
 Likely sections:
 
@@ -69,246 +65,144 @@ Likely sections:
 - Cameras;
 - Clients;
 - Event history;
-- Settings.
+- Settings when real settings exist.
 
-Livewire should not own machine-to-machine webhook processing.
+Livewire must not own machine-to-machine webhook processing.
 
----
+## Webhook boundary
 
-## 4. HTTP/webhook boundary
+Dahua events enter through normal Laravel HTTP routing/controller handling.
 
-Dahua events enter through a standard Laravel HTTP route/controller boundary.
+The mature webhook should be secure, deterministic, and short-running, but the first version may intentionally be synchronous for learning.
 
-The webhook should be optimized for:
-
-- correct validation;
-- security;
-- deterministic responses;
-- short synchronous execution;
-- safe handoff to asynchronous processing.
-
-Do not perform unnecessarily slow external API work before responding to the camera.
-
-We will first understand/test the synchronous contract, then introduce queues.
-
----
-
-## 5. Background processing
-
-Redis-backed Laravel Queue is the intended asynchronous mechanism.
-
-Expected asynchronous responsibilities:
-
-- snapshot retrieval;
-- MAX upload;
-- MAX message sending;
-- retryable external API work.
-
-Queue behavior must eventually define:
-
-- retry policy;
-- timeouts;
-- failure behavior;
-- idempotency;
-- observability.
-
-Do not choose values until real integration behavior is understood.
-
----
-
-## 6. External integrations
+## External integrations
 
 ### Dahua
 
-Implement behind a small service/client boundary using Laravel HTTP Client.
+Use Laravel HTTP Client when implemented.
 
-Responsibilities may include:
+Potential responsibilities:
 
 - snapshot request;
 - digest authentication;
-- timeout handling;
+- timeouts;
 - response validation.
 
-It must be testable with fake HTTP responses.
+Understand the HTTP contract first, using Postman when helpful.
 
 ### MAX Messenger
 
-Implement behind a small service/client boundary using Laravel HTTP Client.
+Use Laravel HTTP Client.
 
-Responsibilities may include:
+Potential responsibilities:
 
 - authentication;
-- upload endpoint creation;
-- binary/image upload;
+- upload URL creation;
+- image upload;
 - message send;
-- API error handling.
+- API errors.
 
-It must be testable with fake HTTP responses.
+Understand the real HTTP sequence before adding abstractions.
 
-Avoid putting API calls directly inside Livewire components or Eloquent models.
+Do not put external API calls directly in Livewire components or Eloquent models.
 
----
+## Data storage
 
-## 7. Data storage
-
-Primary database: PostgreSQL.
+Primary DB: PostgreSQL.
 
 Initial conceptual entities:
 
-### User
+- User;
+- Camera;
+- Client;
+- CameraEvent later, if useful.
 
-Authenticated administrator.
+Expected Camera ↔ Client relation: many-to-many.
 
-### Camera
+Do not create `CameraEvent` before we know which operational data is worth storing.
 
-Represents a Dahua camera and the configuration required to process its events/snapshots.
+## Redis
 
-Exact schema is intentionally postponed until its learning phase.
+Not required at bootstrap.
 
-### Client
+Expected future uses:
 
-Represents a notification recipient/customer.
-
-The exact MAX identifier fields will be confirmed from the integration requirements.
-
-### Camera ↔ Client
-
-Expected many-to-many relationship.
-
-A camera may notify multiple clients.
-A client may receive notifications from multiple cameras.
-
-### CameraEvent
-
-Expected operational history of received/processed events.
-
-This is not intended to store every possible log line.
-
-It should store enough structured information to answer questions such as:
-
-- what camera generated the event?
-- when?
-- was it skipped?
-- was notification successful?
-- how many recipients were targeted?
-- what useful failure reason occurred?
-
-Exact schema will be designed when the processing flow exists.
-
----
-
-## 8. Redis
-
-Intended uses:
-
-- Laravel Cache;
+- queue backend;
 - duplicate-event protection;
-- Laravel Queue.
+- cache;
+- locks where justified.
 
-Potential future use:
+Introduce it when one of those is a real requirement.
 
-- locks;
-- rate limiting.
+## Postman
 
-Use atomic cache primitives for duplicate protection rather than a local JSON/file lock mechanism.
+Development/learning tool for exploring:
 
----
+- Dahua webhook;
+- Dahua HTTP API;
+- MAX Messenger API.
 
-## 9. Configuration and secrets
+It is not runtime infrastructure and does not replace automated tests.
 
-Use `.env`/Laravel config for environment-specific application secrets.
+## Mailpit
 
-Examples likely to belong outside source control:
+Optional development service only if email functionality is actually used.
 
-- MAX token;
-- webhook shared secrets;
-- infrastructure credentials.
+## Adminer
 
-Camera credentials may be database data if each camera has different credentials.
+Optional local PostgreSQL UI. Helpful for inspecting tables/rows/indexes, but not an application dependency.
 
-If so, credentials must not be stored in plain text without considering Laravel encryption-at-rest support.
+Never expose it publicly in production.
 
-Never place production secrets into documentation or Git history.
+## Secrets
 
----
+Use `.env`/Laravel config for environment-specific secrets.
 
-## 10. Development environment
+Never commit MAX token, webhook secrets, camera passwords, or production credentials.
 
-Laravel Sail is the intended local development environment.
+If per-camera credentials live in PostgreSQL, use an encrypted-at-rest approach appropriate for Laravel.
 
-Expected services:
+## Development environment
+
+Required early Sail services:
 
 - Laravel/PHP;
-- PostgreSQL;
-- Redis;
-- Adminer;
-- Mailpit if useful.
+- PostgreSQL.
 
-Adminer is local tooling only.
+Later/optional:
 
-Local database/Redis Docker volumes are not the source of truth.
+- Redis when needed;
+- Adminer optionally;
+- Mailpit only if needed.
 
-A new machine should be recoverable from:
+A new machine should be recoverable from Git, lock files, `.env.example`, migrations, and documented setup.
 
-- Git repository;
-- dependency lock files;
-- `.env.example`;
-- migrations;
-- seeders/factories where appropriate.
-
----
-
-## 11. Testing strategy
-
-Testing will grow with the application.
+## Testing strategy
 
 Prefer:
 
 - Feature tests for HTTP/webhook behavior;
-- Feature tests for important database/Livewire behavior;
-- Unit tests for isolated business rules where isolation is valuable;
-- `Http::fake()` for Dahua and MAX;
-- queue/cache fakes where they improve test focus.
+- Feature tests for important DB/Livewire behavior;
+- Unit tests for isolated business rules when useful;
+- `Http::fake()` for Dahua/MAX.
 
-Do not make tests artificially isolated when a normal Laravel feature test is clearer.
+Postman is exploratory testing, not regression testing.
 
----
+## Architectural constraints
 
-## 12. Architectural constraints
+Avoid until a real problem requires them:
 
-For now, avoid:
-
-- custom repository layer over Eloquent;
+- repository layer over Eloquent;
 - custom service container;
 - CQRS;
 - event sourcing;
 - broad DTO layers;
 - microservices;
-- unnecessary interfaces for every class;
+- unnecessary interfaces;
 - a separate SPA framework.
 
-These can be revisited only if a concrete problem appears.
+## Legacy project
 
----
+Reuse business knowledge, event semantics, integration details, and proven edge cases from the old plain-PHP project.
 
-## 13. Legacy project relationship
-
-The previous plain-PHP `max-notify` implementation is a behavioral reference.
-
-We may reuse:
-
-- business knowledge;
-- event semantics;
-- integration details;
-- proven edge cases.
-
-We should not automatically copy:
-
-- homemade DI;
-- homemade database infrastructure;
-- manual routing;
-- manual session/auth infrastructure;
-- file-based duplicate protection;
-- synchronous architecture where queues are more appropriate.
-
-Laravel should be allowed to solve framework-level concerns in the Laravel way.
+Do not automatically copy homemade DI/DB/routing/auth infrastructure, file-based duplicate protection, or its synchronous architecture.

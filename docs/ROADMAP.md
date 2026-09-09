@@ -1,363 +1,170 @@
 # max-notify — Learning & Development Roadmap
 
-This roadmap is intentionally incremental. It is not a promise that every item will be implemented exactly as written.
+This roadmap is incremental. It describes direction, not a checklist that must be implemented immediately.
 
-The rule is: learn one concept, implement a small piece, review it, then continue.
+Rule:
 
-## Project outcome
+understand the problem
+→ learn one concept
+→ implement a small piece
+→ review
+→ test
+→ continue
 
-A Laravel application that:
+## Phase 0 — Inspect the fresh Laravel project
 
-- receives Dahua camera events;
-- processes them safely and asynchronously;
-- retrieves camera snapshots;
-- sends notifications through the MAX Messenger API;
-- manages cameras and clients through an authenticated web UI;
-- stores an event history;
-- runs locally through Laravel Sail with PostgreSQL and Redis.
+Learn the Laravel directory structure, `composer.json`, `package.json`, `.env` vs `.env.example`, Starter Kit contents, and current `compose.yaml`.
 
----
+Exit: we know exactly what the installer created.
 
-## Phase 0 — Repository and development environment
+## Phase 1 — Git and Sail workflow
 
-### Learning goals
+Learn Git workflow for three machines and Sail basics.
 
-- understand the structure of a Laravel project;
-- understand Composer/npm dependencies;
-- understand Laravel Sail and Docker services;
-- understand `.env` vs `.env.example`;
-- practice basic Git workflow.
+Exit: the application starts through Sail and setup is documented.
 
-### Expected result
+## Phase 2 — PostgreSQL connection
 
-A fresh project can be cloned on another machine and brought up reliably.
+Learn Laravel DB configuration, PostgreSQL service names, migrations, and rollback.
 
-Likely services:
+Exit: Laravel connects to PostgreSQL and migrations work.
 
-- Laravel application;
-- PostgreSQL;
-- Redis;
-- Adminer;
-- Mailpit if useful.
+Adminer may be added here if a visual DB tool would help. It is optional.
 
-### Exit criteria
+## Phase 3 — Understand the domain
 
-- application opens locally;
-- PostgreSQL connection works;
-- Redis connection works;
-- migrations can run;
-- `.env` is not tracked;
-- `.env.example` contains no secrets;
-- setup steps are documented.
-
----
-
-## Phase 1 — Understand and model the domain
-
-### Learning goals
-
-- translate real-world concepts into database entities;
-- distinguish entity data from configuration;
-- understand relationships and constraints.
-
-Initial domain candidates:
+Before creating tables, describe the concepts in plain language:
 
 - User;
 - Camera;
 - Client;
-- CameraEvent.
+- CameraEvent as a future possibility.
 
-Questions to resolve before implementation:
+Resolve only what is needed for the first model.
 
-- Which camera properties are required?
-- How are clients assigned to cameras?
-- Which values belong to application configuration rather than the database?
-- What does an event need to record for debugging?
+## Phase 4 — First Camera migration
 
-### Exit criteria
+Learn migrations, PostgreSQL column types, nullable/default, indexes/unique constraints, timestamps.
 
-We can explain the data model in plain language before building it.
+Exit: minimal useful Camera schema with a reason for every column.
 
----
+## Phase 5 — Camera Eloquent model
 
-## Phase 2 — Cameras: migrations and Eloquent
+Learn Eloquent, mass assignment, casts, factories, and a small DB test.
 
-### Learning goals
+## Phase 6 — Clients and relationships
 
-- migrations;
-- PostgreSQL column types;
-- indexes;
-- Eloquent models;
-- casts;
-- factories;
-- basic feature tests.
+Learn foreign keys, pivot tables, and many-to-many Eloquent relationships.
 
-Implement Camera incrementally rather than all at once.
+Likely relation: Camera ↔ Client = many-to-many.
 
-Potential fields will be decided during the phase, not copied blindly from the previous implementation.
+## Phase 7 — Authentication and admin shell
 
-### Exit criteria
+Learn the Livewire Starter Kit, protected routes, Livewire pages, and Flux UI basics.
 
-Camera data can be stored, retrieved, validated, and tested.
+## Phase 8 — Camera management UI
 
----
+Learn Livewire state, validation, forms, Flux UI, and secure camera credential handling.
 
-## Phase 3 — Clients and camera/client relationship
+## Phase 9 — Client management UI
 
-### Learning goals
+Learn relationship editing, Livewire forms, and validation.
 
-- foreign keys;
-- many-to-many relationships;
-- pivot tables;
-- Eloquent relationship APIs;
-- database constraints.
+## Phase 10 — Dahua webhook with HTTP/Postman
 
-Expected relation:
+Learn HTTP method, URL, query parameters, headers, body, status codes, and machine-to-machine requests.
 
-Camera ↔ Client = many-to-many.
+Workflow:
 
-### Exit criteria
+Dahua docs/real behavior
+→ Postman request
+→ understand payload
+→ Laravel endpoint
+→ Pest feature test
 
-A client can be assigned to one or more cameras and the relationship is covered by tests.
+Exit: we can manually reproduce a representative Dahua request.
 
----
+## Phase 11 — Minimal synchronous webhook
 
-## Phase 4 — Authentication and administrative shell
+Learn routing, controller responsibility, validation, authentication/shared secrets, logging, and feature tests.
 
-### Learning goals
+Do not introduce queues yet.
 
-- official Livewire Starter Kit;
-- authentication;
-- layouts;
-- Livewire full-page components;
-- Flux UI fundamentals;
-- authorization boundaries.
+## Phase 12 — Event filtering and time windows
 
-### Exit criteria
+Learn business rules, testable services/actions, and time-window edge cases.
 
-An authenticated user can access the administration UI and unauthenticated users cannot.
+## Phase 13 — Explore Dahua HTTP API
 
----
+Learn outgoing HTTP requests, digest auth, timeouts, snapshot endpoint, and Postman where useful.
 
-## Phase 5 — Camera management UI
+## Phase 14 — Dahua client + `Http::fake()`
 
-### Learning goals
+Learn Laravel HTTP Client, service boundaries, fake responses, and exceptions.
 
-- Livewire component state;
-- validation;
-- forms;
-- route model binding where appropriate;
-- Flux UI forms/modals;
-- secure handling of camera credentials.
+## Phase 15 — Explore MAX Messenger API
 
-### Exit criteria
+Learn authentication, upload workflow, message sending, and request/response inspection in Postman.
 
-The administrator can create, view, update, enable/disable, and remove cameras safely.
+## Phase 16 — MAX client + `Http::fake()`
 
----
+Learn multi-step external API workflows, uploads, error handling, and fake responses.
 
-## Phase 6 — Client management UI
+## Phase 17 — Observe synchronous limitations
 
-### Learning goals
+Intentionally observe the cost of:
 
-- reusable Livewire patterns;
-- relationship editing;
-- validation;
-- form UX.
+webhook → snapshot → MAX upload → MAX send → response
 
-### Exit criteria
+Exit: explain why background processing is useful.
 
-The administrator can manage clients and assign them to cameras.
+## Phase 18 — Laravel Queue
 
----
+Learn jobs, dispatch, workers, retries, timeouts, failed jobs, and idempotency.
 
-## Phase 7 — Dahua webhook: synchronous foundation
+Only now choose/configure a queue backend.
 
-### Learning goals
+## Phase 19 — Redis
 
-- machine-to-machine HTTP endpoints;
-- request lifecycle;
-- controller responsibility;
-- validation;
-- authentication/secrets;
-- response codes;
-- logging;
-- feature testing webhooks.
+Introduce Redis because there is now a concrete use-case.
 
-Important rule:
+Learn Redis basics, queue backend, Sail service, and Laravel configuration.
 
-Do not start with queues until the synchronous behavior and boundary are understood.
+## Phase 20 — Duplicate-event protection
 
-### Exit criteria
+Learn Cache, TTL, atomic operations, and race conditions.
 
-A fake Dahua event can be accepted/rejected correctly by automated tests without calling a real camera.
+Use Redis if it fits the proven requirement.
 
----
+## Phase 21 — Camera event journal
 
-## Phase 8 — Event filtering and time windows
+Design persistence only after we know which event-processing information is useful.
 
-### Learning goals
+Learn statuses, logs vs operational history, and indexes.
 
-- domain/business rules;
-- small testable services or Actions;
-- time handling;
-- edge cases such as overnight windows.
+## Phase 22 — Dashboard and event UI
 
-### Exit criteria
+Learn Livewire filtering/pagination and Flux tables/badges/modals.
 
-Relevant/non-relevant events and allowed/blocked time windows are deterministic and tested.
+## Phase 23 — Email only if needed
 
----
+If password reset, verification, or email notifications are actually used, introduce Mailpit for local development.
 
-## Phase 9 — Duplicate-event protection with Redis
+Do not add it merely because Laravel supports mail.
 
-### Learning goals
+## Phase 24 — Hardening
 
-- Redis basics;
-- Laravel Cache;
-- atomic operations;
-- TTL;
-- concurrency reasoning.
+Authorization, secrets, encrypted fields, rate limiting where justified, queue recovery, indexes, logs, backups.
 
-### Exit criteria
+## Phase 25 — Deployment preparation
 
-Two equivalent events inside the configured TTL do not both enter expensive processing.
-
----
-
-## Phase 10 — Queues and background processing
-
-### Learning goals
-
-- Laravel Jobs;
-- queue worker;
-- Redis queue backend;
-- serialization;
-- retries;
-- timeout/backoff;
-- failed jobs;
-- idempotency.
-
-### Exit criteria
-
-The webhook can respond quickly while slow event processing happens through a queue worker.
-
----
-
-## Phase 11 — Dahua HTTP integration
-
-### Learning goals
-
-- Laravel HTTP Client;
-- digest authentication;
-- timeouts;
-- retry decisions;
-- exceptions;
-- `Http::fake()`.
-
-### Exit criteria
-
-Snapshot retrieval works through an isolated service and is testable without a physical camera.
-
----
-
-## Phase 12 — MAX Messenger integration
-
-### Learning goals
-
-- multi-step external API workflows;
-- authentication headers;
-- file uploads;
-- API failures;
-- fake HTTP responses;
-- service boundaries.
-
-### Exit criteria
-
-A snapshot can be prepared and sent to configured recipients, with automated tests covering success and important failure cases.
-
----
-
-## Phase 13 — Camera event journal
-
-### Learning goals
-
-- event persistence;
-- status transitions;
-- error visibility;
-- useful logging vs database history;
-- indexes for filtering.
-
-Possible statuses will be decided based on actual workflow.
-
-### Exit criteria
-
-An administrator can understand what happened to a recent camera event without reading application logs.
-
----
-
-## Phase 14 — Dashboard and event UI
-
-### Learning goals
-
-- Livewire pagination/filtering;
-- Flux tables/badges/modals;
-- query performance;
-- UX for operational data.
-
-### Exit criteria
-
-The admin UI shows recent events and useful operational state without becoming a monitoring system that is too complex for the project.
-
----
-
-## Phase 15 — Hardening
-
-### Learning goals
-
-- authorization;
-- rate limiting where justified;
-- secrets;
-- encrypted database fields;
-- queue failure recovery;
-- structured logging;
-- database indexes;
-- backup thinking;
-- dependency/security review.
-
-### Exit criteria
-
-The project is reasonably safe and observable for its intended use.
-
----
-
-## Phase 16 — Deployment preparation
-
-### Learning goals
-
-- production environment differences;
-- environment variables;
-- queue worker lifecycle;
-- scheduler if needed;
-- cache/config optimization;
-- HTTPS/reverse proxy basics;
-- PostgreSQL/Redis persistence;
-- backups;
-- migrations in production.
-
-### Exit criteria
-
-There is a documented deployment plan even if deployment itself uses a separate infrastructure project.
-
----
+Production environment, queue worker lifecycle, HTTPS/reverse proxy basics, persistence, backups, and migrations.
 
 ## Rule for changing the roadmap
 
-The roadmap may be changed when implementation teaches us something new.
+Before adding a new tool, abstraction, or service, ask:
 
-Before adding a large new abstraction or feature, ask:
-
-1. What real problem does it solve now?
-2. Can Laravel already solve it with a standard feature?
-3. Does adding it help learning, or only add architecture?
-4. Can it wait until the problem actually appears?
+1. What real problem do we have now?
+2. Can Laravel already solve it with something present?
+3. Does introducing it improve understanding?
+4. Is this the right time, or can it wait?

@@ -1,36 +1,18 @@
-# Codex + Git Workflow for Three Machines
+MAX-NOTIFY — START CODEX
 
-The repository is the durable project memory.
+Run from the Git repository root.
 
-Codex conversation history is convenient locally, but is not the source of truth.
+1. Before Codex:
 
-## Context files
+    git status
+    git pull --rebase
 
-- `AGENTS.md` — permanent teaching rules.
-- `docs/ROADMAP.md` — direction, not an immediate checklist.
-- `docs/ARCHITECTURE.md` — decisions and reasons.
-- `docs/DEVELOPMENT.md` — short session/machine handoff.
+2. Start Codex:
 
-## Before working on any machine
+    codex
 
-From repository root:
+3. Paste this as the first message:
 
-```bash
-git status
-git pull --rebase
-```
-
-If `git status` is not clean, understand why before pulling or editing.
-
-Then run:
-
-```bash
-codex
-```
-
-## First prompt for a new Codex session
-
-```text
 Прочитай AGENTS.md, docs/DEVELOPMENT.md, docs/ROADMAP.md
 и при необходимости docs/ARCHITECTURE.md.
 
@@ -65,31 +47,11 @@ ROADMAP описывает направление развития проект�
 AGENTS.md и остановись.
 
 Не показывай готовую реализацию задания.
-```
 
-## Normal learning cycle
+--------------------------------------------------
 
-```text
-Codex explains
-      ↓
-Codex gives one small task
-      ↓
-I implement it
-      ↓
-I request review
-      ↓
-Codex inspects git diff/tests
-      ↓
-I fix issues
-      ↓
-Codex verifies
-      ↓
-I commit
-```
+REVIEW PROMPT
 
-## Review prompt
-
-```text
 Я закончил текущее задание.
 
 Не исправляй код сам.
@@ -103,72 +65,11 @@ I commit
 
 Не показывай сразу готовую реализацию.
 Сначала объясни проблемы и дай мне возможность исправить их самостоятельно.
-```
 
-## Before changing machines
+--------------------------------------------------
 
-1. `git status`
-2. Run relevant tests.
-3. Update `docs/DEVELOPMENT.md` if the current task, completed work, or an important decision changed.
-4. Commit and push.
+END-OF-SESSION PROMPT
 
-```bash
-git add ...
-git commit -m "..."
-git push
-```
-
-Do not rely on an unpushed local stash as handoff.
-
-## On another machine
-
-```bash
-git status
-git pull --rebase
-codex
-```
-
-Start a fresh Codex session and paste the first prompt.
-
-It is fine if old conversation history is unavailable. Repository state is authoritative.
-
-## Same-machine resume
-
-If supported:
-
-```bash
-codex resume
-```
-
-or:
-
-```bash
-codex resume --last
-```
-
-Use this as convenience only. Do not synchronize the entire local Codex history directory through Git.
-
-## HTTP/Postman learning flow
-
-```text
-Read API docs
-    ↓
-Create request manually in Postman
-    ↓
-Inspect response
-    ↓
-Understand HTTP contract
-    ↓
-Implement Laravel behavior
-    ↓
-Add Pest / Http::fake()
-```
-
-Do not commit secrets in Postman collections. Keep credentials in local environments.
-
-## End-of-session prompt
-
-```text
 Мы заканчиваем текущую сессию.
 
 Не изменяй код.
@@ -180,4 +81,13 @@ Do not commit secrets in Postman collections. Keep credentials in local environm
 4. одно подходящее commit message.
 
 Не выполняй commit и push за меня.
-```
+
+--------------------------------------------------
+
+Same-machine continuation, if supported:
+
+    codex resume
+
+or:
+
+    codex resume --last
