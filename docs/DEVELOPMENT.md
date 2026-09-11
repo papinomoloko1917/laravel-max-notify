@@ -2,99 +2,100 @@
 
 Short source of truth for moving between Codex sessions and machines.
 
-Keep this concise.
+Keep this concise and update it after a meaningful learning block.
 
 ## Current phase
 
-Phase 0 — Inspect the fresh Laravel project.
+Phase 5 — Camera Eloquent model.
+
+The implementation is complete locally and awaiting commit. Phase 6 (Clients and relationships) has not started.
 
 ## Current state
 
-Development has not started yet.
+- Laravel 13.31 with the official Livewire Starter Kit;
+- PHP 8.4 locally and PHP 8.5 in Sail;
+- Livewire 4, Flux UI 2, Tailwind CSS 4, and Vite 8;
+- PostgreSQL 18 as the application database;
+- Sail services: Laravel, PostgreSQL, and optional local Adminer;
+- Pest, Pint, and Larastan are installed;
+- authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
+- the `cameras` table migration has been applied;
+- `Camera` model, boolean cast, factory, and a database feature test are implemented locally.
 
-Intended direction:
-
-- Laravel 13;
-- PHP 8.4+;
-- official Livewire Starter Kit;
-- Livewire 4;
-- Flux UI;
-- Tailwind CSS 4;
-- PostgreSQL;
-- Laravel Sail;
-- Pest;
-- GitHub.
-
-Future tools/services that should be introduced only when useful:
-
-- Redis;
-- Laravel Queue;
-- Laravel Cache;
-- Adminer;
-- Mailpit;
-- Postman.
-
-The previous plain-PHP implementation is a behavioral reference only.
+Redis and Mailpit are not configured. No Dahua webhook, external API clients, queue jobs, duplicate protection, Clients, or event journal exist yet.
 
 ## Current learning task
 
-Not assigned yet.
+Review and commit the completed Camera model block and the documentation changes. After that, define the minimal Client domain before creating its schema or relationships.
 
-Codex should inspect the real repository and assign the first small task according to `AGENTS.md`.
+## Last completed learning block
 
-## Last completed task
-
-None.
+- Created the minimal `cameras` migration with `name`, `is_active`, and timestamps.
+- Added the `Camera` Eloquent model.
+- Configured mass assignment and a boolean cast for `is_active`.
+- Added `CameraFactory`.
+- Added a database feature test using `RefreshDatabase`.
+- Verified the Camera test twice and ran targeted Pint successfully.
 
 ## What I learned
 
-Nothing recorded yet.
+- A migration defines database structure; an Eloquent model represents rows in application code.
+- `$fillable` controls mass assignment, while casts control PHP representations of stored values.
+- Faker methods may return different types; factory values must match column types.
+- `create()` returns the persisted model, and `findOrFail()` can reload a known row.
+- `RefreshDatabase` isolates class-based database tests.
+- A factory needs an explicit generic type for Larastan when using `HasFactory`.
 
 ## Decisions made
 
-- Use Laravel 13.
-- Use official Livewire Starter Kit.
-- Use Livewire 4.
-- Use Flux UI instead of Bootstrap/daisyUI.
-- Use PostgreSQL instead of MySQL.
-- Use Laravel Sail for development.
-- Do not configure Redis until there is a real use-case.
-- Do not add Mailpit unless email functionality is needed.
-- Adminer is optional development tooling.
-- Use Postman as an HTTP exploration tool, not a replacement for tests.
-- Keep Dahua webhook handling outside Livewire.
-- Introduce queues only after understanding the synchronous webhook.
-- Do not port homemade framework infrastructure from the old PHP project.
+- The initial Camera schema stays deliberately minimal: `id`, `name`, `is_active`, and timestamps.
+- `is_active` defaults to `true` in PostgreSQL and is cast to `boolean` by Eloquent.
+- Use Laravel conventions and factories directly; no repository or service layer is needed for this model.
+- Use PostgreSQL for database feature tests.
+- Learning work is assigned in coherent blocks of 2–4 related tasks rather than mandatory single micro-tasks.
+- Redis, queues, and external API abstractions remain postponed until a real use-case appears.
+
+## Known baseline issues
+
+These issues predate the Camera implementation:
+
+- project-wide Pint reports formatting issues in six `lang/ru/*.php` files;
+- Larastan reports that `ProfileValidationRules` is unused because its use is inside a Blade/Livewire component;
+- Larastan reports a missing return in `UserFactory::withTwoFactor()`.
+
+The Camera model, factory, and test have no current Pint or Larastan errors. The full `composer test` command is not green until the baseline issues are resolved.
 
 ## Open questions
 
 Resolve only when needed:
 
-- exact first Camera schema;
+- what a Client represents in MAX Messenger and which stable identifier it needs;
+- deletion behavior for Camera ↔ Client assignments;
 - Dahua webhook authentication contract;
 - required event/rule fields;
 - Dahua snapshot behavior;
 - MAX API request workflow;
-- which runtime settings belong in DB vs config/env;
+- which runtime settings belong in DB versus config/environment;
 - production deployment target.
 
 ## Next likely steps
 
-1. Finish creating the Laravel project.
-2. Add these learning/docs files.
-3. Commit the initial state.
-4. Start Codex.
-5. Let Codex inspect the real project before task #1.
+1. Commit the updated learning workflow separately from the Camera implementation.
+2. Decide whether to repair the Starter Kit quality baseline before Phase 6.
+3. Describe the Client domain and only then design its minimal migration.
+4. Add the Camera ↔ Client relationship after both models have justified schemas.
 
 ## Last session handoff
 
-Date: not started.
+Date: 2026-09-11.
 
 Summary:
 
-- Learning workflow prepared.
-- No application feature has been implemented.
+- Environment and project structure were inspected against the documentation.
+- Phases 0–4 are complete.
+- The Phase 5 Camera model/factory/test block passes its focused checks.
+- Documentation was synchronized with the repository state.
 
 Next action:
 
-- Start Codex from repository root using `START_CODEX.txt`.
+- Commit the current work, then begin Client domain discovery without adding Redis, queues, or integration code.

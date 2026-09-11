@@ -6,10 +6,21 @@ Rule:
 
 understand the problem
 → learn one concept
-→ implement a small piece
+→ implement a coherent block of related tasks
 → review
 → test
 → continue
+
+## Current progress
+
+As of 2026-09-11:
+
+- Phases 0–4 are complete.
+- Phase 5 is implemented locally: the Camera model, factory, casts, and focused database test are ready to commit.
+- Phase 6 has not started.
+- Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
+
+This section records progress only. Later phases remain direction, not requirements for the current branch.
 
 ## Phase 0 — Inspect the fresh Laravel project
 

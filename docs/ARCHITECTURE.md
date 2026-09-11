@@ -1,6 +1,6 @@
 # max-notify — Architecture
 
-Status: initial architecture hypothesis.
+Status: early implementation; future integration flow remains an architecture hypothesis.
 
 This is direction, not a complete up-front design.
 
@@ -22,6 +22,17 @@ Queues and Redis should appear only after the synchronous webhook and slow exter
 `max-notify` receives Dahua camera events and notifies configured MAX Messenger recipients with camera snapshots.
 
 It also provides an authenticated administrative UI.
+
+## Currently implemented slice
+
+As of 2026-09-11, the application contains:
+
+- the authentication and settings UI supplied by the Livewire Starter Kit;
+- a minimal `cameras` table with `id`, `name`, `is_active`, and timestamps;
+- a `Camera` Eloquent model with explicit mass-assignment rules and a boolean cast;
+- a Camera factory and focused PostgreSQL feature test.
+
+There is no Client model, webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 
 ## Likely mature flow
 
@@ -110,6 +121,8 @@ Do not put external API calls directly in Livewire components or Eloquent models
 
 Primary DB: PostgreSQL.
 
+The current Camera schema is deliberately limited to identity, display name, enabled state, and timestamps. Network details, credentials, rules, and integration fields will be added only after their requirements and security implications are understood.
+
 Initial conceptual entities:
 
 - User;
@@ -164,16 +177,18 @@ If per-camera credentials live in PostgreSQL, use an encrypted-at-rest approach 
 
 ## Development environment
 
-Required early Sail services:
+Current Sail services:
 
 - Laravel/PHP;
-- PostgreSQL.
+- PostgreSQL;
+- Adminer as optional local inspection tooling.
 
 Later/optional:
 
 - Redis when needed;
-- Adminer optionally;
 - Mailpit only if needed.
+
+The default Laravel database-backed cache, session, and queue configuration is present. This does not mean queue processing has been introduced into the application; no application jobs or workers are currently part of the design.
 
 A new machine should be recoverable from Git, lock files, `.env.example`, migrations, and documented setup.
 
