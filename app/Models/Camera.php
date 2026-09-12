@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\CameraFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Camera extends Model
 {
@@ -18,5 +19,10 @@ class Camera extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function clients(): BelongsToMany
+    {
+        return $this->belongsToMany(Client::class);
     }
 }

@@ -11,9 +11,10 @@ The project is being built incrementally. The roadmap describes future direction
 - PostgreSQL 18;
 - Laravel Sail with Laravel, PostgreSQL, and local Adminer services;
 - Pest, Pint, and Larastan;
-- minimal Camera migration, Eloquent model, factory, and focused database test.
+- minimal Camera migration, Eloquent model, factory, and focused database test;
+- Client migration, Eloquent model, factory, and initial database tests.
 
-Client management, Dahua/MAX integrations, queues, Redis, duplicate protection, and event history are not implemented yet.
+The Camera ↔ Client many-to-many relationship is currently in progress. Client management UI, Dahua/MAX integrations, queues, Redis, duplicate protection, and event history are not implemented yet.
 
 See [Development Handoff](docs/DEVELOPMENT.md) for the exact current state and known quality-baseline issues.
 

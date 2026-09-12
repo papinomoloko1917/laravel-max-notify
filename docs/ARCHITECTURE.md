@@ -25,14 +25,18 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-09-11, the application contains:
+As of 2026-09-12, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a minimal `cameras` table with `id`, `name`, `is_active`, and timestamps;
 - a `Camera` Eloquent model with explicit mass-assignment rules and a boolean cast;
-- a Camera factory and focused PostgreSQL feature test.
+- a Camera factory and focused PostgreSQL feature test;
+- a `clients` table and Client model with unique `max_chat_id`;
+- a Client factory and focused persistence/constraint tests.
 
-There is no Client model, webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
+The conventional `camera_client` pivot table and preliminary `BelongsToMany` methods are currently under development. The relationship test is not yet passing, so this relationship is not considered complete.
+
+There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 
 ## Likely mature flow
 
@@ -131,6 +135,14 @@ Initial conceptual entities:
 - CameraEvent later, if useful.
 
 Expected Camera ↔ Client relation: many-to-many.
+
+Current relationship decision:
+
+- pivot table: `camera_client`;
+- foreign keys: `camera_id` and `client_id`;
+- duplicate pairs are forbidden by a composite unique constraint;
+- deleting a Camera or Client cascades only to its pivot rows;
+- pivot timestamps exist provisionally; their usefulness and Eloquent `withTimestamps()` behavior must be decided before the relationship is considered complete.
 
 Do not create `CameraEvent` before we know which operational data is worth storing.
 

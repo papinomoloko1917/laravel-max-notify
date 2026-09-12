@@ -13,11 +13,10 @@ understand the problem
 
 ## Current progress
 
-As of 2026-09-11:
+As of 2026-09-12:
 
-- Phases 0–4 are complete.
-- Phase 5 is implemented locally: the Camera model, factory, casts, and focused database test are ready to commit.
-- Phase 6 has not started.
+- Phases 0–5 are complete and committed.
+- Phase 6 is in progress: the Client model is committed, and the Camera ↔ Client pivot/relationship work is uncommitted and not yet passing all tests.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
