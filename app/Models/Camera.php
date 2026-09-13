@@ -21,8 +21,9 @@ class Camera extends Model
         ];
     }
 
+    /** @return BelongsToMany<Client, $this> */
     public function clients(): BelongsToMany
     {
-        return $this->belongsToMany(Client::class);
+        return $this->belongsToMany(Client::class)->withTimestamps();
     }
 }

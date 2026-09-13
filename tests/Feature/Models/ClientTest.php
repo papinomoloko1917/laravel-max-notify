@@ -59,6 +59,43 @@ class ClientTest extends TestCase
 
         $client->cameras()->attach($camera->id);
 
+        $this->assertDatabaseHas('camera_client', [
+            'camera_id' => $camera->id,
+            'client_id' => $client->id,
+        ]);
+
+        $client = Client::findOrFail($client->id);
+
+        $camera = Camera::findOrFail($camera->id);
+
+        $this->assertTrue($client->cameras->contains('id', $camera->id));
+
+        $this->assertTrue($camera->clients->contains('id', $client->id));
+    }
+
+    public function test_deleting_a_client_detaches_it_from_cameras_but_keeps_cameras(): void
+    {
+        $client = Client::create([
+            'name' => 'testName',
+            'max_chat_id' => 7,
+        ]);
+
+        $camera = Camera::create([
+            'name' => 'testCamera',
+            'is_active' => true,
+        ]);
+
         $camera->clients()->attach($client->id);
+
+        $client->delete();
+
+        $this->assertDatabaseMissing('camera_client', [
+            'camera_id' => $camera->id,
+            'client_id' => $client->id,
+        ]);
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+        ]);
     }
 }

@@ -32,9 +32,10 @@ As of 2026-09-12, the application contains:
 - a `Camera` Eloquent model with explicit mass-assignment rules and a boolean cast;
 - a Camera factory and focused PostgreSQL feature test;
 - a `clients` table and Client model with unique `max_chat_id`;
-- a Client factory and focused persistence/constraint tests.
-
-The conventional `camera_client` pivot table and preliminary `BelongsToMany` methods are currently under development. The relationship test is not yet passing, so this relationship is not considered complete.
+- a Client factory and focused persistence/constraint tests;
+- a conventional `camera_client` pivot table with unique Camera–Client pairs and cascading pivot cleanup;
+- reciprocal, typed `BelongsToMany` relationships between Camera and Client;
+- feature tests for bidirectional relationship reads, duplicate-pair rejection, and deletion behavior.
 
 There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 
@@ -142,7 +143,7 @@ Current relationship decision:
 - foreign keys: `camera_id` and `client_id`;
 - duplicate pairs are forbidden by a composite unique constraint;
 - deleting a Camera or Client cascades only to its pivot rows;
-- pivot timestamps exist provisionally; their usefulness and Eloquent `withTimestamps()` behavior must be decided before the relationship is considered complete.
+- pivot timestamps record assignment creation and updates and are populated by Eloquent through `withTimestamps()` on both relationships.
 
 Do not create `CameraEvent` before we know which operational data is worth storing.
 

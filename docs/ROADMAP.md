@@ -13,10 +13,11 @@ understand the problem
 
 ## Current progress
 
-As of 2026-09-12:
+As of 2026-09-13:
 
 - Phases 0–5 are complete and committed.
-- Phase 6 is in progress: the Client model is committed, and the Camera ↔ Client pivot/relationship work is uncommitted and not yet passing all tests.
+- Phase 6 is implemented locally and ready to commit: Camera and Client have a tested many-to-many relationship with duplicate-pair protection and cascading pivot cleanup.
+- Phase 7 has not started.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
