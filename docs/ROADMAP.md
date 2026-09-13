@@ -13,11 +13,11 @@ understand the problem
 
 ## Current progress
 
-As of 2026-09-13:
+As of 2026-09-14:
 
-- Phases 0–5 are complete and committed.
-- Phase 6 is implemented locally and ready to commit: Camera and Client have a tested many-to-many relationship with duplicate-pair protection and cascading pivot cleanup.
-- Phase 7 has not started.
+- Phases 0–6 are complete, committed, and pushed.
+- Phase 7 is implemented locally: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
+- Phase 8 has started with a read-only Cameras table, status display, and empty state; focused list coverage and verification remain unfinished.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.

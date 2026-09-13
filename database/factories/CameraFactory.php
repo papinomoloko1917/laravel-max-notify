@@ -19,7 +19,7 @@ class CameraFactory extends Factory
     {
         return [
             'name' => fake()->word(),
-            'is_active' => true,
+            'is_active' => fake()->boolean(50),
         ];
     }
 }

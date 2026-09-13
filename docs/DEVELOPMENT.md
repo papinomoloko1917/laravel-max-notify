@@ -6,9 +6,9 @@ Keep this concise and update it after a meaningful learning block.
 
 ## Current phase
 
-Phase 6 — Clients and relationships, implemented locally and ready to commit.
+Phase 7 — Authentication and admin shell is implemented locally.
 
-Phase 5 (Camera Eloquent model) and the initial Client model are committed. The Camera ↔ Client many-to-many relationship is complete locally. Phase 7 (Authentication and admin shell) has not started.
+Phase 8 — Camera management UI has started with a read-only camera list. The list implementation still needs its focused feature test and verification before this block is considered complete.
 
 ## Current state
 
@@ -19,18 +19,19 @@ Phase 5 (Camera Eloquent model) and the initial Client model are committed. The 
 - Sail services: Laravel, PostgreSQL, and optional local Adminer;
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
-- Camera migration, model, cast, factory, and focused feature test are committed;
-- Client migration, model, factory, and initial feature test are committed in `f56a2c6`;
-- the `camera_client` pivot migration has been applied locally as batch 4;
-- Camera and Client expose reciprocal `BelongsToMany` relationships;
-- pivot timestamps are populated through `withTimestamps()`;
-- relationship, duplicate-pair, and cascading-deletion behavior is covered by feature tests.
+- Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
+- the Phase 6 commit has been pushed and local `main` currently matches `origin/main`;
+- a protected `/cameras` Livewire page and named route `cameras.index` exist locally;
+- the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
+- feature tests cover guest and authenticated access to the Cameras page;
+- the Cameras page locally loads cameras ordered by name, renders a Flux table, distinguishes active/inactive cameras, and shows an empty state;
+- Camera and User seeders are present locally for manual development data.
 
 Redis and Mailpit are not configured. No Dahua webhook, external API clients, queue jobs, duplicate protection, or event journal exists yet.
 
 ## Current learning task
 
-Review and commit the completed Phase 6 relationship block and these documentation updates. After that, begin Phase 7 by inspecting the existing Starter Kit authentication and protected admin shell before adding new UI behavior.
+Finish the first Phase 8 block: add focused test coverage for the read-only Cameras list, run the targeted checks, review the complete local change set, and commit/push it before moving to camera creation or editing.
 
 ## Completed work
 
@@ -43,31 +44,38 @@ Review and commit the completed Phase 6 relationship block and these documentati
 - Verified that one `attach()` writes the relationship once and the inverse relation reads the same pivot row.
 - Added tests that reject duplicate Camera–Client pairs.
 - Added tests proving that deleting either main model removes only its pivot rows and preserves the other main model.
+- Added a protected Livewire Cameras page using the Starter Kit authentication middleware.
+- Added guest/authenticated access tests for the Cameras page.
+- Added the Cameras sidebar entry and a custom Flux-compatible CCTV icon.
+- Removed the Starter Kit's demonstration Repository and Documentation sidebar links.
+- Began a read-only Camera list with ordering, active/inactive badges, and an empty state.
 
 ## Current uncommitted changes
 
-- `app/Models/Camera.php` — completed `clients()` relationship;
-- `app/Models/Client.php` — completed `cameras()` relationship;
-- `tests/Feature/Models/CameraTest.php` — duplicate-pair and Camera cascade tests;
-- `tests/Feature/Models/ClientTest.php` — bidirectional relationship and Client cascade tests;
-- documentation updates marking Phase 6 complete locally.
+- Cameras admin shell: route, Livewire page, sidebar entry, translations, custom `cctv` icon, and access test;
+- initial read-only Cameras list and empty state;
+- Camera factory and Camera/User seeders for local sample data;
+- intentional formatting/customization changes in Starter Kit Blade views and the published Flux navlist group;
+- these checkpoint documentation updates.
 
 ## Verification at checkpoint
 
-Run on 2026-09-13:
+Checkpoint date: 2026-09-14.
 
-- `artisan migrate:status`: pivot migration is `Ran` as batch 4 in the current local database;
-- `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
-- full `artisan test --compact`: 31 tests pass, with 1 existing skipped/risky test and 68 assertions;
-- targeted Pint for the changed models and tests: passes;
-- Larastan: only the two existing baseline errors remain; Camera and Client introduce no new errors;
-- `git diff --check`: passes.
+- Before the read-only list was added, `artisan test tests/Feature/CamerasTest.php` passed with 2 tests and 4 assertions;
+- `git diff --check` passes for the current working tree;
+- PHP syntax checks pass for `CameraSeeder` and `CameraFactory`;
+- current Sail tests and Pint were not run because Docker/Podman was stopped;
+- the read-only camera list still lacks the focused feature test described below;
+- previous Phase 6 verification remains recorded in Git history/documentation and was completed before commit `48844e8`.
 
 ## Next exact steps
 
-1. Review and commit the completed Phase 6 implementation and documentation.
-2. Inspect the existing Starter Kit authentication, middleware, dashboard route, and layout as the start of Phase 7.
-3. Decide the smallest authenticated admin-shell change before implementing Camera management UI.
+1. On this machine, commit and push all intended checkpoint changes so they are available on the next machine.
+2. On the next machine, pull `main`, start Sail, and run migrations/seeders as needed.
+3. Add `: void` to the Cameras page `mount()` method.
+4. Add a feature test that creates active and inactive cameras in reverse alphabetical order and verifies their names, statuses, and rendered order.
+5. Run the focused Cameras test and targeted Pint; review before adding create/edit/delete behavior.
 
 ## Decisions made
 
@@ -76,6 +84,9 @@ Run on 2026-09-13:
 - Deleting either main record removes its pivot rows, not the other main record.
 - Pivot timestamps record when an assignment is created or updated and are populated through `withTimestamps()` on both relationships.
 - `max_chat_id` currently uses PostgreSQL `bigint` and a PHP integer cast; this remains provisional until confirmed against the MAX API contract.
+- The Cameras page is an authenticated Livewire administration page; webhook traffic will remain outside Livewire.
+- The first Camera UI slice is deliberately read-only; CRUD will be introduced incrementally.
+- Starter Kit Repository and Documentation links were removed because they were template examples, not application navigation.
 - Redis, queues, and integration abstractions remain postponed.
 
 ## Known baseline issues
@@ -88,16 +99,17 @@ These issues predate the current relationship work:
 
 ## Last session handoff
 
-Date: 2026-09-12.
+Date: 2026-09-14.
 
 Summary:
 
-- Phase 5 and the initial Client model are committed.
-- The Phase 6 Camera ↔ Client relationship is complete locally and ready to commit.
-- The pivot schema, bidirectional Eloquent relationships, duplicate protection, and cascading cleanup are covered by passing feature tests.
-- Relationship methods have Larastan generic annotations and populate pivot timestamps.
-- No application files were modified by Codex during the checkpoint update.
+- Phase 6 is committed and pushed in `48844e8`.
+- Phase 7 is implemented locally: protected Cameras route/page, navigation, custom icon, and access tests.
+- Phase 8 has started with a read-only ordered Cameras table, status badges, an empty state, factory variation, and development seeders.
+- The list-specific feature test has not yet been written.
+- Docker was stopped at the checkpoint, so the latest application changes have not received a fresh Sail/Pint run.
+- Codex modified only documentation during this checkpoint.
 
 Next action on another machine:
 
-- Pull the completed Phase 6 commit after it is pushed, start Sail, run migrations, and begin Phase 7 from “Next exact steps” above.
+- After the current changes are committed and pushed, pull `main`, start Sail, finish the focused Cameras list test, and run the checks in “Next exact steps”.

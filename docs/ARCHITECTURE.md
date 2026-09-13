@@ -25,7 +25,7 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-09-12, the application contains:
+As of 2026-09-14, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a minimal `cameras` table with `id`, `name`, `is_active`, and timestamps;
@@ -36,6 +36,8 @@ As of 2026-09-12, the application contains:
 - a conventional `camera_client` pivot table with unique Camera–Client pairs and cascading pivot cleanup;
 - reciprocal, typed `BelongsToMany` relationships between Camera and Client;
 - feature tests for bidirectional relationship reads, duplicate-pair rejection, and deletion behavior.
+- a protected Livewire Cameras administration page and sidebar navigation entry;
+- a read-only Cameras table with name ordering, active/inactive status display, and an empty state (currently uncommitted and awaiting focused list-test verification).
 
 There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 
