@@ -38,7 +38,9 @@ As of 2026-09-14, the application contains:
 - feature tests for bidirectional relationship reads, duplicate-pair rejection, and deletion behavior;
 - a protected Livewire Cameras administration page and sidebar navigation entry;
 - a read-only Cameras table with name ordering, active/inactive status display, and an empty state;
-- focused HTTP feature tests for access, ordered rendering, statuses, and the empty state.
+- focused HTTP feature tests for access, ordered rendering, statuses, and the empty state;
+- an uncommitted Livewire Camera creation action that validates, persists, resets its name field, and reloads the list;
+- an uncommitted database-backed active/inactive Camera filter whose property-change reactivity and focused tests are still pending.
 
 There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 
