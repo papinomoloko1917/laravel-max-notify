@@ -35,9 +35,10 @@ As of 2026-09-14, the application contains:
 - a Client factory and focused persistence/constraint tests;
 - a conventional `camera_client` pivot table with unique Camera–Client pairs and cascading pivot cleanup;
 - reciprocal, typed `BelongsToMany` relationships between Camera and Client;
-- feature tests for bidirectional relationship reads, duplicate-pair rejection, and deletion behavior.
+- feature tests for bidirectional relationship reads, duplicate-pair rejection, and deletion behavior;
 - a protected Livewire Cameras administration page and sidebar navigation entry;
-- a read-only Cameras table with name ordering, active/inactive status display, and an empty state (currently uncommitted and awaiting focused list-test verification).
+- a read-only Cameras table with name ordering, active/inactive status display, and an empty state;
+- focused HTTP feature tests for access, ordered rendering, statuses, and the empty state.
 
 There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 
@@ -204,6 +205,8 @@ Later/optional:
 - Mailpit only if needed.
 
 The default Laravel database-backed cache, session, and queue configuration is present. This does not mean queue processing has been introduced into the application; no application jobs or workers are currently part of the design.
+
+Demonstration User and Camera seeders are restricted to the `local` environment. The predictable local user is created or updated idempotently and marked email-verified so it can access verified administration routes.
 
 A new machine should be recoverable from Git, lock files, `.env.example`, migrations, and documented setup.
 

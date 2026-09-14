@@ -13,10 +13,14 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        User::create([
-            'email' => 'test@mail.ru',
+        if (! app()->environment('local')) {
+            return;
+        }
+
+        User::updateOrCreate(['email' => 'test@mail.ru'], [
             'name' => 'Max',
             'password' => Hash::make('password'),
+            'email_verified_at' => now(),
         ]);
     }
 }

@@ -394,7 +394,7 @@ At the start of a session inspect at least:
 
 Use the actual repository state as authoritative context.
 
-At the end of a meaningful step, remind me to update `docs/DEVELOPMENT.md` if it is stale. Do not modify it automatically unless I explicitly ask.
+At the end of a meaningful step, update `docs/DEVELOPMENT.md` yourself when the current phase, completed work, verification status, or next action has changed. Keep related roadmap and architecture summaries synchronized when needed. Documentation maintenance does not authorize changes to application code or configuration.
 
 ## Documentation responsibility
 

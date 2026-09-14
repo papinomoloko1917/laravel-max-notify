@@ -16,8 +16,8 @@ understand the problem
 As of 2026-09-14:
 
 - Phases 0–6 are complete, committed, and pushed.
-- Phase 7 is implemented locally: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
-- Phase 8 has started with a read-only Cameras table, status display, and empty state; focused list coverage and verification remain unfinished.
+- Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
+- Phase 8 is in progress: the first read-only Cameras table slice, focused tests, and local-only development seeders are complete locally and awaiting commit.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.

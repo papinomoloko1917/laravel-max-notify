@@ -6,9 +6,9 @@ Keep this concise and update it after a meaningful learning block.
 
 ## Current phase
 
-Phase 7 — Authentication and admin shell is implemented locally.
+Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI has started with a read-only camera list. The list implementation still needs its focused feature test and verification before this block is considered complete.
+Phase 8 — Camera management UI is in progress. The first read-only list and safe development-seeder slice is complete locally and awaiting commit.
 
 ## Current state
 
@@ -21,17 +21,18 @@ Phase 8 — Camera management UI has started with a read-only camera list. The l
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
 - the Phase 6 commit has been pushed and local `main` currently matches `origin/main`;
-- a protected `/cameras` Livewire page and named route `cameras.index` exist locally;
+- a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
-- feature tests cover guest and authenticated access to the Cameras page;
-- the Cameras page locally loads cameras ordered by name, renders a Flux table, distinguishes active/inactive cameras, and shows an empty state;
-- Camera and User seeders are present locally for manual development data.
+- feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
+- the Cameras page loads cameras ordered by name, renders a Flux table, distinguishes active/inactive cameras, and shows an empty state;
+- Camera and User seeders provide manual development data only in the `local` environment;
+- the predictable development user is repeatable through `updateOrCreate()` and has a verified email.
 
 Redis and Mailpit are not configured. No Dahua webhook, external API clients, queue jobs, duplicate protection, or event journal exists yet.
 
 ## Current learning task
 
-Finish the first Phase 8 block: add focused test coverage for the read-only Cameras list, run the targeted checks, review the complete local change set, and commit/push it before moving to camera creation or editing.
+Review and commit/push the completed read-only Cameras list tests, local-only seeder safety, and documentation before moving to camera creation or editing.
 
 ## Completed work
 
@@ -48,34 +49,35 @@ Finish the first Phase 8 block: add focused test coverage for the read-only Came
 - Added guest/authenticated access tests for the Cameras page.
 - Added the Cameras sidebar entry and a custom Flux-compatible CCTV icon.
 - Removed the Starter Kit's demonstration Repository and Documentation sidebar links.
-- Began a read-only Camera list with ordering, active/inactive badges, and an empty state.
+- Completed a read-only Camera list with ordering, active/inactive badges, and an empty state.
+- Added focused tests that verify reverse-input sorting, status placement, and the empty state.
+- Restricted User and Camera demonstration seeders to `local`.
+- Made the predictable development user repeatable and email-verified.
 
 ## Current uncommitted changes
 
-- Cameras admin shell: route, Livewire page, sidebar entry, translations, custom `cctv` icon, and access test;
-- initial read-only Cameras list and empty state;
-- Camera factory and Camera/User seeders for local sample data;
-- intentional formatting/customization changes in Starter Kit Blade views and the published Flux navlist group;
-- these checkpoint documentation updates.
+- `tests/Feature/CamerasTest.php` — focused ordered-list, status, and empty-state coverage;
+- `database/seeders/UserSeeder.php` — local-only, repeatable, verified development user;
+- `database/seeders/CameraSeeder.php` — local-only demonstration cameras;
+- documentation synchronized by Codex with the completed test block.
 
 ## Verification at checkpoint
 
 Checkpoint date: 2026-09-14.
 
-- Before the read-only list was added, `artisan test tests/Feature/CamerasTest.php` passed with 2 tests and 4 assertions;
-- `git diff --check` passes for the current working tree;
-- PHP syntax checks pass for `CameraSeeder` and `CameraFactory`;
-- current Sail tests and Pint were not run because Docker/Podman was stopped;
-- the read-only camera list still lacks the focused feature test described below;
-- previous Phase 6 verification remains recorded in Git history/documentation and was completed before commit `48844e8`.
+- `artisan test tests/Feature/CamerasTest.php`: 4 tests pass with 8 assertions;
+- `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
+- targeted Pint for the Cameras test, page, and seeders passes;
+- `git diff --check` passes;
+- Sail is running and all migrations are applied;
+- `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
+- Larastan still has only the two known baseline issues listed below.
 
 ## Next exact steps
 
-1. On this machine, commit and push all intended checkpoint changes so they are available on the next machine.
-2. On the next machine, pull `main`, start Sail, and run migrations/seeders as needed.
-3. Add `: void` to the Cameras page `mount()` method.
-4. Add a feature test that creates active and inactive cameras in reverse alphabetical order and verifies their names, statuses, and rendered order.
-5. Run the focused Cameras test and targeted Pint; review before adding create/edit/delete behavior.
+1. Review and commit the Cameras list test, seeder safety changes, AGENTS rule, and documentation as logical commits.
+2. Push `main` so this checkpoint is available on all development machines.
+3. Begin the next Phase 8 block: camera creation, introduced through validation and a focused Livewire feature test.
 
 ## Decisions made
 
@@ -87,6 +89,8 @@ Checkpoint date: 2026-09-14.
 - The Cameras page is an authenticated Livewire administration page; webhook traffic will remain outside Livewire.
 - The first Camera UI slice is deliberately read-only; CRUD will be introduced incrementally.
 - Starter Kit Repository and Documentation links were removed because they were template examples, not application navigation.
+- Codex maintains checkpoint, roadmap, and architecture documentation after meaningful project steps; the learner continues to implement application code and configuration.
+- Demonstration User and Camera seeders run only in `local`; the fixed local user is updated or created and marked email-verified.
 - Redis, queues, and integration abstractions remain postponed.
 
 ## Known baseline issues
@@ -104,12 +108,12 @@ Date: 2026-09-14.
 Summary:
 
 - Phase 6 is committed and pushed in `48844e8`.
-- Phase 7 is implemented locally: protected Cameras route/page, navigation, custom icon, and access tests.
-- Phase 8 has started with a read-only ordered Cameras table, status badges, an empty state, factory variation, and development seeders.
-- The list-specific feature test has not yet been written.
-- Docker was stopped at the checkpoint, so the latest application changes have not received a fresh Sail/Pint run.
-- Codex modified only documentation during this checkpoint.
+- Phase 7 and the WIP Cameras UI commit `48f8ba2` are present on `main` and `origin/main`.
+- The read-only Cameras table now has focused ordering, status, and empty-state coverage.
+- Cameras tests pass with 4 tests and 8 assertions; targeted Pint passes.
+- The test update and this documentation synchronization are currently uncommitted.
+- User and Camera seeders are local-only; the predictable development user is repeatable and verified.
 
 Next action on another machine:
 
-- After the current changes are committed and pushed, pull `main`, start Sail, finish the focused Cameras list test, and run the checks in “Next exact steps”.
+- Commit/push the completed read-only Cameras and seeder-safety slice, then start camera creation.

@@ -12,6 +12,10 @@ class CameraSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! app()->environment('local')) {
+            return;
+        }
+
         Camera::factory()->count(10)->create();
     }
 }
