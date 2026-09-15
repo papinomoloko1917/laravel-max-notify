@@ -8,7 +8,7 @@ Keep this concise and update it after a meaningful learning block.
 
 Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI is in progress. The first read-only list and safe development-seeder slice is complete, committed, and pushed in `35039fb`.
+Phase 8 — Camera management UI is in progress. Camera listing, creation, and the first active-status filter implementation are pushed through `be88ed7`; filter presentation is committed locally in `6c4e712`, and focused creation/filter tests are next.
 
 ## Current state
 
@@ -20,11 +20,11 @@ Phase 8 — Camera management UI is in progress. The first read-only list and sa
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `HEAD` and `origin/main` both point to `35039fb`, with the Phase 8 creation/filter work still uncommitted in the working tree;
+- local `main` contains filter-presentation commit `6c4e712` and is ahead of `origin/main` (`be88ed7`) before this documentation commit;
 - a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
 - feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
-- the Cameras page loads cameras ordered by name, renders a Flux table, distinguishes active/inactive cameras, and shows an empty state;
+- the Cameras page loads cameras ordered by name, creates validated cameras, filters by active state, distinguishes statuses, and shows an empty state;
 - Camera and User seeders provide manual development data only in the `local` environment;
 - the predictable development user is repeatable through `updateOrCreate()` and has a verified email.
 
@@ -54,16 +54,14 @@ Finish the first Camera creation slice and the closely related active-status lis
 - Restricted User and Camera demonstration seeders to `local`.
 - Made the predictable development user repeatable and email-verified.
 
-## Current work since `35039fb`
+## Current work after `be88ed7`
 
-- `resources/views/pages/cameras/⚡index.blade.php` — Camera creation form/action and initial active/inactive filter attempt; the filter query exists but does not yet reload when the bound value changes;
-- `lang/ru.json` — translations added for the creation modal and status filter;
-- `pint.json`, existing anonymous class declarations, and existing arrow functions — formatting policy aligned with Blade Formatter; behavior is unchanged;
-- checkpoint documentation synchronized by Codex.
+- commit `6c4e712` centralizes filter options, renders them through a loop, shows the selected label in the trigger, translates the Add button, and replaces “By name” with “All”;
+- this checkpoint documentation synchronization follows that commit.
 
 ## Verification at checkpoint
 
-Checkpoint date: 2026-09-14.
+Checkpoint date: 2026-09-15.
 
 - `artisan test tests/Feature/CamerasTest.php`: 4 tests pass with 8 assertions;
 - `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
@@ -74,23 +72,24 @@ Checkpoint date: 2026-09-14.
 - `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
 - Larastan still has only the two known baseline issues listed below.
 
-Current Camera creation attempt:
+Current Camera creation/filter slice:
 
 - the existing four Cameras feature tests still pass with eight assertions;
 - the creation action now validates both fields, persists the Camera, clears the name, and reloads the ordered list;
+- the filter defaults to `all`, filters in PostgreSQL for `active` and `inactive`, and reloads through `updatedFilter()`;
 - Pint now deliberately accepts anonymous-class opening braces on the same line, matching Blade Formatter 1.44.4;
 - Pint now also accepts Blade Formatter's `fn()` spacing for short arrow functions;
 - the Cameras page and all mechanically aligned PHP files pass targeted Pint;
-- creation-specific tests have not been added yet;
-- filter-specific tests have not been added yet, and changing `$filter` currently does not invoke `loadCameras()`;
+- creation-specific and filter-specific tests have not been added yet;
+- the `all` option now displays the translated “All” label;
 - full-project Pint still reports only the six known generated Russian language-file issues.
 
 ## Next exact steps
 
 1. Add focused Livewire tests for successful Camera creation, validation failure, state reset, and immediate list refresh.
-2. Make the status filter reload the collection when its Livewire property changes and use `all` rather than `name` for the unfiltered state.
-3. Add focused tests for active, inactive, and unfiltered results.
-4. Verify the combined Camera creation/filter slice and then prepare logical commits.
+2. Add focused tests for active, inactive, and unfiltered results.
+3. Finish the remaining small creation-form markup cleanup while keeping it separate from filter behavior.
+4. Verify and commit the completed Camera creation/filter test slice.
 
 ## Decisions made
 
@@ -128,14 +127,14 @@ Summary:
 - Cameras tests pass with 4 tests and 8 assertions; targeted Pint passes.
 - Commit `35039fb` contains the list tests, local-only seeder safety, documentation, and the rule that Codex maintains project docs.
 - User and Camera seeders are local-only; the predictable development user is repeatable and verified.
-- A first Camera creation form and action now exist as uncommitted learner work.
-- The creation action is structurally complete, but focused creation tests are still missing.
-- A database-backed active/inactive filter has been started; it needs a Livewire property-update hook before it reacts in the browser.
+- Commit `be88ed7` contains the Camera creation form/action, the reactive database-backed status filter, translations, and formatter alignment.
+- The creation action and status filter are structurally complete, but their focused Livewire tests are still missing.
 - All 36 project tests run: 35 pass, one is skipped, and one is marked risky; the Cameras file contributes four passing tests and eight assertions.
 - The two existing Larastan baseline findings remain unchanged.
 - Blade Formatter and Pint are now aligned for anonymous classes and short arrow functions; affected files pass targeted formatting checks.
-- At the time of this checkpoint, the entire Phase 8 creation/filter and formatter-alignment worktree is uncommitted; it must be committed and pushed before switching machines.
+- Commit `6c4e712` contains the reviewed filter-presentation cleanup; the unused incorrect accessor was removed before commit.
+- Local `main` is ahead of `origin/main`; push the filter-presentation and documentation commits before switching machines.
 
 Next action on another machine:
 
-- First commit and push the current WIP so it is available on the other machine. After pulling it there, complete the focused Camera creation and status-filter tests described in “Next exact steps”.
+- Push the local commits, then complete the focused Camera creation and status-filter tests.

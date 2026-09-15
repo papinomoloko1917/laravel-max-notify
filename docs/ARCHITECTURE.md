@@ -25,7 +25,7 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-09-14, the application contains:
+As of 2026-09-15, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a minimal `cameras` table with `id`, `name`, `is_active`, and timestamps;
@@ -39,8 +39,9 @@ As of 2026-09-14, the application contains:
 - a protected Livewire Cameras administration page and sidebar navigation entry;
 - a read-only Cameras table with name ordering, active/inactive status display, and an empty state;
 - focused HTTP feature tests for access, ordered rendering, statuses, and the empty state;
-- an uncommitted Livewire Camera creation action that validates, persists, resets its name field, and reloads the list;
-- an uncommitted database-backed active/inactive Camera filter whose property-change reactivity and focused tests are still pending.
+- a Livewire Camera creation action that validates, persists, resets its name field, and reloads the list;
+- a reactive database-backed all/active/inactive Camera filter;
+- focused HTTP list tests, while creation and filter behavior still await focused Livewire component tests.
 
 There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 
