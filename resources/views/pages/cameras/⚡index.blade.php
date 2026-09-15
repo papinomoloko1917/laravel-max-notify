@@ -8,6 +8,12 @@ use Livewire\Component;
 new #[Title('Камеры')] class extends Component {
     public Collection $cameras;
 
+    public array $filterOptions = [
+        'all' => 'All',
+        'active' => 'Only active',
+        'inactive' => 'Only inactive ones',
+    ];
+
     public string $name = '';
 
     public bool $is_active = true;
@@ -58,15 +64,19 @@ new #[Title('Камеры')] class extends Component {
     </flux:heading>
 
     {{-- Фильтр --}}
+    <flux:label class="mt-5">{{ __('Filter') }}: </flux:label>
     <flux:dropdown>
-        <flux:button class="cursor-pointer" size="sm" icon:trailing="chevron-down">{{ __('Filter') }}</flux:button>
+
+        <flux:button class="cursor-pointer" size="xs" icon:trailing="chevron-down">
+            {{ __($filterOptions[$filter]) }}</flux:button>
 
         <flux:menu>
             <flux:menu.radio.group wire:model.live="filter">
-                <flux:menu.radio class="cursor-pointer" value="all">{{ __('By name') }}</flux:menu.radio>
-                <flux:menu.radio class="cursor-pointer" value="active">{{ __('Only active') }}</flux:menu.radio>
-                <flux:menu.radio class="cursor-pointer" value="inactive">{{ __('Only inactive ones') }}
-                </flux:menu.radio>
+                @foreach ($filterOptions as $key => $label)
+                    <flux:menu.radio class="cursor-pointer text-xs" value="{{ $key }}">
+                        {{ __($label) }}
+                    </flux:menu.radio>
+                @endforeach
             </flux:menu.radio.group>
         </flux:menu>
     </flux:dropdown>
@@ -102,7 +112,8 @@ new #[Title('Камеры')] class extends Component {
     {{-- Модалка --}}
     <div class="mt-3">
         <flux:modal.trigger name="create-camera">
-            <flux:button variant="primary" size="sm" class="cursor-pointer" icon:trailing="plus">Добавить
+            <flux:button variant="primary" size="sm" class="cursor-pointer" icon:trailing="plus">
+                {{ __('Add') }}
             </flux:button>
         </flux:modal.trigger>
 
