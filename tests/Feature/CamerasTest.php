@@ -160,4 +160,46 @@ class CamerasTest extends TestCase
             ->set('filter', 'active')
             ->assertSet('paginators.page', 1);
     }
+
+    public function test_editing_camera_loads_its_values(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->assertSet('editingCameraId', $camera->id)
+            ->assertSet('editName', $camera->name)
+            ->assertSet('editIsActive', $camera->is_active);
+    }
+
+    public function test_camera_can_be_updated(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editName', 'TEST')
+            ->set('editIsActive', false)
+            ->call('updateCamera');
+
+        $component->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+            'name' => 'TEST',
+            'is_active' => false,
+        ]);
+
+        $this->assertDatabaseMissing('cameras', [
+            'id' => $camera->id,
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+        ]);
+    }
 }

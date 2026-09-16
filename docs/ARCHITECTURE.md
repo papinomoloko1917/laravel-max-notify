@@ -25,7 +25,7 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-09-15, the application contains:
+As of 2026-09-16, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a minimal `cameras` table with `id`, `name`, `is_active`, and timestamps;
@@ -37,11 +37,12 @@ As of 2026-09-15, the application contains:
 - reciprocal, typed `BelongsToMany` relationships between Camera and Client;
 - feature tests for bidirectional relationship reads, duplicate-pair rejection, and deletion behavior;
 - a protected Livewire Cameras administration page and sidebar navigation entry;
-- a read-only Cameras table with name ordering, active/inactive status display, and an empty state;
+- a Cameras table with name ordering, active/inactive status display, an empty state, database-backed pagination, and Flux UI pagination controls;
 - focused HTTP feature tests for access, ordered rendering, statuses, and the empty state;
 - a Livewire Camera creation action that validates, persists, resets its name field, and reloads the list;
+- a Livewire Camera editing flow with separate edit state, a shared Flux modal, validated updates, and modal closing after success;
 - a reactive database-backed all/active/inactive Camera filter;
-- focused HTTP list tests, while creation and filter behavior still await focused Livewire component tests.
+- focused HTTP list tests and Livewire component tests for creation, validation, filtering, page navigation, filter-driven page reset, edit-state loading, and successful updating.
 
 There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
 

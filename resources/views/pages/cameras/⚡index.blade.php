@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Camera;
+use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -22,6 +23,23 @@ new #[Title('Камеры')] class extends Component {
 
     public string $filter = 'all';
 
+    public ?int $editingCameraId = null;
+
+    public string $editName = '';
+
+    public bool $editIsActive = true;
+
+    public function startEditing(int $cameraId): void
+    {
+        $targetCamera = Camera::findOrFail($cameraId);
+
+        $this->editingCameraId = $targetCamera->id;
+
+        $this->editName = $targetCamera->name;
+
+        $this->editIsActive = $targetCamera->is_active;
+    }
+
     public function createCamera(): void
     {
         $this->validate([
@@ -35,6 +53,23 @@ new #[Title('Камеры')] class extends Component {
         ]);
 
         $this->reset('name');
+    }
+
+    public function updateCamera(): void
+    {
+        $this->validate([
+            'editName' => ['required', 'string', 'max:255'],
+            'editIsActive' => ['boolean'],
+        ]);
+
+        $targetCamera = Camera::findOrFail($this->editingCameraId);
+
+        $targetCamera->update([
+            'name' => $this->editName,
+            'is_active' => $this->editIsActive,
+        ]);
+
+        Flux::modal('edit-camera')->close();
     }
 
     #[Computed]
@@ -84,6 +119,7 @@ new #[Title('Камеры')] class extends Component {
                     <flux:table.column>{{ __('Position') }}</flux:table.column>
                     <flux:table.column>{{ __('Camera name') }}</flux:table.column>
                     <flux:table.column>{{ __('Status') }}</flux:table.column>
+                    <flux:table.column>{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
@@ -94,6 +130,14 @@ new #[Title('Камеры')] class extends Component {
                             <flux:table.cell class="py-0">
                                 <flux:badge color="{{ $camera->is_active === true ? 'green' : 'red' }}" size="sm">
                                     {{ $camera->is_active === true ? __('Active') : __('Inactive') }}</flux:badge>
+                            </flux:table.cell>
+                            <flux:table.cell>
+                                {{-- триггер редактирования камеры --}}
+                                <flux:modal.trigger name="edit-camera">
+                                    <flux:button wire:click='startEditing({{ $camera->id }})'
+                                        tooltip="{{ __('Edit') }}" variant="subtle" class="cursor-pointer"
+                                        icon="pencil-square" size="sm" />
+                                </flux:modal.trigger>
                             </flux:table.cell>
                         </flux:table.row>
                     @endforeach
@@ -106,7 +150,7 @@ new #[Title('Камеры')] class extends Component {
             heading="{{ __('The list of cameras is empty...') }}" />
     @endif
 
-    {{-- Модалка --}}
+    {{-- Модалка добавления камеры --}}
     <div class="mt-3">
         <flux:modal.trigger name="create-camera">
             <flux:button variant="primary" size="sm" class="cursor-pointer" icon:trailing="plus">
@@ -142,5 +186,36 @@ new #[Title('Камеры')] class extends Component {
                 </div>
             </flux:modal>
         </form>
+
+        {{-- Модалка редактирования камеры --}}
+        <form wire:submit="updateCamera">
+            <flux:modal name="edit-camera">
+                <div class="space-y-6">
+                    <flux:heading size="lg">
+                        {{ __('Edit the camera') }}
+                    </flux:heading>
+
+                    <flux:input wire:model="editName" label="{{ __('Camera name') }}" />
+
+                    <flux:field variant="inline">
+                        <flux:checkbox wire:model="editIsActive" />
+                        <flux:label>{{ __('Activate the device') }}</flux:label>
+                    </flux:field>
+
+                    <div class="flex gap-3">
+                        <flux:spacer />
+                        <flux:button type="submit" variant="primary" class="cursor-pointer">
+                            {{ __('Save') }}
+                        </flux:button>
+                        <flux:modal.close>
+                            <flux:button class="cursor-pointer">
+                                {{ __('Close') }}
+                            </flux:button>
+                        </flux:modal.close>
+                    </div>
+                </div>
+            </flux:modal>
+        </form>
     </div>
+
 </div>
