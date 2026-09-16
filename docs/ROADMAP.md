@@ -13,11 +13,11 @@ understand the problem
 
 ## Current progress
 
-As of 2026-09-14:
+As of 2026-09-16:
 
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
-- Phase 8 is in progress: Camera creation and a reactive active-status list filter are pushed through `be88ed7`; filter presentation is polished locally in `6c4e712`, while focused Livewire tests remain.
+- Phase 8 is in progress through `80d73f0` plus an uncommitted reviewed slice: Camera creation, reactive status filtering, and Flux UI pagination are implemented and covered by focused Livewire tests.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Camera;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class CamerasTest extends TestCase
@@ -65,5 +66,98 @@ class CamerasTest extends TestCase
         $response->assertOk();
 
         $response->assertSee(__('The list of cameras is empty...'));
+    }
+
+    public function test_camera_can_be_created(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->set('name', 'Камера №1')
+            ->set('is_active', true)
+            ->call('createCamera');
+
+        $component->assertHasNoErrors();
+        $component->assertSet('name', '');
+        $component->assertSee('Камера №1');
+
+        $this->assertDatabaseHas('cameras', [
+            'name' => 'Камера №1',
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_camera_name_is_required(): void
+    {
+        $component = Livewire::test('pages::cameras.index')
+            ->set('name', '')
+            ->set('is_active', true)
+            ->call('createCamera');
+
+        $component->assertHasErrors(['name' => 'required']);
+
+        $this->assertDatabaseEmpty('cameras');
+    }
+
+    public function test_cameras_can_be_filtered_by_active_status(): void
+    {
+        Camera::factory()->create([
+            'name' => 'Активная камера',
+            'is_active' => true,
+        ]);
+
+        Camera::factory()->create([
+            'name' => 'Неактивная камера',
+            'is_active' => false,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->set('filter', 'active')
+            ->assertSee('Активная камера')
+            ->assertDontSee('Неактивная камера')
+            ->set('filter', 'inactive')
+            ->assertSee('Неактивная камера')
+            ->assertDontSee('Активная камера')
+            ->set('filter', 'all')
+            ->assertSee('Активная камера')
+            ->assertSee('Неактивная камера');
+    }
+
+    public function test_cameras_are_paginated_and_filter_resets_current_page(): void
+    {
+        $cameraNames = [
+            'Камера 01' => true,
+            'Камера 02' => true,
+            'Камера 03' => true,
+            'Камера 04' => true,
+            'Камера 05' => false,
+            'Камера 06' => false,
+            'Камера 07' => false,
+            'Камера 08' => false,
+            'Камера 09' => false,
+            'Камера 10' => false,
+            'Камера 11' => false,
+            'Камера 12' => false,
+            'Камера 13' => false,
+        ];
+
+        foreach ($cameraNames as $cameraName => $status) {
+            Camera::factory()->create([
+                'name' => $cameraName,
+                'is_active' => $status,
+            ]);
+        }
+
+        $component = Livewire::test('pages::cameras.index')
+            ->assertSee('Камера 01')
+            ->assertDontSee('Камера 11')
+            ->call('gotoPage', 2)
+            ->assertSee('Камера 11')
+            ->assertDontSee('Камера 01')
+            ->assertSet('paginators.page', 2)
+            ->set('filter', 'active')
+            ->assertSet('paginators.page', 1);
     }
 }

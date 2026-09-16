@@ -8,7 +8,7 @@ Keep this concise and update it after a meaningful learning block.
 
 Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI is in progress. Camera listing, creation, and the first active-status filter implementation are pushed through `be88ed7`; filter presentation is committed locally in `6c4e712`, and focused creation/filter tests are next.
+Phase 8 — Camera management UI is in progress. Camera listing, creation, active-status filtering, and Flux UI pagination are implemented; the completed uncommitted slice now has focused component coverage.
 
 ## Current state
 
@@ -32,7 +32,7 @@ Redis and Mailpit are not configured. No Dahua webhook, external API clients, qu
 
 ## Current learning task
 
-Finish the first Camera creation slice and the closely related active-status list filter with focused Livewire component tests.
+Review and commit the completed Camera creation/filter/pagination slice before starting the next Camera-management block.
 
 ## Completed work
 
@@ -53,20 +53,23 @@ Finish the first Camera creation slice and the closely related active-status lis
 - Added focused tests that verify reverse-input sorting, status placement, and the empty state.
 - Restricted User and Camera demonstration seeders to `local`.
 - Made the predictable development user repeatable and email-verified.
+- Added database-backed Camera pagination with `WithPagination`, a computed paginator, and Flux UI controls.
+- Added focused Livewire tests for successful creation, required-name validation, active-status filtering, page navigation, and filter-driven page reset.
 
 ## Current work after `be88ed7`
 
 - commit `6c4e712` centralizes filter options, renders them through a loop, shows the selected label in the trigger, translates the Add button, and replaces “By name” with “All”;
-- this checkpoint documentation synchronization follows that commit.
+- commit `80d73f0` synchronizes the Camera UI checkpoint documentation;
+- `resources/views/pages/cameras/⚡index.blade.php` contains an uncommitted pagination revision using `WithPagination`, a computed Camera paginator, and `paginate(10)`.
 
 ## Verification at checkpoint
 
-Checkpoint date: 2026-09-15.
+Checkpoint date: 2026-09-16.
 
-- `artisan test tests/Feature/CamerasTest.php`: 4 tests pass with 8 assertions;
+- `artisan test tests/Feature/CamerasTest.php`: 8 tests pass with 28 assertions;
 - `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
 - targeted Pint for the Cameras page, migrations, providers, bootstrap file, and affected factory passes;
-- the full suite runs 36 tests: 35 pass, one is skipped, and one is marked risky;
+- the full suite runs 40 tests: 39 pass and one is skipped; the known empty Starter Kit test is still marked risky;
 - `git diff --check` passes;
 - Sail is running and all migrations are applied;
 - `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
@@ -80,16 +83,24 @@ Current Camera creation/filter slice:
 - Pint now deliberately accepts anonymous-class opening braces on the same line, matching Blade Formatter 1.44.4;
 - Pint now also accepts Blade Formatter's `fn()` spacing for short arrow functions;
 - the Cameras page and all mechanically aligned PHP files pass targeted Pint;
-- creation-specific and filter-specific tests have not been added yet;
+- creation and filter behavior now have focused Livewire component tests;
 - the `all` option now displays the translated “All” label;
 - full-project Pint still reports only the six known generated Russian language-file issues.
 
+Current pagination attempt:
+
+- the computed `LengthAwarePaginator`, `WithPagination`, and filter page reset are in place;
+- the standalone Flux paginator now receives the computed paginator object through a valid bound prop;
+- all eight Cameras tests pass with 28 assertions;
+- the filter resets pagination to page one through `resetPage()`;
+- the computed method is public and has an explicit `LengthAwarePaginator` return type;
+- the UI uses Flux 2.19's standalone pagination component, while Laravel/Livewire own the paginator state and query;
+- targeted Pint passes.
+
 ## Next exact steps
 
-1. Add focused Livewire tests for successful Camera creation, validation failure, state reset, and immediate list refresh.
-2. Add focused tests for active, inactive, and unfiltered results.
-3. Finish the remaining small creation-form markup cleanup while keeping it separate from filter behavior.
-4. Verify and commit the completed Camera creation/filter test slice.
+1. Commit the reviewed Camera creation/filter/pagination slice and documentation.
+2. Start the next coherent Phase 8 block only after choosing its boundary (for example, Camera editing and deletion).
 
 ## Decisions made
 
@@ -117,24 +128,18 @@ These issues predate the current relationship work:
 
 ## Last session handoff
 
-Date: 2026-09-14.
+Date: 2026-09-16.
 
 Summary:
 
-- Phase 6 is committed and pushed in `48844e8`.
-- Phase 7 and the WIP Cameras UI commit `48f8ba2` are present on `main` and `origin/main`.
-- The read-only Cameras table now has focused ordering, status, and empty-state coverage.
-- Cameras tests pass with 4 tests and 8 assertions; targeted Pint passes.
-- Commit `35039fb` contains the list tests, local-only seeder safety, documentation, and the rule that Codex maintains project docs.
-- User and Camera seeders are local-only; the predictable development user is repeatable and verified.
-- Commit `be88ed7` contains the Camera creation form/action, the reactive database-backed status filter, translations, and formatter alignment.
-- The creation action and status filter are structurally complete, but their focused Livewire tests are still missing.
-- All 36 project tests run: 35 pass, one is skipped, and one is marked risky; the Cameras file contributes four passing tests and eight assertions.
-- The two existing Larastan baseline findings remain unchanged.
-- Blade Formatter and Pint are now aligned for anonymous classes and short arrow functions; affected files pass targeted formatting checks.
-- Commit `6c4e712` contains the reviewed filter-presentation cleanup; the unused incorrect accessor was removed before commit.
-- Local `main` is ahead of `origin/main`; push the filter-presentation and documentation commits before switching machines.
+- `main` and `origin/main` point to `80d73f0` before the current uncommitted slice;
+- the Cameras page now uses database-backed pagination and a standalone Flux UI paginator;
+- changing the status filter resets pagination to page one;
+- Camera creation, validation, filtering, and pagination have focused component coverage;
+- Cameras tests pass: 8 tests, 28 assertions; targeted Pint and `git diff --check` pass;
+- the full suite runs 40 tests: 39 pass and one is skipped; the pre-existing empty Starter Kit test remains risky;
+- application, tests, and checkpoint documentation are modified but not committed.
 
 Next action on another machine:
 
-- Push the local commits, then complete the focused Camera creation and status-filter tests.
+- commit and push the completed slice before switching machines, then choose the next Phase 8 Camera-management block.

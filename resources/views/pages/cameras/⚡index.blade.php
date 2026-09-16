@@ -1,12 +1,14 @@
 <?php
 
 use App\Models\Camera;
-use Illuminate\Support\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Камеры')] class extends Component {
-    public Collection $cameras;
+    use WithPagination;
 
     public array $filterOptions = [
         'all' => 'All',
@@ -33,27 +35,21 @@ new #[Title('Камеры')] class extends Component {
         ]);
 
         $this->reset('name');
-
-        $this->loadCameras();
     }
 
-    public function mount(): void
+    #[Computed]
+    public function cameras(): LengthAwarePaginator
     {
-        $this->loadCameras();
-    }
-
-    private function loadCameras(): void
-    {
-        $this->cameras = Camera::query()
+        return Camera::query()
             ->when($this->filter === 'active', fn($q) => $q->where('is_active', true))
             ->when($this->filter === 'inactive', fn($q) => $q->where('is_active', false))
             ->orderBy('name')
-            ->get();
+            ->paginate(10);
     }
 
     public function updatedFilter(): void
     {
-        $this->loadCameras();
+        $this->resetPage();
     }
 };
 ?>
@@ -104,6 +100,7 @@ new #[Title('Камеры')] class extends Component {
                 </flux:table.rows>
             </flux:table>
         </div>
+        <flux:pagination :paginator="$this->cameras" />
     @else
         <flux:callout class="mt-5" variant="secondary" icon="information-circle"
             heading="{{ __('The list of cameras is empty...') }}" />
