@@ -238,6 +238,9 @@ class CamerasTest extends TestCase
 
         Livewire::test('pages::cameras.index')
             ->call('startDeleting', $camera->id)
+            ->assertSee(__('Are you sure you want to delete the camera :name?', [
+                'name' => $camera->name,
+            ]))
             ->assertSet('deletingCameraId', $camera->id)
             ->assertSet('deletingCameraName', $camera->name);
 
@@ -245,6 +248,39 @@ class CamerasTest extends TestCase
             'id' => $camera->id,
             'name' => $camera->name,
             'is_active' => $camera->is_active,
+        ]);
+    }
+
+    public function test_camera_can_be_deleted(): void
+    {
+        $camera1 = Camera::factory()->create([
+            'name' => 'Тестовая камера №1',
+            'is_active' => true,
+        ]);
+
+        $camera2 = Camera::factory()->create([
+            'name' => 'Вторая тестовая камера',
+            'is_active' => false,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startDeleting', $camera1->id)
+            ->call('deleteCamera');
+
+        $this->assertDatabaseMissing('cameras', [
+            'id' => $camera1->id,
+            'name' => $camera1->name,
+            'is_active' => $camera1->is_active,
+        ]);
+
+        $component->assertSet('deletingCameraId', null);
+        $component->assertSet('deletingCameraName', '');
+        $component->assertDispatched('modal-close', name: 'delete-camera');
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera2->id,
+            'name' => $camera2->name,
+            'is_active' => $camera2->is_active,
         ]);
     }
 }

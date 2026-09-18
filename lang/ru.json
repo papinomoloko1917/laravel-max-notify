@@ -99,6 +99,8 @@
     "Camera name": "Название камеры",
     "Active": "Активна",
     "Inactive": "Неактивна",
+    "Are you sure you want to delete the camera :name?": "Вы уверены в том, что хотите удалить камеру :name?",
+    "Recovery will be impossible": "Восстановление будет невозможным",
     "Status": "Статус",
     "Disable 2FA": "Отключить 2FA",
     "Discard": "Отказаться",

@@ -13,11 +13,12 @@ understand the problem
 
 ## Current progress
 
-As of 2026-09-18:
+As of 2026-09-19:
 
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
-- Phase 8 is in progress through `02ce63c` plus an uncommitted deletion-preparation slice: creation, filtering, pagination, and editing are complete; Camera deletion selection is tested, while confirmation UI and actual deletion remain separate next steps.
+- Phase 8 is complete locally for the current minimal Camera schema: listing, creation, filtering, pagination, editing, and confirmed deletion are implemented and covered; the final deletion slice is ready to commit.
+- Phase 9 has not started.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.

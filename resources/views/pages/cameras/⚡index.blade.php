@@ -44,6 +44,15 @@ new #[Title('Камеры')] class extends Component {
         $this->editIsActive = $targetCamera->is_active;
     }
 
+    public function startDeleting(int $cameraId): void
+    {
+        $camera = Camera::findOrFail($cameraId);
+
+        $this->deletingCameraId = $camera->id;
+
+        $this->deletingCameraName = $camera->name;
+    }
+
     public function createCamera(): void
     {
         $this->validate([
@@ -76,13 +85,17 @@ new #[Title('Камеры')] class extends Component {
         Flux::modal('edit-camera')->close();
     }
 
-    public function startDeleting(int $cameraId): void
+    public function deleteCamera(): void
     {
-        $camera = Camera::findOrFail($cameraId);
+        $camera = Camera::findOrFail($this->deletingCameraId);
 
-        $this->deletingCameraId = $camera->id;
+        $camera->delete();
 
-        $this->deletingCameraName = $camera->name;
+        $this->deletingCameraId = null;
+
+        $this->deletingCameraName = '';
+
+        Flux::modal('delete-camera')->close();
     }
 
     #[Computed]
@@ -126,7 +139,7 @@ new #[Title('Камеры')] class extends Component {
     </flux:dropdown>
 
     @if ($this->cameras->isNotEmpty())
-        <div class="[--flux-bleed:1rem] mt-5">
+        <div class="mt-5 [--flux-bleed:1rem]">
             <flux:table bleed>
                 <flux:table.columns>
                     <flux:table.column>{{ __('Position') }}</flux:table.column>
@@ -150,6 +163,12 @@ new #[Title('Камеры')] class extends Component {
                                     <flux:button wire:click='startEditing({{ $camera->id }})'
                                         tooltip="{{ __('Edit') }}" variant="subtle" class="cursor-pointer"
                                         icon="pencil-square" size="sm" />
+                                </flux:modal.trigger>
+                                {{-- триггер удаления камеры --}}
+                                <flux:modal.trigger name="delete-camera">
+                                    <flux:button wire:click="startDeleting({{ $camera->id }})"
+                                        tooltip="{{ __('Delete') }}" variant="subtle" class="cursor-pointer"
+                                        icon="trash" size="sm" />
                                 </flux:modal.trigger>
                             </flux:table.cell>
                         </flux:table.row>
@@ -202,7 +221,7 @@ new #[Title('Камеры')] class extends Component {
 
         {{-- Модалка редактирования камеры --}}
         <form wire:submit="updateCamera">
-            <flux:modal name="edit-camera">
+            <flux:modal :closable="false" name="edit-camera">
                 <div class="space-y-6">
                     <flux:heading size="lg">
                         {{ __('Edit the camera') }}
@@ -223,6 +242,35 @@ new #[Title('Камеры')] class extends Component {
                         <flux:modal.close>
                             <flux:button class="cursor-pointer">
                                 {{ __('Close') }}
+                            </flux:button>
+                        </flux:modal.close>
+                    </div>
+                </div>
+            </flux:modal>
+        </form>
+
+        {{-- Модалка удаления камеры --}}
+        <form wire:submit="deleteCamera">
+            <flux:modal :closable="false" name="delete-camera">
+                <div class="space-y-6">
+                    <flux:text class="text-lg font-bold">
+                        {{ __('Are you sure you want to delete the camera :name?', [
+                            'name' => $deletingCameraName,
+                        ]) }}
+                    </flux:text>
+
+                    <flux:text class="text-lg">
+                        {{ __('Recovery will be impossible') }}
+                    </flux:text>
+
+                    <div class="flex gap-3">
+                        <flux:spacer />
+                        <flux:button type="submit" variant="danger" class="cursor-pointer">
+                            {{ __('Delete') }}
+                        </flux:button>
+                        <flux:modal.close>
+                            <flux:button class="cursor-pointer">
+                                {{ __('Cancel') }}
                             </flux:button>
                         </flux:modal.close>
                     </div>

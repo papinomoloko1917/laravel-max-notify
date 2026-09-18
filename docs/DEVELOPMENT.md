@@ -8,7 +8,7 @@ Keep this concise and update it after a meaningful learning block.
 
 Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI is in progress. Camera listing, creation, filtering, pagination, and editing are committed and pushed through `02ce63c`; safe Camera deletion preparation is implemented locally but not committed.
+Phase 8 — Camera management UI is complete locally for the current minimal Camera schema. Listing, creation, filtering, pagination, and editing are committed and pushed through `73fa772`; confirmed deletion is implemented, reviewed, and ready to commit.
 
 ## Current state
 
@@ -20,11 +20,11 @@ Phase 8 — Camera management UI is in progress. Camera listing, creation, filte
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `main` and `origin/main` point to `02ce63c` before the current uncommitted deletion-preparation slice;
+- local `main` and `origin/main` point to `73fa772`;
 - a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
 - feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
-- the Cameras page loads cameras ordered by name, creates and edits validated cameras, filters by active state, distinguishes statuses, paginates, and shows an empty state;
+- the Cameras page loads cameras ordered by name, creates, edits, and safely deletes cameras, filters by active state, distinguishes statuses, paginates, and shows an empty state;
 - Camera and User seeders provide manual development data only in the `local` environment;
 - the predictable development user is repeatable through `updateOrCreate()` and has a verified email.
 
@@ -32,7 +32,7 @@ Redis and Mailpit are not configured. No Dahua webhook, external API clients, qu
 
 ## Current learning task
 
-Continue the separate Camera deletion block by adding confirmation UI without performing deletion yet.
+Review, commit, and push the completed Camera deletion block and checkpoint documentation. Phase 9 (Client management UI) is the next learning phase.
 
 ## Completed work
 
@@ -59,6 +59,8 @@ Continue the separate Camera deletion block by adding confirmation UI without pe
 - Added focused tests for loading the selected Camera into edit state and successfully updating its name and active status.
 - Added a focused invalid-edit test proving that a required-name failure preserves the Camera and does not close the modal.
 - Started the deletion block with separate selected-Camera state and a tested `startDeleting()` action that does not delete anything.
+- Added a per-row destructive action and a shared non-closable confirmation modal that displays the selected Camera name.
+- Added confirmed Camera deletion, selection-state cleanup, modal closing, and focused tests proving that only the selected Camera is deleted.
 
 ## Recent Camera UI work
 
@@ -68,20 +70,21 @@ Continue the separate Camera deletion block by adding confirmation UI without pe
 - commit `20ac704` adds Camera editing UI and behavior, the `Edit the camera` translation, two focused component tests, and the prior checkpoint documentation; it is present on local and remote `main`.
 - commit `6daf730` adds invalid-edit coverage and refreshes the checkpoint documentation; it is present on local and remote `main`.
 - commit `02ce63c` completes the Camera editing checkpoint documentation; it is present on local and remote `main`.
-- the current uncommitted slice adds deletion-selection state, `startDeleting()`, and a test proving that selection loads the correct Camera without deleting it.
+- commit `73fa772` adds deletion-selection state, `startDeleting()`, and a test proving that selection loads the correct Camera without deleting it; it is present on local and remote `main`.
+- the current uncommitted slice completes confirmed Camera deletion, translated confirmation UI, and focused deletion coverage.
 
 ## Verification at checkpoint
 
-Checkpoint date: 2026-09-18.
+Checkpoint date: 2026-09-19.
 
-- `artisan test tests/Feature/CamerasTest.php`: 12 tests pass with 42 assertions;
+- `artisan test tests/Feature/CamerasTest.php`: 13 tests pass with 48 assertions;
 - `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
-- targeted Pint for the Cameras page, migrations, providers, bootstrap file, and affected factory passes;
-- the full suite runs 44 tests: 43 pass and one is skipped; the known empty Starter Kit test is still marked risky;
+- targeted Pint for the Cameras page and Cameras feature test passes;
+- the last full-suite run before this deletion slice had 44 tests: 43 passed and one was skipped; the full suite was not repeated for this checkpoint;
 - `git diff --check` passes;
 - Sail is running and all migrations are applied;
 - `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
-- Larastan still has only the two known baseline issues listed below.
+- the last Larastan run had only the two known baseline issues listed below; Larastan was not repeated for this checkpoint.
 
 Current Camera creation/filter slice:
 
@@ -99,7 +102,7 @@ Current pagination state:
 
 - the computed `LengthAwarePaginator`, `WithPagination`, and filter page reset are in place;
 - the standalone Flux paginator now receives the computed paginator object through a valid bound prop;
-- pagination remains covered as part of the 12 passing Cameras tests;
+- pagination remains covered as part of the 13 passing Cameras tests;
 - the filter resets pagination to page one through `resetPage()`;
 - the computed method is public and has an explicit `LengthAwarePaginator` return type;
 - the UI uses Flux 2.19's standalone pagination component, while Laravel/Livewire own the paginator state and query;
@@ -107,9 +110,9 @@ Current pagination state:
 
 ## Next exact steps
 
-1. Commit and push the current deletion-selection slice and checkpoint documentation before switching machines.
-2. Add a per-row Delete trigger and one shared confirmation modal showing `deletingCameraName`; include Cancel only.
-3. Do not implement actual deletion or an active confirmation button until that UI step is reviewed.
+1. Commit and push the completed Camera deletion implementation, translations, tests, and checkpoint documentation.
+2. On the next session/machine, pull `main` and verify the focused Camera tests.
+3. Begin Phase 9 by inspecting the existing Client model/schema and deciding the smallest protected Client administration shell before adding management behavior.
 
 ## Decisions made
 
@@ -119,7 +122,8 @@ Current pagination state:
 - Pivot timestamps record when an assignment is created or updated and are populated through `withTimestamps()` on both relationships.
 - `max_chat_id` currently uses PostgreSQL `bigint` and a PHP integer cast; this remains provisional until confirmed against the MAX API contract.
 - The Cameras page is an authenticated Livewire administration page; webhook traffic will remain outside Livewire.
-- Camera management is being introduced incrementally: listing, creation, filtering, pagination, and editing exist; deletion is now an isolated destructive-action block and has not yet been implemented.
+- Camera management for the current minimal schema includes listing, creation, filtering, pagination, editing, and confirmed deletion.
+- Camera deletion requires explicit selection and confirmation, displays the selected name, deletes only the selected record, clears selection state, and closes the modal.
 - Starter Kit Repository and Documentation links were removed because they were template examples, not application navigation.
 - Codex maintains checkpoint, roadmap, and architecture documentation after meaningful project steps; the learner continues to implement application code and configuration.
 - Demonstration User and Camera seeders run only in `local`; the fixed local user is updated or created and marked email-verified.
@@ -137,18 +141,19 @@ These issues predate the current relationship work:
 
 ## Last session handoff
 
-Date: 2026-09-18.
+Date: 2026-09-19.
 
 Summary:
 
-- local `main` and `origin/main` point to `02ce63c` before the current uncommitted slice;
-- Camera editing and invalid-edit coverage are committed and pushed; the editing block is complete.
-- Camera deletion preparation now stores the selected Camera ID/name and has a focused test proving the Camera remains in the database;
-- no delete method, Delete trigger, confirmation modal, or destructive UI action exists yet;
-- Cameras tests pass: 12 tests, 42 assertions; targeted Pint and `git diff --check` pass;
-- the full suite runs 44 tests with 43 passed and one skipped; the pre-existing empty Starter Kit test remains risky;
-- deletion-selection code, its test, and this checkpoint documentation are modified but not committed.
+- local `main` and `origin/main` point to `73fa772`;
+- Camera management for the current schema is complete locally through confirmed deletion;
+- deletion uses separate selection and confirmation actions, a translated warning containing the Camera name, a danger button, state cleanup, and programmatic modal closing;
+- focused deletion coverage proves the selected Camera is removed while another Camera remains;
+- Cameras tests pass: 13 tests, 48 assertions;
+- Model tests pass: 7 tests, 15 assertions;
+- targeted Pint and `git diff --check` pass;
+- the completed deletion slice and documentation are not committed yet.
 
 Next action on another machine:
 
-- pull the new checkpoint commit, then add the Delete trigger and non-destructive confirmation modal; do not implement deletion yet.
+- commit and push this checkpoint, then begin Phase 9 from “Next exact steps”.
