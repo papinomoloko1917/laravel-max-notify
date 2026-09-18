@@ -29,6 +29,10 @@ new #[Title('Камеры')] class extends Component {
 
     public bool $editIsActive = true;
 
+    public ?int $deletingCameraId = null;
+
+    public string $deletingCameraName = '';
+
     public function startEditing(int $cameraId): void
     {
         $targetCamera = Camera::findOrFail($cameraId);
@@ -70,6 +74,15 @@ new #[Title('Камеры')] class extends Component {
         ]);
 
         Flux::modal('edit-camera')->close();
+    }
+
+    public function startDeleting(int $cameraId): void
+    {
+        $camera = Camera::findOrFail($cameraId);
+
+        $this->deletingCameraId = $camera->id;
+
+        $this->deletingCameraName = $camera->name;
     }
 
     #[Computed]

@@ -8,7 +8,7 @@ Keep this concise and update it after a meaningful learning block.
 
 Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI is in progress. Camera listing, creation, active-status filtering, Flux UI pagination, Camera editing, and invalid-edit coverage are committed and pushed through `6daf730`.
+Phase 8 — Camera management UI is in progress. Camera listing, creation, filtering, pagination, and editing are committed and pushed through `02ce63c`; safe Camera deletion preparation is implemented locally but not committed.
 
 ## Current state
 
@@ -20,7 +20,7 @@ Phase 8 — Camera management UI is in progress. Camera listing, creation, activ
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `main` and `origin/main` point to `6daf730` before this documentation correction;
+- local `main` and `origin/main` point to `02ce63c` before the current uncommitted deletion-preparation slice;
 - a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
 - feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
@@ -32,7 +32,7 @@ Redis and Mailpit are not configured. No Dahua webhook, external API clients, qu
 
 ## Current learning task
 
-The Camera editing block is complete. The next learning block should treat Camera deletion separately because it is destructive.
+Continue the separate Camera deletion block by adding confirmation UI without performing deletion yet.
 
 ## Completed work
 
@@ -58,6 +58,7 @@ The Camera editing block is complete. The next learning block should treat Camer
 - Added separate Camera edit state, a row action, a Flux edit modal, validated updating, and automatic modal closing after a successful update.
 - Added focused tests for loading the selected Camera into edit state and successfully updating its name and active status.
 - Added a focused invalid-edit test proving that a required-name failure preserves the Camera and does not close the modal.
+- Started the deletion block with separate selected-Camera state and a tested `startDeleting()` action that does not delete anything.
 
 ## Recent Camera UI work
 
@@ -66,15 +67,17 @@ The Camera editing block is complete. The next learning block should treat Camer
 - commit `08d9e2e` adds database-backed pagination, the Flux paginator, and focused creation/filter/pagination tests; it is present on local and remote `main`.
 - commit `20ac704` adds Camera editing UI and behavior, the `Edit the camera` translation, two focused component tests, and the prior checkpoint documentation; it is present on local and remote `main`.
 - commit `6daf730` adds invalid-edit coverage and refreshes the checkpoint documentation; it is present on local and remote `main`.
+- commit `02ce63c` completes the Camera editing checkpoint documentation; it is present on local and remote `main`.
+- the current uncommitted slice adds deletion-selection state, `startDeleting()`, and a test proving that selection loads the correct Camera without deleting it.
 
 ## Verification at checkpoint
 
 Checkpoint date: 2026-09-18.
 
-- `artisan test tests/Feature/CamerasTest.php`: 11 tests pass with 39 assertions;
+- `artisan test tests/Feature/CamerasTest.php`: 12 tests pass with 42 assertions;
 - `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
 - targeted Pint for the Cameras page, migrations, providers, bootstrap file, and affected factory passes;
-- the full suite runs 43 tests: 42 pass and one is skipped; the known empty Starter Kit test is still marked risky;
+- the full suite runs 44 tests: 43 pass and one is skipped; the known empty Starter Kit test is still marked risky;
 - `git diff --check` passes;
 - Sail is running and all migrations are applied;
 - `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
@@ -96,7 +99,7 @@ Current pagination state:
 
 - the computed `LengthAwarePaginator`, `WithPagination`, and filter page reset are in place;
 - the standalone Flux paginator now receives the computed paginator object through a valid bound prop;
-- pagination remains covered as part of the 10 passing Cameras tests;
+- pagination remains covered as part of the 12 passing Cameras tests;
 - the filter resets pagination to page one through `resetPage()`;
 - the computed method is public and has an explicit `LengthAwarePaginator` return type;
 - the UI uses Flux 2.19's standalone pagination component, while Laravel/Livewire own the paginator state and query;
@@ -104,8 +107,9 @@ Current pagination state:
 
 ## Next exact steps
 
-1. Start the Camera deletion block with explicit confirmation and focused tests.
-2. Keep deletion separate from unrelated Camera fields or future integration configuration.
+1. Commit and push the current deletion-selection slice and checkpoint documentation before switching machines.
+2. Add a per-row Delete trigger and one shared confirmation modal showing `deletingCameraName`; include Cancel only.
+3. Do not implement actual deletion or an active confirmation button until that UI step is reviewed.
 
 ## Decisions made
 
@@ -115,7 +119,7 @@ Current pagination state:
 - Pivot timestamps record when an assignment is created or updated and are populated through `withTimestamps()` on both relationships.
 - `max_chat_id` currently uses PostgreSQL `bigint` and a PHP integer cast; this remains provisional until confirmed against the MAX API contract.
 - The Cameras page is an authenticated Livewire administration page; webhook traffic will remain outside Livewire.
-- Camera management is being introduced incrementally: listing, creation, filtering, pagination, and editing exist; deletion remains postponed to a separate destructive-action block.
+- Camera management is being introduced incrementally: listing, creation, filtering, pagination, and editing exist; deletion is now an isolated destructive-action block and has not yet been implemented.
 - Starter Kit Repository and Documentation links were removed because they were template examples, not application navigation.
 - Codex maintains checkpoint, roadmap, and architecture documentation after meaningful project steps; the learner continues to implement application code and configuration.
 - Demonstration User and Camera seeders run only in `local`; the fixed local user is updated or created and marked email-verified.
@@ -137,17 +141,14 @@ Date: 2026-09-18.
 
 Summary:
 
-- local `main` and `origin/main` point to `6daf730` before this documentation correction;
-- the Cameras page now uses database-backed pagination and a standalone Flux UI paginator;
-- changing the status filter resets pagination to page one;
-- Camera creation, validation, filtering, and pagination have focused component coverage;
-- Camera editing uses separate state, a per-row action, a Flux modal, validated updates, and closes the modal after success;
-- focused tests cover loading edit state and a successful update;
-- invalid-edit coverage proves that validation preserves the stored Camera and leaves the modal open;
-- Cameras tests pass: 11 tests, 39 assertions; targeted Pint and `git diff --check` pass;
-- the full suite runs 43 tests: 42 pass and one is skipped; the pre-existing empty Starter Kit test remains risky;
+- local `main` and `origin/main` point to `02ce63c` before the current uncommitted slice;
 - Camera editing and invalid-edit coverage are committed and pushed; the editing block is complete.
+- Camera deletion preparation now stores the selected Camera ID/name and has a focused test proving the Camera remains in the database;
+- no delete method, Delete trigger, confirmation modal, or destructive UI action exists yet;
+- Cameras tests pass: 12 tests, 42 assertions; targeted Pint and `git diff --check` pass;
+- the full suite runs 44 tests with 43 passed and one skipped; the pre-existing empty Starter Kit test remains risky;
+- deletion-selection code, its test, and this checkpoint documentation are modified but not committed.
 
 Next action on another machine:
 
-- continue with Camera deletion as a separate destructive-action learning block.
+- pull the new checkpoint commit, then add the Delete trigger and non-destructive confirmation modal; do not implement deletion yet.

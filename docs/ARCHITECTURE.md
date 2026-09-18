@@ -41,6 +41,7 @@ As of 2026-09-18, the application contains:
 - focused HTTP feature tests for access, ordered rendering, statuses, and the empty state;
 - a Livewire Camera creation action that validates, persists, resets its name field, and reloads the list;
 - a Livewire Camera editing flow with separate edit state, a shared Flux modal, validated updates, and modal closing after success;
+- an in-progress deletion flow that currently only loads the selected Camera ID/name for future confirmation and does not delete records;
 - a reactive database-backed all/active/inactive Camera filter;
 - focused HTTP list tests and Livewire component tests for creation, validation, filtering, page navigation, filter-driven page reset, edit-state loading, successful updating, and rejected invalid edits.
 

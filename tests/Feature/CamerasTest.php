@@ -228,4 +228,23 @@ class CamerasTest extends TestCase
 
         $component->assertNotDispatched('modal-close');
     }
+
+    public function test_selecting_camera_for_deletion_loads_its_values(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера №1',
+            'is_active' => true,
+        ]);
+
+        Livewire::test('pages::cameras.index')
+            ->call('startDeleting', $camera->id)
+            ->assertSet('deletingCameraId', $camera->id)
+            ->assertSet('deletingCameraName', $camera->name);
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+            'name' => $camera->name,
+            'is_active' => $camera->is_active,
+        ]);
+    }
 }
