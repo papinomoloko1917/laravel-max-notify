@@ -13,11 +13,11 @@ understand the problem
 
 ## Current progress
 
-As of 2026-09-16:
+As of 2026-09-18:
 
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
-- Phase 8 is in progress through `08d9e2e` plus an uncommitted Camera editing slice: creation, reactive filtering, pagination, and editing are implemented; edit validation coverage and final review remain.
+- Phase 8 is in progress through `20ac704` plus an uncommitted validation test: creation, reactive filtering, pagination, and editing are implemented; only manual edit-modal verification and the follow-up commit remain in this block.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.

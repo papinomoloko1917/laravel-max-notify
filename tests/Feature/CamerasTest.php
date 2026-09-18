@@ -202,4 +202,30 @@ class CamerasTest extends TestCase
             'is_active' => true,
         ]);
     }
+
+    public function test_camera_name_is_required_when_updating(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера №1',
+            'is_active' => true,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editName', '')
+            ->set('editIsActive', false)
+            ->call('updateCamera');
+
+        $component->assertHasErrors([
+            'editName' => 'required',
+        ]);
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+            'name' => 'Тестовая камера №1',
+            'is_active' => true,
+        ]);
+
+        $component->assertNotDispatched('modal-close');
+    }
 }

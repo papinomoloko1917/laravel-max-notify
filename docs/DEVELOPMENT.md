@@ -8,7 +8,7 @@ Keep this concise and update it after a meaningful learning block.
 
 Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI is in progress. Camera listing, creation, active-status filtering, and Flux UI pagination are committed and pushed through `08d9e2e`; Camera editing is implemented locally and awaits its validation test and commit.
+Phase 8 — Camera management UI is in progress. Camera listing, creation, active-status filtering, Flux UI pagination, and Camera editing are committed and pushed through `20ac704`; invalid-edit coverage is complete locally and awaits manual verification and commit.
 
 ## Current state
 
@@ -20,7 +20,7 @@ Phase 8 — Camera management UI is in progress. Camera listing, creation, activ
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `main` and `origin/main` point to `08d9e2e`; Camera editing, its translation and tests, plus refreshed documentation are currently uncommitted;
+- local `main` and `origin/main` point to `20ac704`; the invalid-edit test and refreshed checkpoint documentation are currently uncommitted;
 - a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
 - feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
@@ -32,7 +32,7 @@ Redis and Mailpit are not configured. No Dahua webhook, external API clients, qu
 
 ## Current learning task
 
-Finish the Camera editing block with invalid-input coverage, manual browser verification, review, and a logical commit.
+Manually verify the Camera editing modal, then commit the completed validation-coverage follow-up.
 
 ## Completed work
 
@@ -57,22 +57,24 @@ Finish the Camera editing block with invalid-input coverage, manual browser veri
 - Added focused Livewire tests for successful creation, required-name validation, active-status filtering, page navigation, and filter-driven page reset.
 - Added separate Camera edit state, a row action, a Flux edit modal, validated updating, and automatic modal closing after a successful update.
 - Added focused tests for loading the selected Camera into edit state and successfully updating its name and active status.
+- Added a focused invalid-edit test proving that a required-name failure preserves the Camera and does not close the modal.
 
 ## Recent Camera UI work
 
 - commit `6c4e712` centralizes filter options, renders them through a loop, shows the selected label in the trigger, translates the Add button, and replaces “By name” with “All”;
 - commit `80d73f0` synchronizes the Camera UI checkpoint documentation;
 - commit `08d9e2e` adds database-backed pagination, the Flux paginator, and focused creation/filter/pagination tests; it is present on local and remote `main`.
-- the current uncommitted slice adds Camera editing UI and behavior, the `Edit the camera` translation, and two focused component tests.
+- commit `20ac704` adds Camera editing UI and behavior, the `Edit the camera` translation, two focused component tests, and the prior checkpoint documentation; it is present on local and remote `main`.
+- the current uncommitted follow-up adds invalid-edit coverage and refreshes the checkpoint documentation.
 
 ## Verification at checkpoint
 
-Checkpoint date: 2026-09-16.
+Checkpoint date: 2026-09-18.
 
-- `artisan test tests/Feature/CamerasTest.php`: 10 tests pass with 34 assertions;
+- `artisan test tests/Feature/CamerasTest.php`: 11 tests pass with 39 assertions;
 - `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
 - targeted Pint for the Cameras page, migrations, providers, bootstrap file, and affected factory passes;
-- the full suite runs 42 tests: 41 pass and one is skipped; the known empty Starter Kit test is still marked risky;
+- the full suite runs 43 tests: 42 pass and one is skipped; the known empty Starter Kit test is still marked risky;
 - `git diff --check` passes;
 - Sail is running and all migrations are applied;
 - `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
@@ -102,9 +104,8 @@ Current pagination state:
 
 ## Next exact steps
 
-1. Add `test_camera_name_is_required_when_updating` and prove that invalid input leaves the Camera unchanged.
-2. Manually verify that successful editing closes the modal and invalid editing keeps it open with an error.
-3. Run focused and full verification, review the diff, and commit the Camera editing slice.
+1. Manually verify that successful editing closes the modal and invalid editing keeps it open with an error.
+2. Review and commit the validation-coverage follow-up and refreshed documentation.
 
 ## Decisions made
 
@@ -132,20 +133,21 @@ These issues predate the current relationship work:
 
 ## Last session handoff
 
-Date: 2026-09-16.
+Date: 2026-09-18.
 
 Summary:
 
-- local `main` and `origin/main` point to `08d9e2e`;
+- local `main` and `origin/main` point to `20ac704`;
 - the Cameras page now uses database-backed pagination and a standalone Flux UI paginator;
 - changing the status filter resets pagination to page one;
 - Camera creation, validation, filtering, and pagination have focused component coverage;
 - Camera editing uses separate state, a per-row action, a Flux modal, validated updates, and closes the modal after success;
 - focused tests cover loading edit state and a successful update;
-- Cameras tests pass: 10 tests, 34 assertions; targeted Pint and `git diff --check` pass;
-- the full suite runs 42 tests: 41 pass and one is skipped; the pre-existing empty Starter Kit test remains risky;
-- Camera editing, its translation, tests, and checkpoint documentation are modified but not committed.
+- invalid-edit coverage proves that validation preserves the stored Camera and leaves the modal open;
+- Cameras tests pass: 11 tests, 39 assertions; targeted Pint and `git diff --check` pass;
+- the full suite runs 43 tests: 42 pass and one is skipped; the pre-existing empty Starter Kit test remains risky;
+- Camera editing is committed and pushed; the validation test and refreshed documentation are modified but not committed.
 
 Next action on another machine:
 
-- add the invalid-edit test, manually verify modal behavior, then review and commit the Camera editing block.
+- manually verify modal behavior, then review and commit the validation-coverage follow-up.
