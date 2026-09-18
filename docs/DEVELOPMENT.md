@@ -8,7 +8,7 @@ Keep this concise and update it after a meaningful learning block.
 
 Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI is in progress. Camera listing, creation, active-status filtering, Flux UI pagination, and Camera editing are committed and pushed through `20ac704`; invalid-edit coverage is complete locally and awaits manual verification and commit.
+Phase 8 — Camera management UI is in progress. Camera listing, creation, active-status filtering, Flux UI pagination, Camera editing, and invalid-edit coverage are committed and pushed through `6daf730`.
 
 ## Current state
 
@@ -20,7 +20,7 @@ Phase 8 — Camera management UI is in progress. Camera listing, creation, activ
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `main` and `origin/main` point to `20ac704`; the invalid-edit test and refreshed checkpoint documentation are currently uncommitted;
+- local `main` and `origin/main` point to `6daf730` before this documentation correction;
 - a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
 - feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
@@ -32,7 +32,7 @@ Redis and Mailpit are not configured. No Dahua webhook, external API clients, qu
 
 ## Current learning task
 
-Manually verify the Camera editing modal, then commit the completed validation-coverage follow-up.
+The Camera editing block is complete. The next learning block should treat Camera deletion separately because it is destructive.
 
 ## Completed work
 
@@ -65,7 +65,7 @@ Manually verify the Camera editing modal, then commit the completed validation-c
 - commit `80d73f0` synchronizes the Camera UI checkpoint documentation;
 - commit `08d9e2e` adds database-backed pagination, the Flux paginator, and focused creation/filter/pagination tests; it is present on local and remote `main`.
 - commit `20ac704` adds Camera editing UI and behavior, the `Edit the camera` translation, two focused component tests, and the prior checkpoint documentation; it is present on local and remote `main`.
-- the current uncommitted follow-up adds invalid-edit coverage and refreshes the checkpoint documentation.
+- commit `6daf730` adds invalid-edit coverage and refreshes the checkpoint documentation; it is present on local and remote `main`.
 
 ## Verification at checkpoint
 
@@ -104,8 +104,8 @@ Current pagination state:
 
 ## Next exact steps
 
-1. Manually verify that successful editing closes the modal and invalid editing keeps it open with an error.
-2. Review and commit the validation-coverage follow-up and refreshed documentation.
+1. Start the Camera deletion block with explicit confirmation and focused tests.
+2. Keep deletion separate from unrelated Camera fields or future integration configuration.
 
 ## Decisions made
 
@@ -137,7 +137,7 @@ Date: 2026-09-18.
 
 Summary:
 
-- local `main` and `origin/main` point to `20ac704`;
+- local `main` and `origin/main` point to `6daf730` before this documentation correction;
 - the Cameras page now uses database-backed pagination and a standalone Flux UI paginator;
 - changing the status filter resets pagination to page one;
 - Camera creation, validation, filtering, and pagination have focused component coverage;
@@ -146,8 +146,8 @@ Summary:
 - invalid-edit coverage proves that validation preserves the stored Camera and leaves the modal open;
 - Cameras tests pass: 11 tests, 39 assertions; targeted Pint and `git diff --check` pass;
 - the full suite runs 43 tests: 42 pass and one is skipped; the pre-existing empty Starter Kit test remains risky;
-- Camera editing is committed and pushed; the validation test and refreshed documentation are modified but not committed.
+- Camera editing and invalid-edit coverage are committed and pushed; the editing block is complete.
 
 Next action on another machine:
 
-- manually verify modal behavior, then review and commit the validation-coverage follow-up.
+- continue with Camera deletion as a separate destructive-action learning block.
