@@ -23,6 +23,10 @@
                     :current="request()->routeIs('cameras.index')" wire:navigate>
                     {{ __('Cameras') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="users" :href="route('clients.index')"
+                    :current="request()->routeIs('clients.index')" wire:navigate>
+                    {{ __('Clients') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 

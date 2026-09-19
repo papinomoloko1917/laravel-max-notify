@@ -8,7 +8,9 @@ Keep this concise and update it after a meaningful learning block.
 
 Phase 7 — Authentication and admin shell is complete and committed.
 
-Phase 8 — Camera management UI is complete locally for the current minimal Camera schema. Listing, creation, filtering, pagination, and editing are committed and pushed through `73fa772`; confirmed deletion is implemented, reviewed, and ready to commit.
+Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
+
+Phase 9 — Client management UI is in progress. The protected administration shell and paginated read-only Client list are complete locally and ready to commit.
 
 ## Current state
 
@@ -20,19 +22,22 @@ Phase 8 — Camera management UI is complete locally for the current minimal Cam
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `main` and `origin/main` point to `73fa772`;
+- local `main` and `origin/main` point to `cb1adf0`;
 - a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
 - feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
 - the Cameras page loads cameras ordered by name, creates, edits, and safely deletes cameras, filters by active state, distinguishes statuses, paginates, and shows an empty state;
+- a protected `/clients` Livewire page, sidebar entry, paginated name-ordered list, MAX chat ID display, assigned-Camera counts, and empty state are implemented locally;
+- focused Client page tests cover guest/authenticated access, ordering, chat IDs, Camera counts, and the empty state;
 - Camera and User seeders provide manual development data only in the `local` environment;
+- a local-only Client seeder provides development list data;
 - the predictable development user is repeatable through `updateOrCreate()` and has a verified email.
 
 Redis and Mailpit are not configured. No Dahua webhook, external API clients, queue jobs, duplicate protection, or event journal exists yet.
 
 ## Current learning task
 
-Review, commit, and push the completed Camera deletion block and checkpoint documentation. Phase 9 (Client management UI) is the next learning phase.
+Review, commit, and push the completed read-only Client list slice. Client creation and its validation are the next Phase 9 learning block.
 
 ## Completed work
 
@@ -61,6 +66,9 @@ Review, commit, and push the completed Camera deletion block and checkpoint docu
 - Started the deletion block with separate selected-Camera state and a tested `startDeleting()` action that does not delete anything.
 - Added a per-row destructive action and a shared non-closable confirmation modal that displays the selected Camera name.
 - Added confirmed Camera deletion, selection-state cleanup, modal closing, and focused tests proving that only the selected Camera is deleted.
+- Added a protected Clients Livewire route/page and sidebar navigation entry.
+- Added a paginated, name-ordered Client list with MAX chat IDs and efficient assigned-Camera counts through `withCount('cameras')`.
+- Added Client empty-state UI, local development seeding, and four focused feature tests.
 
 ## Recent Camera UI work
 
@@ -71,7 +79,13 @@ Review, commit, and push the completed Camera deletion block and checkpoint docu
 - commit `6daf730` adds invalid-edit coverage and refreshes the checkpoint documentation; it is present on local and remote `main`.
 - commit `02ce63c` completes the Camera editing checkpoint documentation; it is present on local and remote `main`.
 - commit `73fa772` adds deletion-selection state, `startDeleting()`, and a test proving that selection loads the correct Camera without deleting it; it is present on local and remote `main`.
-- the current uncommitted slice completes confirmed Camera deletion, translated confirmation UI, and focused deletion coverage.
+- commit `cb1adf0` completes confirmed Camera deletion, translated confirmation UI, focused deletion coverage, and the Phase 8 checkpoint documentation; it is present on local and remote `main`.
+
+## Current Client UI work
+
+- the first Phase 9 slice is uncommitted;
+- it adds the protected Clients shell, navigation, translations, pagination, `withCount('cameras')`, empty state, local Client seeding, and focused tests;
+- unrelated mechanical formatting changes remain present in six generated `lang/ru/*.php` files and should not be mixed into the feature commit unless intentionally reviewed as a separate change.
 
 ## Verification at checkpoint
 
@@ -85,6 +99,14 @@ Checkpoint date: 2026-09-19.
 - Sail is running and all migrations are applied;
 - `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
 - the last Larastan run had only the two known baseline issues listed below; Larastan was not repeated for this checkpoint.
+
+Current Client list state:
+
+- `artisan test tests/Feature/ClientsTest.php`: 4 tests pass with 7 assertions;
+- `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
+- targeted Pint for the route, Clients page/test, and affected seeders passes;
+- `git diff --check` passes;
+- the list query uses `withCount('cameras')`, orders by name, and paginates by 10 records.
 
 Current Camera creation/filter slice:
 
@@ -110,9 +132,9 @@ Current pagination state:
 
 ## Next exact steps
 
-1. Commit and push the completed Camera deletion implementation, translations, tests, and checkpoint documentation.
-2. On the next session/machine, pull `main` and verify the focused Camera tests.
-3. Begin Phase 9 by inspecting the existing Client model/schema and deciding the smallest protected Client administration shell before adding management behavior.
+1. Commit the Clients page/list feature without the unrelated six generated Russian PHP translation-file formatting changes.
+2. Optionally commit the local Client seeder separately from the UI feature.
+3. Push the checkpoint, then begin Client creation with validation for `name` and unique `max_chat_id`.
 
 ## Decisions made
 
@@ -124,6 +146,7 @@ Current pagination state:
 - The Cameras page is an authenticated Livewire administration page; webhook traffic will remain outside Livewire.
 - Camera management for the current minimal schema includes listing, creation, filtering, pagination, editing, and confirmed deletion.
 - Camera deletion requires explicit selection and confirmation, displays the selected name, deletes only the selected record, clears selection state, and closes the modal.
+- Client list Camera totals are calculated in PostgreSQL through `withCount('cameras')` rather than loading every related Camera model.
 - Starter Kit Repository and Documentation links were removed because they were template examples, not application navigation.
 - Codex maintains checkpoint, roadmap, and architecture documentation after meaningful project steps; the learner continues to implement application code and configuration.
 - Demonstration User and Camera seeders run only in `local`; the fixed local user is updated or created and marked email-verified.
@@ -145,15 +168,20 @@ Date: 2026-09-19.
 
 Summary:
 
-- local `main` and `origin/main` point to `73fa772`;
-- Camera management for the current schema is complete locally through confirmed deletion;
+- local `main` and `origin/main` point to `cb1adf0`;
+- Camera management for the current schema is complete, committed, and pushed through confirmed deletion;
 - deletion uses separate selection and confirmation actions, a translated warning containing the Camera name, a danger button, state cleanup, and programmatic modal closing;
 - focused deletion coverage proves the selected Camera is removed while another Camera remains;
 - Cameras tests pass: 13 tests, 48 assertions;
 - Model tests pass: 7 tests, 15 assertions;
 - targeted Pint and `git diff --check` pass;
-- the completed deletion slice and documentation are not committed yet.
+- Phase 9 application code has not started yet.
+- the first Phase 9 Client list slice is complete locally and uncommitted;
+- Clients tests pass: 4 tests, 7 assertions;
+- Model tests pass: 7 tests, 15 assertions;
+- targeted Pint and `git diff --check` pass;
+- six unrelated generated Russian PHP language files remain modified and are outside the Client feature scope.
 
 Next action on another machine:
 
-- commit and push this checkpoint, then begin Phase 9 from “Next exact steps”.
+- commit and push the first Client UI slice, then continue with Client creation from “Next exact steps”.
