@@ -105,6 +105,8 @@
     "Clients": "Клиенты",
     "The list of clients is empty...": "Список клиентов пуст...",
     "MAX chat id": "MAX chat id",
+    "Adding a client": "Добавьте клиента",
+    "Create a new client.": "Создайте нового клиента",
     "Disable 2FA": "Отключить 2FA",
     "Discard": "Отказаться",
     "Client name": "Имя клиента",

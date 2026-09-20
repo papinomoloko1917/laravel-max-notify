@@ -10,7 +10,7 @@ Phase 7 — Authentication and admin shell is complete and committed.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The protected administration shell and paginated read-only Client list are complete locally and ready to commit.
+Phase 9 — Client management UI is in progress. The read-only list is committed and pushed through `2107f1e`; Client creation and most of its validation coverage are implemented locally but not committed.
 
 ## Current state
 
@@ -29,6 +29,7 @@ Phase 9 — Client management UI is in progress. The protected administration sh
 - the Cameras page loads cameras ordered by name, creates, edits, and safely deletes cameras, filters by active state, distinguishes statuses, paginates, and shows an empty state;
 - a protected `/clients` Livewire page, sidebar entry, paginated name-ordered list, MAX chat ID display, assigned-Camera counts, and empty state are implemented locally;
 - focused Client page tests cover guest/authenticated access, ordering, chat IDs, Camera counts, and the empty state;
+- a local Client creation modal validates `name` and unique integer `max_chat_id`, persists the Client, resets both fields, and intentionally remains open after success;
 - Camera and User seeders provide manual development data only in the `local` environment;
 - a local-only Client seeder provides development list data;
 - the predictable development user is repeatable through `updateOrCreate()` and has a verified email.
@@ -37,7 +38,7 @@ Redis and Mailpit are not configured. No Dahua webhook, external API clients, qu
 
 ## Current learning task
 
-Review, commit, and push the completed read-only Client list slice. Client creation and its validation are the next Phase 9 learning block.
+Finish Client creation validation coverage by adding the missing duplicate `max_chat_id` test, then run the focused checks and review the block before committing. Editing, deletion, and Camera assignment remain later blocks.
 
 ## Completed work
 
@@ -83,9 +84,10 @@ Review, commit, and push the completed read-only Client list slice. Client creat
 
 ## Current Client UI work
 
-- the first Phase 9 slice is uncommitted;
-- it adds the protected Clients shell, navigation, translations, pagination, `withCount('cameras')`, empty state, local Client seeding, and focused tests;
-- unrelated mechanical formatting changes remain present in six generated `lang/ru/*.php` files and should not be mixed into the feature commit unless intentionally reviewed as a separate change.
+- commit `2107f1e` adds the protected Clients shell, navigation, translations, pagination, `withCount('cameras')`, empty state, local Client seeding, focused tests, and intentional formatting of the generated Russian PHP language files; it is present on local and remote `main`.
+- the current uncommitted slice adds Client creation state, a Flux flyout form, required/integer/unique validation, persistence, field reset, and two new translations;
+- local component tests cover successful creation, required fields, and a non-integer MAX chat ID;
+- the duplicate MAX chat ID (`unique`) test is still missing.
 
 ## Verification at checkpoint
 
@@ -107,6 +109,14 @@ Current Client list state:
 - targeted Pint for the route, Clients page/test, and affected seeders passes;
 - `git diff --check` passes;
 - the list query uses `withCount('cameras')`, orders by name, and paginates by 10 records.
+
+Current Client creation state (uncommitted):
+
+- the implementation deliberately keeps the create modal open after a successful save and resets the two form fields;
+- seven Client feature-test methods now exist: four previously verified list/access tests plus creation, required-field, and integer-validation tests;
+- the current uncommitted test set was not run at this checkpoint because Sail/Docker was unavailable to Codex;
+- `git diff --check` passes;
+- uniqueness validation is implemented in the component but its friendly validation behavior is not yet covered by a component test.
 
 Current Camera creation/filter slice:
 
@@ -132,9 +142,9 @@ Current pagination state:
 
 ## Next exact steps
 
-1. Commit the Clients page/list feature without the unrelated six generated Russian PHP translation-file formatting changes.
-2. Optionally commit the local Client seeder separately from the UI feature.
-3. Push the checkpoint, then begin Client creation with validation for `name` and unique `max_chat_id`.
+1. Add a component test that creates an existing Client, attempts another Client with the same `max_chat_id`, expects the `unique` validation error, and proves only the original record remains.
+2. Run the focused Clients and Model tests, targeted Pint, and `git diff --check`.
+3. Review, commit, and push the completed Client creation block before starting editing.
 
 ## Decisions made
 
@@ -147,6 +157,7 @@ Current pagination state:
 - Camera management for the current minimal schema includes listing, creation, filtering, pagination, editing, and confirmed deletion.
 - Camera deletion requires explicit selection and confirmation, displays the selected name, deletes only the selected record, clears selection state, and closes the modal.
 - Client list Camera totals are calculated in PostgreSQL through `withCount('cameras')` rather than loading every related Camera model.
+- Successful Client creation resets the form but intentionally leaves its Flux modal open for adding another recipient.
 - Starter Kit Repository and Documentation links were removed because they were template examples, not application navigation.
 - Codex maintains checkpoint, roadmap, and architecture documentation after meaningful project steps; the learner continues to implement application code and configuration.
 - Demonstration User and Camera seeders run only in `local`; the fixed local user is updated or created and marked email-verified.
@@ -164,7 +175,7 @@ These issues predate the current relationship work:
 
 ## Last session handoff
 
-Date: 2026-09-19.
+Date: 2026-09-21.
 
 Summary:
 
@@ -176,12 +187,16 @@ Summary:
 - Model tests pass: 7 tests, 15 assertions;
 - targeted Pint and `git diff --check` pass;
 - Phase 9 application code has not started yet.
-- the first Phase 9 Client list slice is complete locally and uncommitted;
+- the first Phase 9 Client list slice is committed and pushed in `2107f1e`;
 - Clients tests pass: 4 tests, 7 assertions;
 - Model tests pass: 7 tests, 15 assertions;
 - targeted Pint and `git diff --check` pass;
-- six unrelated generated Russian PHP language files remain modified and are outside the Client feature scope.
+- intentional generated Russian PHP language-file formatting is included in the same checkpoint commit.
+- Client creation is implemented locally with required, integer, and unique validation rules;
+- success, required-field, and integer-validation component tests are written, while the duplicate-ID test is still missing;
+- the current creation slice, translations, tests, and these documentation updates are uncommitted;
+- the latest uncommitted test set still needs a Sail/Pint run on the next machine.
 
 Next action on another machine:
 
-- commit and push the first Client UI slice, then continue with Client creation from “Next exact steps”.
+- pull `main`, restore/apply this checkpoint commit, then finish the `unique` test and verification from “Next exact steps”.

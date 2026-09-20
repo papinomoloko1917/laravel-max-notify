@@ -6,6 +6,7 @@ use App\Models\Camera;
 use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class ClientsTest extends TestCase
@@ -91,5 +92,52 @@ class ClientsTest extends TestCase
         $response = $this->get(route('clients.index'));
 
         $response->assertSee(__('The list of clients is empty...'));
+    }
+
+    public function test_successfully_create_client(): void
+    {
+        $component = Livewire::test('pages::clients.index')
+            ->set('name', 'Test')
+            ->set('max_chat_id', 123)
+            ->call('createClient');
+
+        $component->assertHasNoErrors();
+
+        $this->assertDatabaseHas('clients', [
+            'name' => 'Test',
+            'max_chat_id' => 123,
+        ]);
+
+        $component->assertSet('name', '');
+        $component->assertSet('max_chat_id', '');
+        $component->assertNotDispatched('modal-close', name: 'create-client');
+
+    }
+
+    public function test_mandatory_field(): void
+    {
+        $component = Livewire::test('pages::clients.index')
+            ->call('createClient');
+
+        $component->assertHasErrors([
+            'name' => 'required',
+            'max_chat_id' => 'required',
+        ]);
+
+        $this->assertDatabaseEmpty('clients');
+    }
+
+    public function test_integer_for_max_chat_id(): void
+    {
+        $component = Livewire::test('pages::clients.index')
+            ->set('name', 'Test')
+            ->set('max_chat_id', 'abc')
+            ->call('createClient');
+
+        $component->assertHasErrors([
+            'max_chat_id' => 'integer',
+        ]);
+
+        $this->assertDatabaseEmpty('clients');
     }
 }
