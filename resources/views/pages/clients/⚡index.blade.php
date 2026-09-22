@@ -14,6 +14,12 @@ new #[Title('Клиенты')] class extends Component {
 
     public string $max_chat_id = '';
 
+    public ?int $editingClientId = null;
+
+    public string $editName = '';
+
+    public string $editMaxChatId = '';
+
     #[Computed]
     public function clients(): LengthAwarePaginator
     {
@@ -34,6 +40,15 @@ new #[Title('Клиенты')] class extends Component {
 
         $this->reset('name', 'max_chat_id');
     }
+
+    public function startEditing(int $clientId): void
+    {
+        $client = Client::findOrFail($clientId);
+
+        $this->editingClientId = $client->id;
+        $this->editName = $client->name;
+        $this->editMaxChatId = (string) $client->max_chat_id;
+    }
 };
 ?>
 
@@ -50,6 +65,7 @@ new #[Title('Клиенты')] class extends Component {
                     <flux:table.column>{{ __('Client name') }}</flux:table.column>
                     <flux:table.column>{{ __('MAX chat id') }}</flux:table.column>
                     <flux:table.column>{{ __('Assigned cameras') }}</flux:table.column>
+                    <flux:table.column>{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
@@ -59,6 +75,14 @@ new #[Title('Клиенты')] class extends Component {
                             <flux:table.cell>{{ $client->name }}</flux:table.cell>
                             <flux:table.cell>{{ $client->max_chat_id }}</flux:table.cell>
                             <flux:table.cell>{{ $client->cameras_count }}</flux:table.cell>
+                            <flux:table.cell>
+                                {{-- триггер редактирования клиента --}}
+                                <flux:modal.trigger name="edit-client">
+                                    <flux:button wire:click='startEditing({{ $client->id }})'
+                                        tooltip="{{ __('Edit') }}" variant="subtle" class="cursor-pointer"
+                                        icon="pencil-square" size="sm" />
+                                </flux:modal.trigger>
+                            </flux:table.cell>
                         </flux:table.row>
                     @endforeach
                 </flux:table.rows>
@@ -101,4 +125,28 @@ new #[Title('Клиенты')] class extends Component {
             </flux:modal>
         </form>
     </div>
+
+    {{-- Модалка редактирования клиента --}}
+    <flux:modal :closable="false" name="edit-client">
+        <div class="space-y-6">
+            <flux:heading size="lg">
+                {{ __('Edit the client') }}
+            </flux:heading>
+
+            <flux:input wire:model="editName" label="{{ __('Name') }}" />
+
+            <flux:input wire:model="editMaxChatId" label="{{ __('MAX chat id') }}" />
+
+            <div class="flex gap-3">
+                <flux:spacer />
+
+                <flux:modal.close>
+                    <flux:button class="cursor-pointer">
+                        {{ __('Close') }}
+                    </flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
 </div>

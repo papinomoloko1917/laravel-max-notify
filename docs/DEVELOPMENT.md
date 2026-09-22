@@ -2,202 +2,97 @@
 
 Short source of truth for moving between Codex sessions and machines.
 
-Keep this concise and update it after a meaningful learning block.
-
 ## Current phase
 
-Phase 7 — Authentication and admin shell is complete and committed.
+Phase 7 — Authentication and admin shell is complete.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The read-only list is committed through `2107f1e`; Client creation is checkpointed in `bfc574a`, and its final duplicate-ID test is complete locally but not committed.
+Phase 9 — Client management UI is in progress. The list and creation flow are committed and pushed through `e3471c9`. Client edit-state loading and its modal are implemented and verified locally but are not committed yet. Updating and deletion are not implemented.
 
-## Current state
-
-- Laravel 13.31 with the official Livewire Starter Kit;
-- PHP 8.4 locally and PHP 8.5 in Sail;
-- Livewire 4, Flux UI 2, Tailwind CSS 4, and Vite 8;
-- PostgreSQL 18 as the application and test database;
-- Sail services: Laravel, PostgreSQL, and optional local Adminer;
-- Pest, Pint, and Larastan are installed;
-- authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
-- Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `main` and `origin/main` point to `bfc574a` before the current uncommitted duplicate-ID test and documentation update;
-- a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
-- the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
-- feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
-- the Cameras page loads cameras ordered by name, creates, edits, and safely deletes cameras, filters by active state, distinguishes statuses, paginates, and shows an empty state;
-- a protected `/clients` Livewire page, sidebar entry, paginated name-ordered list, MAX chat ID display, assigned-Camera counts, and empty state are implemented locally;
-- focused Client page tests cover guest/authenticated access, ordering, chat IDs, Camera counts, and the empty state;
-- the Client creation modal validates `name` and unique integer `max_chat_id`, persists the Client, resets both fields, and intentionally remains open after success;
-- Camera and User seeders provide manual development data only in the `local` environment;
-- a local-only Client seeder provides development list data;
-- the predictable development user is repeatable through `updateOrCreate()` and has a verified email.
-
-Redis and Mailpit are not configured. No Dahua webhook, external API clients, queue jobs, duplicate protection, or event journal exists yet.
-
-## Current learning task
-
-Review and commit the completed Client creation block. Editing, deletion, and Camera assignment remain later blocks.
-
-## Completed work
-
-- Created and tested the minimal Camera model.
-- Created the `clients` table with unique `max_chat_id`.
-- Added the Client model, integer cast, factory, and persistence test.
-- Added a passing test that expects `QueryException` for duplicate `max_chat_id`.
-- Created `camera_client` with foreign keys, cascading pivot cleanup, timestamps, and a composite unique constraint.
-- Added reciprocal `BelongsToMany` methods to Camera and Client with Larastan generic annotations and `withTimestamps()`.
-- Verified that one `attach()` writes the relationship once and the inverse relation reads the same pivot row.
-- Added tests that reject duplicate Camera–Client pairs.
-- Added tests proving that deleting either main model removes only its pivot rows and preserves the other main model.
-- Added a protected Livewire Cameras page using the Starter Kit authentication middleware.
-- Added guest/authenticated access tests for the Cameras page.
-- Added the Cameras sidebar entry and a custom Flux-compatible CCTV icon.
-- Removed the Starter Kit's demonstration Repository and Documentation sidebar links.
-- Completed a read-only Camera list with ordering, active/inactive badges, and an empty state.
-- Added focused tests that verify reverse-input sorting, status placement, and the empty state.
-- Restricted User and Camera demonstration seeders to `local`.
-- Made the predictable development user repeatable and email-verified.
-- Added database-backed Camera pagination with `WithPagination`, a computed paginator, and Flux UI controls.
-- Added focused Livewire tests for successful creation, required-name validation, active-status filtering, page navigation, and filter-driven page reset.
-- Added separate Camera edit state, a row action, a Flux edit modal, validated updating, and automatic modal closing after a successful update.
-- Added focused tests for loading the selected Camera into edit state and successfully updating its name and active status.
-- Added a focused invalid-edit test proving that a required-name failure preserves the Camera and does not close the modal.
-- Started the deletion block with separate selected-Camera state and a tested `startDeleting()` action that does not delete anything.
-- Added a per-row destructive action and a shared non-closable confirmation modal that displays the selected Camera name.
-- Added confirmed Camera deletion, selection-state cleanup, modal closing, and focused tests proving that only the selected Camera is deleted.
-- Added a protected Clients Livewire route/page and sidebar navigation entry.
-- Added a paginated, name-ordered Client list with MAX chat IDs and efficient assigned-Camera counts through `withCount('cameras')`.
-- Added Client empty-state UI, local development seeding, and four focused feature tests.
-- Completed Client creation coverage for success, required fields, integer chat IDs, and duplicate chat IDs.
-
-## Recent Camera UI work
-
-- commit `6c4e712` centralizes filter options, renders them through a loop, shows the selected label in the trigger, translates the Add button, and replaces “By name” with “All”;
-- commit `80d73f0` synchronizes the Camera UI checkpoint documentation;
-- commit `08d9e2e` adds database-backed pagination, the Flux paginator, and focused creation/filter/pagination tests; it is present on local and remote `main`.
-- commit `20ac704` adds Camera editing UI and behavior, the `Edit the camera` translation, two focused component tests, and the prior checkpoint documentation; it is present on local and remote `main`.
-- commit `6daf730` adds invalid-edit coverage and refreshes the checkpoint documentation; it is present on local and remote `main`.
-- commit `02ce63c` completes the Camera editing checkpoint documentation; it is present on local and remote `main`.
-- commit `73fa772` adds deletion-selection state, `startDeleting()`, and a test proving that selection loads the correct Camera without deleting it; it is present on local and remote `main`.
-- commit `cb1adf0` completes confirmed Camera deletion, translated confirmation UI, focused deletion coverage, and the Phase 8 checkpoint documentation; it is present on local and remote `main`.
-
-## Current Client UI work
-
-- commit `2107f1e` adds the protected Clients shell, navigation, translations, pagination, `withCount('cameras')`, empty state, local Client seeding, focused tests, and intentional formatting of the generated Russian PHP language files; it is present on local and remote `main`.
-- commit `bfc574a` checkpoints Client creation state, a Flux flyout form, required/integer/unique validation, persistence, field reset, two translations, and three component tests; it is present on local and remote `main`;
-- the current uncommitted follow-up adds duplicate MAX chat ID (`unique`) coverage and refreshes the checkpoint documentation.
-
-## Verification at checkpoint
+## Current repository state
 
 Checkpoint date: 2026-09-22.
 
-- `artisan test tests/Feature/CamerasTest.php`: 13 tests pass with 48 assertions;
-- `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
-- targeted Pint for the Cameras page and Cameras feature test passes;
-- the last full-suite run before this deletion slice had 44 tests: 43 passed and one was skipped; the full suite was not repeated for this checkpoint;
-- `git diff --check` passes;
-- Sail is running and all migrations are applied;
-- `UserSeeder` succeeds on two consecutive local runs and produces a verified `test@mail.ru` user;
-- the last Larastan run had only the two known baseline issues listed below; Larastan was not repeated for this checkpoint.
+- branch: `main`;
+- local `main` and `origin/main` point to `e3471c9` before this checkpoint is committed;
+- modified application files:
+  - `resources/views/pages/clients/⚡index.blade.php`;
+  - `tests/Feature/ClientsTest.php`;
+- modified documentation files:
+  - `docs/DEVELOPMENT.md`;
+  - `docs/ROADMAP.md`;
+  - `docs/ARCHITECTURE.md`;
+- no unexpected untracked files remain;
+- the current changes must be committed and pushed before continuing on another machine.
 
-Current Client list state:
+## Implemented application state
 
-- `artisan test tests/Feature/ClientsTest.php`: 8 tests pass with 28 assertions across list and creation behavior;
-- `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
-- targeted Pint for the route, Clients page/test, and affected seeders passes;
-- `git diff --check` passes;
-- the list query uses `withCount('cameras')`, orders by name, and paginates by 10 records.
+- Laravel 13.31 with the official Livewire Starter Kit;
+- Livewire 4, Flux UI 2, Tailwind CSS 4, Vite 8, Pest, Pint, and Larastan;
+- PostgreSQL 18 through Sail, with optional local Adminer;
+- authenticated administration shell and profile/settings pages;
+- Camera and Client models with a tested many-to-many relationship;
+- complete Camera management for the current schema: list, creation, active-state filtering, pagination, editing, and confirmed deletion;
+- protected Clients page with name ordering, pagination, MAX chat IDs, assigned-Camera counts through `withCount('cameras')`, and an empty state;
+- Client creation with required name, integer/unique MAX chat ID validation, persistence, and field reset;
+- separate Client edit state: `editingClientId`, `editName`, and `editMaxChatId`;
+- `startEditing()` loads the selected Client with `findOrFail()` and fills edit state;
+- each Client row has an edit action opening one shared Flux modal;
+- the edit modal displays the selected name and MAX chat ID and currently contains only a Close action;
+- a focused component test verifies that selection loads all three edit-state values.
 
-Current Client creation state:
+Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate protection, and event history remain intentionally postponed.
 
-- the implementation deliberately keeps the create modal open after a successful save and resets the two form fields;
-- eight Client feature-test methods now exist: four list/access tests plus creation, required-field, integer-validation, and duplicate-ID tests;
-- `artisan test tests/Feature/ClientsTest.php`: 8 tests pass with 28 assertions;
-- the full suite runs 53 tests: 52 pass and one is skipped; the known empty Starter Kit test remains risky;
-- `git diff --check` passes;
-- uniqueness validation now has component coverage proving the original row remains and no duplicate is inserted.
+## Verification at checkpoint
 
-Current Camera creation/filter slice:
+- `artisan test tests/Feature/ClientsTest.php`: **9 tests pass, 32 assertions**;
+- targeted Pint for `resources/views/pages/clients/⚡index.blade.php`: **passes**;
+- the focused edit-state test passes with 4 assertions;
+- `git diff --check`: **passes**;
+- the full test suite and Larastan were not repeated for this checkpoint;
+- previously known project-wide baseline issues remain: generated `lang/ru/*.php` formatting differences and two Larastan findings in Starter Kit-related code.
 
-- the existing four Cameras feature tests still pass with eight assertions;
-- the creation action now validates both fields, persists the Camera, clears the name, and reloads the ordered list;
-- the filter defaults to `all`, filters in PostgreSQL for `active` and `inactive`, and reloads through `updatedFilter()`;
-- Pint now deliberately accepts anonymous-class opening braces on the same line, matching Blade Formatter 1.44.4;
-- Pint now also accepts Blade Formatter's `fn()` spacing for short arrow functions;
-- the Cameras page and all mechanically aligned PHP files pass targeted Pint;
-- creation and filter behavior now have focused Livewire component tests;
-- the `all` option now displays the translated “All” label;
-- full-project Pint still reports only the six known generated Russian language-file issues.
+## Next exact learning block
 
-Current pagination state:
+Continue Client editing; do not start deletion yet.
 
-- the computed `LengthAwarePaginator`, `WithPagination`, and filter page reset are in place;
-- the standalone Flux paginator now receives the computed paginator object through a valid bound prop;
-- pagination remains covered as part of the 13 passing Cameras tests;
-- the filter resets pagination to page one through `resetPage()`;
-- the computed method is public and has an explicit `LengthAwarePaginator` return type;
-- the UI uses Flux 2.19's standalone pagination component, while Laravel/Livewire own the paginator state and query;
-- targeted Pint passes.
+1. Write a focused Livewire component test for successfully updating the selected Client.
+2. Implement `updateClient()` with validation for edit fields, including uniqueness of `max_chat_id` while ignoring the Client currently being edited.
+3. Connect the edit modal to the action with a form and Save button.
+4. Verify that the database changes, edit state is cleared, and the modal closes only after a successful update.
 
-## Next exact steps
+Invalid-update coverage should follow after the successful update path works and has been reviewed.
 
-1. Commit and push the duplicate-ID test and refreshed checkpoint documentation.
-2. Start Client editing as the next separate Phase 9 block only after the creation block is clean.
+## Decisions to preserve
 
-## Decisions made
+- Camera ↔ Client is many-to-many through `camera_client`; duplicate pairs are forbidden and deleting either model removes only its pivot rows.
+- `max_chat_id` currently uses PostgreSQL `bigint` and a PHP integer cast; this remains provisional until the MAX API contract is confirmed.
+- Client list Camera totals are calculated by PostgreSQL through `withCount('cameras')`.
+- successful Client creation resets its fields but intentionally leaves the creation modal open.
+- edit and create fields use separate Livewire state.
+- Client update validation must not reject the unchanged MAX chat ID belonging to the selected Client.
+- the Dahua webhook will use normal Laravel HTTP routing, not Livewire.
+- external API calls do not belong in Livewire components or Eloquent models.
+- Redis and queues are introduced only when a concrete requirement appears.
+- application code remains learner-written unless explicit permission is given; Codex maintains checkpoint documentation.
 
-- Camera ↔ Client is many-to-many through conventional table `camera_client`.
-- The same Camera–Client pair must be unique.
-- Deleting either main record removes its pivot rows, not the other main record.
-- Pivot timestamps record when an assignment is created or updated and are populated through `withTimestamps()` on both relationships.
-- `max_chat_id` currently uses PostgreSQL `bigint` and a PHP integer cast; this remains provisional until confirmed against the MAX API contract.
-- The Cameras page is an authenticated Livewire administration page; webhook traffic will remain outside Livewire.
-- Camera management for the current minimal schema includes listing, creation, filtering, pagination, editing, and confirmed deletion.
-- Camera deletion requires explicit selection and confirmation, displays the selected name, deletes only the selected record, clears selection state, and closes the modal.
-- Client list Camera totals are calculated in PostgreSQL through `withCount('cameras')` rather than loading every related Camera model.
-- Successful Client creation resets the form but intentionally leaves its Flux modal open for adding another recipient.
-- Starter Kit Repository and Documentation links were removed because they were template examples, not application navigation.
-- Codex maintains checkpoint, roadmap, and architecture documentation after meaningful project steps; the learner continues to implement application code and configuration.
-- Demonstration User and Camera seeders run only in `local`; the fixed local user is updated or created and marked email-verified.
-- Pint permits same-line opening braces for anonymous classes so that its output agrees with the configured Blade Formatter used on save.
-- Pint permits no space after `fn` for short arrow functions for the same formatter compatibility reason.
-- Redis, queues, and integration abstractions remain postponed.
+## Moving to another machine
 
-## Known baseline issues
+On this machine, after reviewing the documentation diff:
 
-These issues predate the current relationship work:
+```bash
+git add docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md \
+  'resources/views/pages/clients/⚡index.blade.php' tests/Feature/ClientsTest.php
+git commit -m "feat: prepare client editing"
+git push
+```
 
-- project-wide Pint reports formatting issues in six `lang/ru/*.php` files;
-- Larastan reports that `ProfileValidationRules` is unused because its use is inside a Blade/Livewire component;
-- Larastan reports a missing return in `UserFactory::withTwoFactor()`.
+On the other machine:
 
-## Last session handoff
-
-Date: 2026-09-21.
-
-Summary:
-
-- local `main` and `origin/main` point to `bfc574a` before the current uncommitted follow-up;
-- Camera management for the current schema is complete, committed, and pushed through confirmed deletion;
-- deletion uses separate selection and confirmation actions, a translated warning containing the Camera name, a danger button, state cleanup, and programmatic modal closing;
-- focused deletion coverage proves the selected Camera is removed while another Camera remains;
-- Cameras tests pass: 13 tests, 48 assertions;
-- Model tests pass: 7 tests, 15 assertions;
-- targeted Pint and `git diff --check` pass;
-- Phase 9 application code has not started yet.
-- the first Phase 9 Client list slice is committed and pushed in `2107f1e`;
-- Clients tests pass: 4 tests, 7 assertions;
-- Model tests pass: 7 tests, 15 assertions;
-- targeted Pint and `git diff --check` pass;
-- intentional generated Russian PHP language-file formatting is included in the same checkpoint commit.
-- Client creation is checkpointed with required, integer, and unique validation rules;
-- success, required-field, and integer-validation component tests are committed; duplicate-ID coverage is complete locally;
-- Clients tests pass: 8 tests, 28 assertions; Models tests pass: 7 tests, 15 assertions;
-- the full suite runs 53 tests with 52 passed and one skipped; targeted Pint and `git diff --check` pass;
-- the duplicate-ID test and refreshed documentation are modified but not committed.
-
-Next action on another machine:
-
-- commit and push the completed Client creation follow-up, then begin Client editing as a separate block.
+```bash
+git pull
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan test tests/Feature/ClientsTest.php
+```

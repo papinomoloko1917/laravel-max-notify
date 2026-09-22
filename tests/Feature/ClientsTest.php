@@ -168,4 +168,24 @@ class ClientsTest extends TestCase
             'max_chat_id' => 3000,
         ]);
     }
+
+    public function test_editing_client_loads_its_values(): void
+    {
+        $client = Client::factory()->create();
+
+        $component = Livewire::test('pages::clients.index')
+            ->call('startEditing', $client->id);
+
+        $component->assertSet('editingClientId', $client->id);
+
+        $component->assertSet('editName', $client->name);
+
+        $component->assertSet('editMaxChatId', (string) $client->max_chat_id);
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+            'name' => $client->name,
+            'max_chat_id' => $client->max_chat_id,
+        ]);
+    }
 }
