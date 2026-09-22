@@ -18,7 +18,7 @@ As of 2026-09-21:
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
 - Phase 8 is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema: listing, creation, filtering, pagination, editing, and confirmed deletion are implemented and covered.
-- Phase 9 is in progress through `2107f1e` plus an uncommitted Client-creation slice: the form and validation are implemented, success/required/integer tests are written, and duplicate-ID coverage plus verification remain before commit.
+- Phase 9 is in progress through `bfc574a` plus an uncommitted duplicate-ID test: the Client creation block is implemented and fully verified; commit/push remains before starting editing.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.

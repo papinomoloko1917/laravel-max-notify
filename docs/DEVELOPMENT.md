@@ -10,7 +10,7 @@ Phase 7 — Authentication and admin shell is complete and committed.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The read-only list is committed and pushed through `2107f1e`; Client creation and most of its validation coverage are implemented locally but not committed.
+Phase 9 — Client management UI is in progress. The read-only list is committed through `2107f1e`; Client creation is checkpointed in `bfc574a`, and its final duplicate-ID test is complete locally but not committed.
 
 ## Current state
 
@@ -22,14 +22,14 @@ Phase 9 — Client management UI is in progress. The read-only list is committed
 - Pest, Pint, and Larastan are installed;
 - authentication, profile/settings pages, and the protected dashboard come from the Starter Kit;
 - Camera, Client, their many-to-many relationship, and relationship tests are committed in `48844e8`;
-- local `main` and `origin/main` point to `cb1adf0`;
+- local `main` and `origin/main` point to `bfc574a` before the current uncommitted duplicate-ID test and documentation update;
 - a protected `/cameras` Livewire page and named route `cameras.index` are committed in `48f8ba2`;
 - the sidebar contains a Cameras link with a custom Flux-compatible `cctv` icon;
 - feature tests cover guest and authenticated access, ordered camera rendering, active/inactive statuses, and the empty state;
 - the Cameras page loads cameras ordered by name, creates, edits, and safely deletes cameras, filters by active state, distinguishes statuses, paginates, and shows an empty state;
 - a protected `/clients` Livewire page, sidebar entry, paginated name-ordered list, MAX chat ID display, assigned-Camera counts, and empty state are implemented locally;
 - focused Client page tests cover guest/authenticated access, ordering, chat IDs, Camera counts, and the empty state;
-- a local Client creation modal validates `name` and unique integer `max_chat_id`, persists the Client, resets both fields, and intentionally remains open after success;
+- the Client creation modal validates `name` and unique integer `max_chat_id`, persists the Client, resets both fields, and intentionally remains open after success;
 - Camera and User seeders provide manual development data only in the `local` environment;
 - a local-only Client seeder provides development list data;
 - the predictable development user is repeatable through `updateOrCreate()` and has a verified email.
@@ -38,7 +38,7 @@ Redis and Mailpit are not configured. No Dahua webhook, external API clients, qu
 
 ## Current learning task
 
-Finish Client creation validation coverage by adding the missing duplicate `max_chat_id` test, then run the focused checks and review the block before committing. Editing, deletion, and Camera assignment remain later blocks.
+Review and commit the completed Client creation block. Editing, deletion, and Camera assignment remain later blocks.
 
 ## Completed work
 
@@ -70,6 +70,7 @@ Finish Client creation validation coverage by adding the missing duplicate `max_
 - Added a protected Clients Livewire route/page and sidebar navigation entry.
 - Added a paginated, name-ordered Client list with MAX chat IDs and efficient assigned-Camera counts through `withCount('cameras')`.
 - Added Client empty-state UI, local development seeding, and four focused feature tests.
+- Completed Client creation coverage for success, required fields, integer chat IDs, and duplicate chat IDs.
 
 ## Recent Camera UI work
 
@@ -85,13 +86,12 @@ Finish Client creation validation coverage by adding the missing duplicate `max_
 ## Current Client UI work
 
 - commit `2107f1e` adds the protected Clients shell, navigation, translations, pagination, `withCount('cameras')`, empty state, local Client seeding, focused tests, and intentional formatting of the generated Russian PHP language files; it is present on local and remote `main`.
-- the current uncommitted slice adds Client creation state, a Flux flyout form, required/integer/unique validation, persistence, field reset, and two new translations;
-- local component tests cover successful creation, required fields, and a non-integer MAX chat ID;
-- the duplicate MAX chat ID (`unique`) test is still missing.
+- commit `bfc574a` checkpoints Client creation state, a Flux flyout form, required/integer/unique validation, persistence, field reset, two translations, and three component tests; it is present on local and remote `main`;
+- the current uncommitted follow-up adds duplicate MAX chat ID (`unique`) coverage and refreshes the checkpoint documentation.
 
 ## Verification at checkpoint
 
-Checkpoint date: 2026-09-19.
+Checkpoint date: 2026-09-22.
 
 - `artisan test tests/Feature/CamerasTest.php`: 13 tests pass with 48 assertions;
 - `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
@@ -104,19 +104,20 @@ Checkpoint date: 2026-09-19.
 
 Current Client list state:
 
-- `artisan test tests/Feature/ClientsTest.php`: 4 tests pass with 7 assertions;
+- `artisan test tests/Feature/ClientsTest.php`: 8 tests pass with 28 assertions across list and creation behavior;
 - `artisan test tests/Feature/Models`: 7 tests pass with 15 assertions;
 - targeted Pint for the route, Clients page/test, and affected seeders passes;
 - `git diff --check` passes;
 - the list query uses `withCount('cameras')`, orders by name, and paginates by 10 records.
 
-Current Client creation state (uncommitted):
+Current Client creation state:
 
 - the implementation deliberately keeps the create modal open after a successful save and resets the two form fields;
-- seven Client feature-test methods now exist: four previously verified list/access tests plus creation, required-field, and integer-validation tests;
-- the current uncommitted test set was not run at this checkpoint because Sail/Docker was unavailable to Codex;
+- eight Client feature-test methods now exist: four list/access tests plus creation, required-field, integer-validation, and duplicate-ID tests;
+- `artisan test tests/Feature/ClientsTest.php`: 8 tests pass with 28 assertions;
+- the full suite runs 53 tests: 52 pass and one is skipped; the known empty Starter Kit test remains risky;
 - `git diff --check` passes;
-- uniqueness validation is implemented in the component but its friendly validation behavior is not yet covered by a component test.
+- uniqueness validation now has component coverage proving the original row remains and no duplicate is inserted.
 
 Current Camera creation/filter slice:
 
@@ -142,9 +143,8 @@ Current pagination state:
 
 ## Next exact steps
 
-1. Add a component test that creates an existing Client, attempts another Client with the same `max_chat_id`, expects the `unique` validation error, and proves only the original record remains.
-2. Run the focused Clients and Model tests, targeted Pint, and `git diff --check`.
-3. Review, commit, and push the completed Client creation block before starting editing.
+1. Commit and push the duplicate-ID test and refreshed checkpoint documentation.
+2. Start Client editing as the next separate Phase 9 block only after the creation block is clean.
 
 ## Decisions made
 
@@ -179,7 +179,7 @@ Date: 2026-09-21.
 
 Summary:
 
-- local `main` and `origin/main` point to `cb1adf0`;
+- local `main` and `origin/main` point to `bfc574a` before the current uncommitted follow-up;
 - Camera management for the current schema is complete, committed, and pushed through confirmed deletion;
 - deletion uses separate selection and confirmation actions, a translated warning containing the Camera name, a danger button, state cleanup, and programmatic modal closing;
 - focused deletion coverage proves the selected Camera is removed while another Camera remains;
@@ -192,11 +192,12 @@ Summary:
 - Model tests pass: 7 tests, 15 assertions;
 - targeted Pint and `git diff --check` pass;
 - intentional generated Russian PHP language-file formatting is included in the same checkpoint commit.
-- Client creation is implemented locally with required, integer, and unique validation rules;
-- success, required-field, and integer-validation component tests are written, while the duplicate-ID test is still missing;
-- the current creation slice, translations, tests, and these documentation updates are uncommitted;
-- the latest uncommitted test set still needs a Sail/Pint run on the next machine.
+- Client creation is checkpointed with required, integer, and unique validation rules;
+- success, required-field, and integer-validation component tests are committed; duplicate-ID coverage is complete locally;
+- Clients tests pass: 8 tests, 28 assertions; Models tests pass: 7 tests, 15 assertions;
+- the full suite runs 53 tests with 52 passed and one skipped; targeted Pint and `git diff --check` pass;
+- the duplicate-ID test and refreshed documentation are modified but not committed.
 
 Next action on another machine:
 
-- pull `main`, restore/apply this checkpoint commit, then finish the `unique` test and verification from “Next exact steps”.
+- commit and push the completed Client creation follow-up, then begin Client editing as a separate block.

@@ -111,7 +111,6 @@ class ClientsTest extends TestCase
         $component->assertSet('name', '');
         $component->assertSet('max_chat_id', '');
         $component->assertNotDispatched('modal-close', name: 'create-client');
-
     }
 
     public function test_mandatory_field(): void
@@ -139,5 +138,34 @@ class ClientsTest extends TestCase
         ]);
 
         $this->assertDatabaseEmpty('clients');
+    }
+
+    public function test_max_chat_id_must_be_unique(): void
+    {
+        $client = Client::factory()->create([
+            'name' => 'Яндекс',
+            'max_chat_id' => 3000,
+        ]);
+
+        $component = Livewire::test('pages::clients.index')
+            ->set('name', 'Max')
+            ->set('max_chat_id', 3000)
+            ->call('createClient');
+
+        $component->assertHasErrors([
+            'max_chat_id' => 'unique',
+        ]);
+
+        $this->assertDatabaseCount('clients', 1);
+
+        $this->assertDatabaseHas('clients', [
+            'name' => $client->name,
+            'max_chat_id' => $client->max_chat_id,
+        ]);
+
+        $this->assertDatabaseMissing('clients', [
+            'name' => 'Max',
+            'max_chat_id' => 3000,
+        ]);
     }
 }
