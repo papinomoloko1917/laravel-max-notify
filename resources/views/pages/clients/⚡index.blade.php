@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\Client;
+use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -48,6 +50,25 @@ new #[Title('Клиенты')] class extends Component {
         $this->editingClientId = $client->id;
         $this->editName = $client->name;
         $this->editMaxChatId = (string) $client->max_chat_id;
+    }
+
+    public function updateClient(): void
+    {
+        $client = Client::findOrFail($this->editingClientId);
+
+        $this->validate([
+            'editName' => ['required', 'string', 'max:255'],
+            'editMaxChatId' => ['required', 'integer', Rule::unique('clients', 'max_chat_id')->ignore($client->id)],
+        ]);
+
+        $client->update([
+            'name' => $this->editName,
+            'max_chat_id' => $this->editMaxChatId,
+        ]);
+
+        $this->reset('editingClientId', 'editName', 'editMaxChatId');
+
+        Flux::modal('edit-client')->close();
     }
 };
 ?>
@@ -127,26 +148,31 @@ new #[Title('Клиенты')] class extends Component {
     </div>
 
     {{-- Модалка редактирования клиента --}}
-    <flux:modal :closable="false" name="edit-client">
-        <div class="space-y-6">
-            <flux:heading size="lg">
-                {{ __('Edit the client') }}
-            </flux:heading>
+    <form wire:submit="updateClient">
+        <flux:modal :closable="false" name="edit-client">
+            <div class="space-y-6">
+                <flux:heading size="lg">
+                    {{ __('Edit the client') }}
+                </flux:heading>
 
-            <flux:input wire:model="editName" label="{{ __('Name') }}" />
+                <flux:input wire:model="editName" label="{{ __('Name') }}" />
 
-            <flux:input wire:model="editMaxChatId" label="{{ __('MAX chat id') }}" />
+                <flux:input wire:model="editMaxChatId" label="{{ __('MAX chat id') }}" />
 
-            <div class="flex gap-3">
-                <flux:spacer />
-
-                <flux:modal.close>
-                    <flux:button class="cursor-pointer">
-                        {{ __('Close') }}
+                <div class="flex gap-3">
+                    <flux:spacer />
+                    <flux:button type="submit" variant="primary" class="cursor-pointer">
+                        {{ __('Save') }}
                     </flux:button>
-                </flux:modal.close>
+
+                    <flux:modal.close>
+                        <flux:button class="cursor-pointer">
+                            {{ __('Close') }}
+                        </flux:button>
+                    </flux:modal.close>
+                </div>
             </div>
-        </div>
-    </flux:modal>
+        </flux:modal>
+    </form>
 
 </div>

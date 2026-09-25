@@ -8,15 +8,16 @@ Phase 7 — Authentication and admin shell is complete.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The list and creation flow are committed and pushed through `e3471c9`. Client edit-state loading and its modal are implemented and verified locally but are not committed yet. Updating and deletion are not implemented.
+Phase 9 — Client management UI is in progress. The list, creation flow, and edit-state preparation are committed and pushed through `a1db054`. Successful Client updating is implemented and verified locally but is not committed yet. Invalid-update coverage and deletion are not implemented.
 
 ## Current repository state
 
-Checkpoint date: 2026-09-22.
+Checkpoint date: 2026-09-25.
 
 - branch: `main`;
-- local `main` and `origin/main` point to `e3471c9` before this checkpoint is committed;
+- local `main` and `origin/main` point to `a1db054` before this checkpoint is committed;
 - modified application files:
+  - `lang/ru.json`;
   - `resources/views/pages/clients/⚡index.blade.php`;
   - `tests/Feature/ClientsTest.php`;
 - modified documentation files:
@@ -39,30 +40,31 @@ Checkpoint date: 2026-09-22.
 - separate Client edit state: `editingClientId`, `editName`, and `editMaxChatId`;
 - `startEditing()` loads the selected Client with `findOrFail()` and fills edit state;
 - each Client row has an edit action opening one shared Flux modal;
-- the edit modal displays the selected name and MAX chat ID and currently contains only a Close action;
+- the edit modal displays the selected name and MAX chat ID;
 - a focused component test verifies that selection loads all three edit-state values.
+- `updateClient()` validates and updates the selected Client, ignores that Client in the unique MAX chat ID rule, clears edit state, and closes the modal;
+- the edit modal submits to `updateClient()` and provides Save and Close actions;
+- a focused component test verifies persistence, state cleanup, and modal closing after a successful update.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate protection, and event history remain intentionally postponed.
 
 ## Verification at checkpoint
 
-- `artisan test tests/Feature/ClientsTest.php`: **9 tests pass, 32 assertions**;
-- targeted Pint for `resources/views/pages/clients/⚡index.blade.php`: **passes**;
-- the focused edit-state test passes with 4 assertions;
+- `artisan test tests/Feature/ClientsTest.php`: **10 tests pass, 38 assertions**;
+- targeted Pint for the Clients page and feature test: **passes**;
+- the focused successful-update test passes with 6 assertions;
 - `git diff --check`: **passes**;
 - the full test suite and Larastan were not repeated for this checkpoint;
 - previously known project-wide baseline issues remain: generated `lang/ru/*.php` formatting differences and two Larastan findings in Starter Kit-related code.
 
 ## Next exact learning block
 
-Continue Client editing; do not start deletion yet.
+Complete validation coverage for Client editing; do not start deletion yet.
 
-1. Write a focused Livewire component test for successfully updating the selected Client.
-2. Implement `updateClient()` with validation for edit fields, including uniqueness of `max_chat_id` while ignoring the Client currently being edited.
-3. Connect the edit modal to the action with a form and Save button.
-4. Verify that the database changes, edit state is cleared, and the modal closes only after a successful update.
-
-Invalid-update coverage should follow after the successful update path works and has been reviewed.
+1. Add focused coverage showing that an empty edit name is rejected, the stored Client is unchanged, edit state remains available for correction, and the modal is not closed.
+2. Add focused coverage showing that another Client's MAX chat ID is rejected and neither Client is changed.
+3. Add coverage proving that a Client can keep its own unchanged MAX chat ID while changing another field.
+4. Verify the full Clients test file and targeted Pint.
 
 ## Decisions to preserve
 
@@ -72,6 +74,7 @@ Invalid-update coverage should follow after the successful update path works and
 - successful Client creation resets its fields but intentionally leaves the creation modal open.
 - edit and create fields use separate Livewire state.
 - Client update validation must not reject the unchanged MAX chat ID belonging to the selected Client.
+- failed Client update validation must preserve the record and keep the edit modal open for correction.
 - the Dahua webhook will use normal Laravel HTTP routing, not Livewire.
 - external API calls do not belong in Livewire components or Eloquent models.
 - Redis and queues are introduced only when a concrete requirement appears.
@@ -83,8 +86,8 @@ On this machine, after reviewing the documentation diff:
 
 ```bash
 git add docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md \
-  'resources/views/pages/clients/⚡index.blade.php' tests/Feature/ClientsTest.php
-git commit -m "feat: prepare client editing"
+  lang/ru.json 'resources/views/pages/clients/⚡index.blade.php' tests/Feature/ClientsTest.php
+git commit -m "feat: add client editing"
 git push
 ```
 
