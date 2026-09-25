@@ -8,22 +8,19 @@ Phase 7 — Authentication and admin shell is complete.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The list, creation flow, and edit-state preparation are committed and pushed through `a1db054`. Successful Client updating is implemented and verified locally but is not committed yet. Invalid-update coverage and deletion are not implemented.
+Phase 9 — Client management UI is in progress. The list, creation flow, edit-state preparation, and successful updating are committed and pushed through `1444211`. Invalid-update coverage has started as a local WIP; Client deletion is not implemented.
 
 ## Current repository state
 
 Checkpoint date: 2026-09-25.
 
 - branch: `main`;
-- local `main` and `origin/main` point to `a1db054` before this checkpoint is committed;
+- local `main` and `origin/main` point to `1444211` before this WIP checkpoint is committed;
 - modified application files:
-  - `lang/ru.json`;
-  - `resources/views/pages/clients/⚡index.blade.php`;
   - `tests/Feature/ClientsTest.php`;
 - modified documentation files:
   - `docs/DEVELOPMENT.md`;
   - `docs/ROADMAP.md`;
-  - `docs/ARCHITECTURE.md`;
 - no unexpected untracked files remain;
 - the current changes must be committed and pushed before continuing on another machine.
 
@@ -50,9 +47,11 @@ Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate prot
 
 ## Verification at checkpoint
 
-- `artisan test tests/Feature/ClientsTest.php`: **10 tests pass, 38 assertions**;
-- targeted Pint for the Clients page and feature test: **passes**;
-- the focused successful-update test passes with 6 assertions;
+- committed baseline at `1444211`: `artisan test tests/Feature/ClientsTest.php` has **10 passing tests and 38 assertions**;
+- current WIP run: **11 tests total, 10 pass and 1 fails after 41 assertions**;
+- the failing WIP test is `test_clear_name_client()`;
+- failure reason: Livewire testing has no `assertNoDispatched()` method; the intended assertion is `assertNotDispatched()`;
+- targeted Pint for the current WIP `ClientsTest.php`: **passes**;
 - `git diff --check`: **passes**;
 - the full test suite and Larastan were not repeated for this checkpoint;
 - previously known project-wide baseline issues remain: generated `lang/ru/*.php` formatting differences and two Larastan findings in Starter Kit-related code.
@@ -61,10 +60,10 @@ Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate prot
 
 Complete validation coverage for Client editing; do not start deletion yet.
 
-1. Add focused coverage showing that an empty edit name is rejected, the stored Client is unchanged, edit state remains available for correction, and the modal is not closed.
-2. Add focused coverage showing that another Client's MAX chat ID is rejected and neither Client is changed.
-3. Add coverage proving that a Client can keep its own unchanged MAX chat ID while changing another field.
-4. Verify the full Clients test file and targeted Pint.
+1. Finish `test_clear_name_client()`: use the specific `required` error assertion, verify all edit-state values remain available, cast the expected MAX chat ID to string, and replace `assertNoDispatched()` with `assertNotDispatched()`.
+2. Prefer the clearer test name `test_client_name_is_required_when_updating()`.
+3. Add focused coverage showing that another Client's MAX chat ID is rejected and neither Client is changed.
+4. Add coverage proving that a Client can keep its own unchanged MAX chat ID while changing another field, then run the full Clients tests and targeted Pint.
 
 ## Decisions to preserve
 
@@ -85,9 +84,8 @@ Complete validation coverage for Client editing; do not start deletion yet.
 On this machine, after reviewing the documentation diff:
 
 ```bash
-git add docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md \
-  lang/ru.json 'resources/views/pages/clients/⚡index.blade.php' tests/Feature/ClientsTest.php
-git commit -m "feat: add client editing"
+git add docs/DEVELOPMENT.md docs/ROADMAP.md tests/Feature/ClientsTest.php
+git commit -m "wip: checkpoint client edit validation"
 git push
 ```
 

@@ -215,4 +215,26 @@ class ClientsTest extends TestCase
 
         $component->assertDispatched('modal-close', name: 'edit-client');
     }
+
+    public function test_clear_name_client(): void
+    {
+        $client = Client::factory()->create();
+
+        $component = Livewire::test('pages::clients.index')
+            ->call('startEditing', $client->id)
+            ->set('editName', '')
+            ->call('updateClient');
+
+        $component->assertHasErrors();
+
+        $component->assertSet('editMaxChatId', $client->max_chat_id);
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+            'name' => $client->name,
+            'max_chat_id' => $client->max_chat_id,
+        ]);
+
+        $component->assertNoDispatched('modal-close', name: 'edit-client');
+    }
 }
