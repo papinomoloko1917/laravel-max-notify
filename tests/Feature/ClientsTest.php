@@ -171,7 +171,14 @@ class ClientsTest extends TestCase
 
     public function test_editing_client_loads_its_values(): void
     {
+
         $client = Client::factory()->create();
+
+        $camera1 = Camera::factory()->create();
+
+        $camera2 = Camera::factory()->create();
+
+        $client->cameras()->attach($camera1->id);
 
         $component = Livewire::test('pages::clients.index')
             ->call('startEditing', $client->id);
@@ -181,6 +188,8 @@ class ClientsTest extends TestCase
         $component->assertSet('editName', $client->name);
 
         $component->assertSet('editMaxChatId', (string) $client->max_chat_id);
+
+        $component->assertSet('editCameraIds', [$camera1->id]);
 
         $this->assertDatabaseHas('clients', [
             'id' => $client->id,

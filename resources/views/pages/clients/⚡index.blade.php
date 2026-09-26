@@ -26,6 +26,9 @@ new #[Title('Клиенты')] class extends Component {
 
     public string $deletingClientName = '';
 
+    /** @var array<int> */
+    public array $editCameraIds = [];
+
     #[Computed]
     public function clients(): LengthAwarePaginator
     {
@@ -50,6 +53,8 @@ new #[Title('Клиенты')] class extends Component {
     public function startEditing(int $clientId): void
     {
         $client = Client::findOrFail($clientId);
+
+        $this->editCameraIds = $client->cameras()->pluck('cameras.id')->all();
 
         $this->editingClientId = $client->id;
         $this->editName = $client->name;
