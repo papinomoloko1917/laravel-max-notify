@@ -8,19 +8,16 @@ Phase 7 — Authentication and admin shell is complete.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The list, creation flow, edit-state preparation, and successful updating are committed and pushed through `1444211`. Invalid-update coverage has started as a local WIP; Client deletion is not implemented.
+Phase 9 — Client management UI is in progress. The list, creation flow, editing, and edit-validation coverage are committed and pushed through `59668ca`. Client deletion is not implemented.
 
 ## Current repository state
 
-Checkpoint date: 2026-09-25.
+Checkpoint date: 2026-09-26.
 
 - branch: `main`;
-- local `main` and `origin/main` point to `1444211` before this WIP checkpoint is committed;
-- modified application files:
-  - `tests/Feature/ClientsTest.php`;
-- modified documentation files:
-  - `docs/DEVELOPMENT.md`;
-  - `docs/ROADMAP.md`;
+- local `main` and `origin/main` point to `59668ca`;
+- the application worktree is clean before this documentation update;
+- documentation files are modified only to record this checkpoint;
 - no unexpected untracked files remain;
 - the current changes must be committed and pushed before continuing on another machine.
 
@@ -42,28 +39,26 @@ Checkpoint date: 2026-09-25.
 - `updateClient()` validates and updates the selected Client, ignores that Client in the unique MAX chat ID rule, clears edit state, and closes the modal;
 - the edit modal submits to `updateClient()` and provides Save and Close actions;
 - a focused component test verifies persistence, state cleanup, and modal closing after a successful update.
+- focused edit-validation tests verify that a missing name is rejected without changing the record or closing the modal, another Client's MAX chat ID is rejected while both records remain unchanged, and the edited Client may retain its own MAX chat ID.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate protection, and event history remain intentionally postponed.
 
 ## Verification at checkpoint
 
-- committed baseline at `1444211`: `artisan test tests/Feature/ClientsTest.php` has **10 passing tests and 38 assertions**;
-- current WIP run: **11 tests total, 10 pass and 1 fails after 41 assertions**;
-- the failing WIP test is `test_clear_name_client()`;
-- failure reason: Livewire testing has no `assertNoDispatched()` method; the intended assertion is `assertNotDispatched()`;
-- targeted Pint for the current WIP `ClientsTest.php`: **passes**;
+- committed baseline at `59668ca`: `artisan test tests/Feature/ClientsTest.php` has **13 passing tests and 62 assertions**;
+- targeted Pint for `tests/Feature/ClientsTest.php`: **passes**;
 - `git diff --check`: **passes**;
 - the full test suite and Larastan were not repeated for this checkpoint;
 - previously known project-wide baseline issues remain: generated `lang/ru/*.php` formatting differences and two Larastan findings in Starter Kit-related code.
 
 ## Next exact learning block
 
-Complete validation coverage for Client editing; do not start deletion yet.
+Implement Client deletion following the already learned Camera deletion pattern.
 
-1. Finish `test_clear_name_client()`: use the specific `required` error assertion, verify all edit-state values remain available, cast the expected MAX chat ID to string, and replace `assertNoDispatched()` with `assertNotDispatched()`.
-2. Prefer the clearer test name `test_client_name_is_required_when_updating()`.
-3. Add focused coverage showing that another Client's MAX chat ID is rejected and neither Client is changed.
-4. Add coverage proving that a Client can keep its own unchanged MAX chat ID while changing another field, then run the full Clients tests and targeted Pint.
+1. Add separate deletion-selection state and a method that loads the selected Client.
+2. Add a shared confirmation modal that identifies the selected Client.
+3. Delete only after explicit confirmation, then clear state and close the modal.
+4. Cover selection and successful deletion with focused Livewire tests; existing model coverage already proves pivot rows are removed while Cameras remain.
 
 ## Decisions to preserve
 
@@ -84,8 +79,8 @@ Complete validation coverage for Client editing; do not start deletion yet.
 On this machine, after reviewing the documentation diff:
 
 ```bash
-git add docs/DEVELOPMENT.md docs/ROADMAP.md tests/Feature/ClientsTest.php
-git commit -m "wip: checkpoint client edit validation"
+git add docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md
+git commit -m "docs: update client management checkpoint"
 git push
 ```
 
