@@ -216,7 +216,7 @@ class ClientsTest extends TestCase
         $component->assertDispatched('modal-close', name: 'edit-client');
     }
 
-    public function test_clear_name_client(): void
+    public function test_client_name_is_required_when_updating(): void
     {
         $client = Client::factory()->create();
 
@@ -225,9 +225,13 @@ class ClientsTest extends TestCase
             ->set('editName', '')
             ->call('updateClient');
 
-        $component->assertHasErrors();
+        $component->assertHasErrors(['editName' => 'required']);
 
-        $component->assertSet('editMaxChatId', $client->max_chat_id);
+        $component->assertSet('editingClientId', $client->id);
+
+        $component->assertSet('editMaxChatId', (string) $client->max_chat_id);
+
+        $component->assertSet('editName', '');
 
         $this->assertDatabaseHas('clients', [
             'id' => $client->id,
@@ -235,6 +239,71 @@ class ClientsTest extends TestCase
             'max_chat_id' => $client->max_chat_id,
         ]);
 
-        $component->assertNoDispatched('modal-close', name: 'edit-client');
+        $component->assertNotDispatched('modal-close', name: 'edit-client');
+    }
+
+    public function test_another_clients_max_chat_id_cannot_be_used_when_updating(): void
+    {
+        $client1 = Client::factory()->create([
+            'name' => 'Первый',
+            'max_chat_id' => 100,
+        ]);
+
+        $client2 = Client::factory()->create([
+            'name' => 'Второй',
+            'max_chat_id' => 200,
+        ]);
+
+        $component = Livewire::test('pages::clients.index')
+            ->call('startEditing', $client1->id)
+            ->set('editName', 'Новое имя')
+            ->set('editMaxChatId', '200')
+            ->call('updateClient');
+
+        $component->assertHasErrors(['editMaxChatId' => 'unique']);
+
+        $this->assertDatabaseCount('clients', 2);
+
+        $this->assertDatabaseHas('clients', [
+            'name' => 'Первый',
+            'max_chat_id' => 100,
+        ]);
+
+        $this->assertDatabaseHas('clients', [
+            'name' => 'Второй',
+            'max_chat_id' => 200,
+        ]);
+
+        $component->assertSet('editingClientId', $client1->id);
+        $component->assertSet('editName', 'Новое имя');
+        $component->assertSet('editMaxChatId', '200');
+
+        $component->assertNotDispatched('modal-close', name: 'edit-client');
+    }
+
+    public function test_user_changes_the_clients_name_but_keeps_the_max_chat_id(): void
+    {
+        $client = Client::factory()->create();
+
+        $component = Livewire::test('pages::clients.index')
+            ->call('startEditing', $client->id)
+            ->set('editName', 'Новое имя')
+            ->call('updateClient');
+
+        $component->assertHasNoErrors();
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+            'name' => 'Новое имя',
+            'max_chat_id' => $client->max_chat_id,
+        ]);
+
+        $component->assertSet('editingClientId', null);
+
+        $component->assertSet('editName', '');
+
+        $component->assertSet('editMaxChatId', '');
+
+        $component->assertDispatched('modal-close', name: 'edit-client');
     }
 }
