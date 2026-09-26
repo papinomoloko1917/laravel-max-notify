@@ -104,6 +104,7 @@
     "Are you sure you want to delete the client :name?": "Вы уверены в том, что хотите удалить клиента с именем - :name?",
     "Recovery will be impossible": "Восстановление будет невозможным",
     "Status": "Статус",
+    "Selected": "Выбрать",
     "Clients": "Клиенты",
     "The list of clients is empty...": "Список клиентов пуст...",
     "MAX chat id": "MAX chat id",

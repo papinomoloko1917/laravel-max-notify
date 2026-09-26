@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Camera;
 use App\Models\Client;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -33,6 +34,12 @@ new #[Title('Клиенты')] class extends Component {
     public function clients(): LengthAwarePaginator
     {
         return Client::query()->withCount('cameras')->orderBy('name')->paginate(10);
+    }
+
+    #[Computed]
+    public function cameras(): LengthAwarePaginator
+    {
+        return Camera::query()->orderBy('name')->paginate(10, pageName: 'camerasPage');
     }
 
     public function createClient(): void
@@ -123,7 +130,7 @@ new #[Title('Клиенты')] class extends Component {
                 <flux:table.rows>
                     @foreach ($this->clients as $client)
                         <flux:table.row>
-                            <flux:table.cell>{{ $loop->iteration }}</flux:table.cell>
+                            <flux:table.cell>{{ $this->clients->firstItem() + $loop->index }}</flux:table.cell>
                             <flux:table.cell>{{ $client->name }}</flux:table.cell>
                             <flux:table.cell>{{ $client->max_chat_id }}</flux:table.cell>
                             <flux:table.cell>{{ $client->cameras_count }}</flux:table.cell>
@@ -195,6 +202,32 @@ new #[Title('Клиенты')] class extends Component {
                 <flux:input wire:model="editName" label="{{ __('Name') }}" />
 
                 <flux:input wire:model="editMaxChatId" label="{{ __('MAX chat id') }}" />
+
+                @if ($this->cameras->isNotEmpty())
+                    <div>
+                        <flux:table bleed>
+                            <flux:table.columns>
+                                <flux:table.column>{{ __('Position') }}</flux:table.column>
+                                <flux:table.column>{{ __('Camera name') }}</flux:table.column>
+                                <flux:table.column>{{ __('Selected') }}</flux:table.column>
+                            </flux:table.columns>
+                            <flux:table.rows>
+                                @foreach ($this->cameras as $camera)
+                                    <flux:table.row>
+                                        <flux:table.cell>{{ $this->cameras->firstItem() + $loop->index }}
+                                        </flux:table.cell>
+                                        <flux:table.cell>{{ $camera->name }}</flux:table.cell>
+                                        <flux:table.cell class="text-center">
+                                            <flux:checkbox value="{{ $camera->id }}"
+                                                class="inline-block align-middle" wire:model="editCameraIds" />
+                                        </flux:table.cell>
+                                    </flux:table.row>
+                                @endforeach
+                            </flux:table.rows>
+                        </flux:table>
+                    </div>
+                    <flux:pagination :paginator="$this->cameras" />
+                @endif
 
                 <div class="flex gap-3">
                     <flux:spacer />
