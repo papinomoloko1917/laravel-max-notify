@@ -8,16 +8,16 @@ Phase 7 — Authentication and admin shell is complete.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The list, creation flow, editing, and edit-validation coverage are committed and pushed through `59668ca`. Client deletion is not implemented.
+Phase 9 — Client management UI is in progress. The list, creation flow, editing, and edit-validation coverage are committed and pushed through `57a1198`. Confirmed Client deletion is implemented locally; Camera assignment editing remains.
 
 ## Current repository state
 
 Checkpoint date: 2026-09-26.
 
 - branch: `main`;
-- local `main` and `origin/main` point to `59668ca`;
-- the application worktree is clean before this documentation update;
-- documentation files are modified only to record this checkpoint;
+- local `main` and `origin/main` point to `57a1198`;
+- modified application files implement Client deletion and its tests;
+- documentation files are modified to record this checkpoint;
 - no unexpected untracked files remain;
 - the current changes must be committed and pushed before continuing on another machine.
 
@@ -40,25 +40,28 @@ Checkpoint date: 2026-09-26.
 - the edit modal submits to `updateClient()` and provides Save and Close actions;
 - a focused component test verifies persistence, state cleanup, and modal closing after a successful update.
 - focused edit-validation tests verify that a missing name is rejected without changing the record or closing the modal, another Client's MAX chat ID is rejected while both records remain unchanged, and the edited Client may retain its own MAX chat ID.
+- Client deletion uses separate selection state, a translated shared confirmation modal, explicit confirmation, state cleanup, and modal closing;
+- focused tests separately verify deletion selection without persistence and confirmed deletion of only the selected Client.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate protection, and event history remain intentionally postponed.
 
 ## Verification at checkpoint
 
-- committed baseline at `59668ca`: `artisan test tests/Feature/ClientsTest.php` has **13 passing tests and 62 assertions**;
-- targeted Pint for `tests/Feature/ClientsTest.php`: **passes**;
+- current `artisan test tests/Feature/ClientsTest.php`: **15 passing tests and 75 assertions**;
+- current `artisan test tests/Feature/Models/ClientTest.php`: **4 passing tests and 9 assertions**;
+- targeted Pint for the Client page, Client feature tests, and `lang/ru.json`: **passes**;
 - `git diff --check`: **passes**;
 - the full test suite and Larastan were not repeated for this checkpoint;
 - previously known project-wide baseline issues remain: generated `lang/ru/*.php` formatting differences and two Larastan findings in Starter Kit-related code.
 
 ## Next exact learning block
 
-Implement Client deletion following the already learned Camera deletion pattern.
+Begin Camera assignment editing for Clients without persisting changes yet.
 
-1. Add separate deletion-selection state and a method that loads the selected Client.
-2. Add a shared confirmation modal that identifies the selected Client.
-3. Delete only after explicit confirmation, then clear state and close the modal.
-4. Cover selection and successful deletion with focused Livewire tests; existing model coverage already proves pivot rows are removed while Cameras remain.
+1. Add separate edit state for selected Camera IDs.
+2. Load the edited Client's currently assigned Camera IDs in `startEditing()`.
+3. Present available Cameras in the existing edit modal with clear status information.
+4. Extend the selection test to verify that existing assignments are loaded; persistence with `sync()` belongs to the following block.
 
 ## Decisions to preserve
 
@@ -79,8 +82,8 @@ Implement Client deletion following the already learned Camera deletion pattern.
 On this machine, after reviewing the documentation diff:
 
 ```bash
-git add docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md
-git commit -m "docs: update client management checkpoint"
+git add lang/ru.json resources/views/pages/clients/⚡index.blade.php tests/Feature/ClientsTest.php docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md
+git commit -m "feat: add client deletion"
 git push
 ```
 

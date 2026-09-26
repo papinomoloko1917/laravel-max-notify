@@ -22,6 +22,10 @@ new #[Title('Клиенты')] class extends Component {
 
     public string $editMaxChatId = '';
 
+    public ?int $deletingClientId = null;
+
+    public string $deletingClientName = '';
+
     #[Computed]
     public function clients(): LengthAwarePaginator
     {
@@ -70,6 +74,28 @@ new #[Title('Клиенты')] class extends Component {
 
         Flux::modal('edit-client')->close();
     }
+
+    public function startDeleting(int $clientId): void
+    {
+        $client = Client::findOrFail($clientId);
+
+        $this->deletingClientId = $client->id;
+
+        $this->deletingClientName = $client->name;
+    }
+
+    public function deleteClient(): void
+    {
+        $client = Client::findOrFail($this->deletingClientId);
+
+        $client->delete();
+
+        $this->deletingClientId = null;
+
+        $this->deletingClientName = '';
+
+        Flux::modal('delete-client')->close();
+    }
 };
 ?>
 
@@ -102,6 +128,12 @@ new #[Title('Клиенты')] class extends Component {
                                     <flux:button wire:click='startEditing({{ $client->id }})'
                                         tooltip="{{ __('Edit') }}" variant="subtle" class="cursor-pointer"
                                         icon="pencil-square" size="sm" />
+                                </flux:modal.trigger>
+                                {{-- триггер удаления клиента --}}
+                                <flux:modal.trigger name="delete-client">
+                                    <flux:button wire:click="startDeleting({{ $client->id }})"
+                                        tooltip="{{ __('Delete') }}" variant="subtle" class="cursor-pointer"
+                                        icon="trash" size="sm" />
                                 </flux:modal.trigger>
                             </flux:table.cell>
                         </flux:table.row>
@@ -168,6 +200,35 @@ new #[Title('Клиенты')] class extends Component {
                     <flux:modal.close>
                         <flux:button class="cursor-pointer">
                             {{ __('Close') }}
+                        </flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        </flux:modal>
+    </form>
+
+    {{-- Модалка удаления клиента --}}
+    <form wire:submit="deleteClient">
+        <flux:modal :closable="false" name="delete-client">
+            <div class="space-y-6">
+                <flux:text class="text-lg font-bold">
+                    {{ __('Are you sure you want to delete the client :name?', [
+                        'name' => $deletingClientName,
+                    ]) }}
+                </flux:text>
+
+                <flux:text class="text-lg">
+                    {{ __('Recovery will be impossible') }}
+                </flux:text>
+
+                <div class="flex gap-3">
+                    <flux:spacer />
+                    <flux:button type="submit" variant="danger" class="cursor-pointer">
+                        {{ __('Delete') }}
+                    </flux:button>
+                    <flux:modal.close>
+                        <flux:button class="cursor-pointer">
+                            {{ __('Cancel') }}
                         </flux:button>
                     </flux:modal.close>
                 </div>

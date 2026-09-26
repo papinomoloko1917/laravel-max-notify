@@ -101,6 +101,7 @@
     "Active": "Активна",
     "Inactive": "Неактивна",
     "Are you sure you want to delete the camera :name?": "Вы уверены в том, что хотите удалить камеру :name?",
+    "Are you sure you want to delete the client :name?": "Вы уверены в том, что хотите удалить клиента с именем - :name?",
     "Recovery will be impossible": "Восстановление будет невозможным",
     "Status": "Статус",
     "Clients": "Клиенты",

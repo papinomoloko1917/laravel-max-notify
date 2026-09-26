@@ -306,4 +306,66 @@ class ClientsTest extends TestCase
 
         $component->assertDispatched('modal-close', name: 'edit-client');
     }
+
+    public function test_selecting_client_for_deletion_loads_its_values(): void
+    {
+        $client = Client::factory()->create();
+
+        $this->assertDatabaseCount('clients', 1);
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+        ]);
+
+        $component = Livewire::test('pages::clients.index')
+            ->call('startDeleting', $client->id)
+            ->assertSee(__('Are you sure you want to delete the client :name?', [
+                'name' => $client->name,
+            ]));
+
+        $component->assertHasNoErrors();
+
+        $component->assertSet('deletingClientId', $client->id);
+        $component->assertSet('deletingClientName', $client->name);
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client->id,
+        ]);
+    }
+
+    public function test_client_can_be_deleted(): void
+    {
+        $client1 = Client::factory()->create([
+            'name' => 'Первый клиент',
+            'max_chat_id' => 100,
+        ]);
+
+        $client2 = Client::factory()->create([
+            'name' => 'Второй клиент',
+            'max_chat_id' => 200,
+        ]);
+
+        $component = Livewire::test('pages::clients.index')
+            ->call('startDeleting', $client1->id)
+            ->call('deleteClient');
+
+        $this->assertDatabaseMissing('clients', [
+            'id' => $client1->id,
+            'name' => $client1->name,
+            'max_chat_id' => $client1->max_chat_id,
+        ]);
+
+        $this->assertDatabaseHas('clients', [
+            'id' => $client2->id,
+            'name' => $client2->name,
+            'max_chat_id' => $client2->max_chat_id,
+        ]);
+
+        $this->assertDatabaseCount('clients', 1);
+
+        $component->assertSet('deletingClientId', null);
+        $component->assertSet('deletingClientName', '');
+
+        $component->assertDispatched('modal-close', name: 'delete-client');
+    }
 }

@@ -18,7 +18,7 @@ As of 2026-09-26:
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
 - Phase 8 is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema: listing, creation, filtering, pagination, editing, and confirmed deletion are implemented and covered.
-- Phase 9 is in progress through `59668ca`: the Client list, creation, editing, and edit-validation coverage are committed and pushed. Validation covers a required name, rejection of another Client's MAX chat ID, and acceptance of the edited Client's unchanged MAX chat ID. Client deletion is next.
+- Phase 9 is in progress through `57a1198` plus local changes: the Client list, creation, editing, edit validation, and confirmed deletion are implemented and covered. Editing Camera assignments for a Client is next.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
