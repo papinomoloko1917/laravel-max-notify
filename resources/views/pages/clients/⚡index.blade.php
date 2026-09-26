@@ -75,6 +75,8 @@ new #[Title('Клиенты')] class extends Component {
         $this->validate([
             'editName' => ['required', 'string', 'max:255'],
             'editMaxChatId' => ['required', 'integer', Rule::unique('clients', 'max_chat_id')->ignore($client->id)],
+            'editCameraIds' => ['array'],
+            'editCameraIds.*' => ['integer', 'exists:cameras,id'],
         ]);
 
         $client->update([
@@ -82,7 +84,9 @@ new #[Title('Клиенты')] class extends Component {
             'max_chat_id' => $this->editMaxChatId,
         ]);
 
-        $this->reset('editingClientId', 'editName', 'editMaxChatId');
+        $client->cameras()->sync($this->editCameraIds);
+
+        $this->reset('editingClientId', 'editName', 'editMaxChatId', 'editCameraIds');
 
         Flux::modal('edit-client')->close();
     }
@@ -209,7 +213,7 @@ new #[Title('Клиенты')] class extends Component {
                             <flux:table.columns>
                                 <flux:table.column>{{ __('Position') }}</flux:table.column>
                                 <flux:table.column>{{ __('Camera name') }}</flux:table.column>
-                                <flux:table.column>{{ __('Selected') }}</flux:table.column>
+                                <flux:table.column>{{ __('Append') }}</flux:table.column>
                             </flux:table.columns>
                             <flux:table.rows>
                                 @foreach ($this->cameras as $camera)

@@ -8,15 +8,15 @@ Phase 7 — Authentication and admin shell is complete.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is in progress. The list, creation flow, editing, and edit-validation coverage are committed and pushed through `57a1198`. Confirmed Client deletion is implemented locally; Camera assignment editing remains.
+Phase 9 — Client management UI is complete locally. Client CRUD and Camera assignment loading/display are committed and pushed through `c4fb43a`; validated Camera assignment persistence is ready to commit.
 
 ## Current repository state
 
 Checkpoint date: 2026-09-26.
 
 - branch: `main`;
-- local `main` and `origin/main` point to `57a1198`;
-- modified application files implement Client deletion and its tests;
+- local `main` and `origin/main` point to `c4fb43a`;
+- modified application files implement validated Camera assignment synchronization and its tests;
 - documentation files are modified to record this checkpoint;
 - no unexpected untracked files remain;
 - the current changes must be committed and pushed before continuing on another machine.
@@ -42,26 +42,30 @@ Checkpoint date: 2026-09-26.
 - focused edit-validation tests verify that a missing name is rejected without changing the record or closing the modal, another Client's MAX chat ID is rejected while both records remain unchanged, and the edited Client may retain its own MAX chat ID.
 - Client deletion uses separate selection state, a translated shared confirmation modal, explicit confirmation, state cleanup, and modal closing;
 - focused tests separately verify deletion selection without persistence and confirmed deletion of only the selected Client.
+- the Client edit modal shows an independently paginated Camera table with checkboxes backed by `editCameraIds`;
+- `startEditing()` loads current Camera IDs, while `updateClient()` validates every submitted ID and uses `sync()` to make pivot rows match the selected set;
+- focused tests verify replacement of Camera assignments and rejection of a nonexistent Camera ID without changing Client or pivot data.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate protection, and event history remain intentionally postponed.
 
 ## Verification at checkpoint
 
-- current `artisan test tests/Feature/ClientsTest.php`: **15 passing tests and 75 assertions**;
-- current `artisan test tests/Feature/Models/ClientTest.php`: **4 passing tests and 9 assertions**;
+- current `artisan test tests/Feature/ClientsTest.php`: **16 passing tests and 88 assertions**;
+- current `artisan test tests/Feature/Models`: **7 passing tests and 15 assertions**;
+- full `artisan test`: **61 tests, 204 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to the Client changes;
 - targeted Pint for the Client page, Client feature tests, and `lang/ru.json`: **passes**;
 - `git diff --check`: **passes**;
-- the full test suite and Larastan were not repeated for this checkpoint;
+- Larastan was not repeated for this checkpoint;
 - previously known project-wide baseline issues remain: generated `lang/ru/*.php` formatting differences and two Larastan findings in Starter Kit-related code.
 
 ## Next exact learning block
 
-Begin Camera assignment editing for Clients without persisting changes yet.
+Begin Phase 10 by discovering the real Dahua webhook HTTP contract before implementing an endpoint.
 
-1. Add separate edit state for selected Camera IDs.
-2. Load the edited Client's currently assigned Camera IDs in `startEditing()`.
-3. Present available Cameras in the existing edit modal with clear status information.
-4. Extend the selection test to verify that existing assignments are loaded; persistence with `sync()` belongs to the following block.
+1. Identify the available Dahua model/firmware documentation or capture a representative event request from the actual device.
+2. Record the HTTP method, path, query parameters, headers, body, authentication behavior, and expected response.
+3. Reproduce one representative request manually in Postman without committing credentials.
+4. Only after the contract is understood, design the minimal normal Laravel route and feature test; do not use Livewire for the webhook.
 
 ## Decisions to preserve
 
@@ -83,7 +87,7 @@ On this machine, after reviewing the documentation diff:
 
 ```bash
 git add lang/ru.json resources/views/pages/clients/⚡index.blade.php tests/Feature/ClientsTest.php docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md
-git commit -m "feat: add client deletion"
+git commit -m "feat: sync client camera assignments"
 git push
 ```
 

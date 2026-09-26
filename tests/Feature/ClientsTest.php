@@ -202,11 +202,28 @@ class ClientsTest extends TestCase
     {
         $client = Client::factory()->create();
 
+        $camera1 = Camera::factory()->create();
+
+        $camera2 = Camera::factory()->create();
+
+        $client->cameras()->attach($camera1->id);
+
         $component = Livewire::test('pages::clients.index')
             ->call('startEditing', $client->id)
             ->set('editName', 'Test123')
+            ->set('editCameraIds', [$camera2->id])
             ->set('editMaxChatId', 7171177)
             ->call('updateClient');
+
+        $this->assertDatabaseHas('camera_client', [
+            'camera_id' => $camera2->id,
+            'client_id' => $client->id,
+        ]);
+
+        $this->assertDatabaseMissing('camera_client', [
+            'camera_id' => $camera1->id,
+            'client_id' => $client->id,
+        ]);
 
         $component->assertHasNoErrors();
 
@@ -221,6 +238,8 @@ class ClientsTest extends TestCase
         $component->assertSet('editName', '');
 
         $component->assertSet('editMaxChatId', '');
+
+        $component->assertSet('editCameraIds', []);
 
         $component->assertDispatched('modal-close', name: 'edit-client');
     }
@@ -376,5 +395,41 @@ class ClientsTest extends TestCase
         $component->assertSet('deletingClientName', '');
 
         $component->assertDispatched('modal-close', name: 'delete-client');
+    }
+
+    public function test_nonexistent_camera_cannot_be_assigned_when_updating_client(): void
+    {
+        $client = Client::factory()->create();
+
+        $camera = Camera::factory()->create();
+
+        $client->cameras()->attach($camera->id);
+
+        $component = Livewire::test('pages::clients.index')
+            ->call('startEditing', $client->id)
+            ->set('editName', 'Новое имя')
+            ->set('editCameraIds', [999999])
+            ->call('updateClient');
+
+        $component->assertHasErrors([
+            'editCameraIds.0' => 'exists',
+        ]);
+
+        $this->assertDatabaseHas('clients', [
+            'name' => $client->name,
+        ]);
+
+        $this->assertDatabaseHas('camera_client', [
+            'client_id' => $client->id,
+            'camera_id' => $camera->id,
+        ]);
+
+        $component->assertSet('editingClientId', $client->id);
+
+        $component->assertSet('editName', 'Новое имя');
+
+        $component->assertSet('editCameraIds', [999999]);
+
+        $component->assertNotDispatched('modal-close', name: 'edit-client');
     }
 }
