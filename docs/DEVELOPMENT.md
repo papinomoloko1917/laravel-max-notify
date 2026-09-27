@@ -8,17 +8,20 @@ Phase 7 — Authentication and admin shell is complete.
 
 Phase 8 — Camera management UI is complete, committed, and pushed through `cb1adf0` for the current minimal Camera schema.
 
-Phase 9 — Client management UI is complete locally. Client CRUD and Camera assignment loading/display are committed and pushed through `c4fb43a`; validated Camera assignment persistence is ready to commit.
+Phase 9 — Client management UI is complete, committed, and pushed through `da1aca1`, including validated Camera assignment persistence.
+
+Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR4232-4KS2/L and the now-removed diagnostic route.
+
+Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
 ## Current repository state
 
 Checkpoint date: 2026-09-26.
 
 - branch: `main`;
-- local `main` and `origin/main` point to `c4fb43a`;
-- modified application files implement validated Camera assignment synchronization and its tests;
-- documentation files are modified to record this checkpoint;
-- no unexpected untracked files remain;
+- local `main` and `origin/main` point to `da1aca1`;
+- the production `/webhooks/dahua` route, controller, feature tests, and synchronized documentation are staged for commit;
+- the temporary `/dahua-probe` route and its route-file imports have been removed;
 - the current changes must be committed and pushed before continuing on another machine.
 
 ## Implemented application state
@@ -45,14 +48,47 @@ Checkpoint date: 2026-09-26.
 - the Client edit modal shows an independently paginated Camera table with checkboxes backed by `editCameraIds`;
 - `startEditing()` loads current Camera IDs, while `updateClient()` validates every submitted ID and uses `sync()` to make pivot rows match the selected set;
 - focused tests verify replacement of Camera assignments and rejection of a nonexistent Camera ID without changing Client or pivot data.
+- a reversible Camera migration adds nullable unique `webhook_username` and nullable `webhook_password` fields so existing Cameras need not be configured immediately;
+- the Camera model accepts webhook credentials, hashes `webhook_password` automatically, and hides the stored hash from array/JSON serialization;
+- focused model tests verify hashing, password-hash matching, serialization hiding, and database-enforced username uniqueness.
+- `/webhooks/dahua` is a normal GET route handled by an invokable controller outside browser-user authentication;
+- the controller identifies an active Camera by Basic username, verifies the supplied password against its stored hash, and returns plain-text `200 OK` only on success;
+- missing credentials, unknown usernames, wrong passwords, and inactive Cameras all receive the same plain-text `401 Unauthorized` response;
+- five focused webhook feature tests cover the success path and all four authentication rejection paths.
+- after successful authentication, query metadata requires exact `event=ivs`, an integer channel of at least one, and a non-empty rule label of at most 100 characters;
+- malformed authenticated metadata receives explicit plain-text `400 Invalid webhook request` rather than a browser-oriented redirect;
+- three additional focused tests cover a non-IVS event, a non-integer channel, and a missing rule.
+- accepted requests are logged with Camera ID/name and validated event/channel/rule only; credentials and authorization headers are excluded;
+- the production `/webhooks/dahua` endpoint was successfully exercised through both Postman and the real NVR on 2026-09-27, producing matching accepted-event logs for Camera ID 7 with `event=ivs`, `channel=7`, and `rule=perimeter`.
 
-Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate protection, and event history remain intentionally postponed.
+Redis, Mailpit, Dahua/MAX HTTP clients, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed.
+
+## Confirmed Dahua probe behavior
+
+Observed on 2026-09-26 with DHI-NVR4232-4KS2/L firmware `V4.003.0000000.1.R` and DH-IPC-HFW2249SP-S-IL-0280B. IVS, rather than SMD, is the intended production event source:
+
+- the NVR can reach the Sail application through the Windows host LAN address;
+- both the initial SMD experiment and the intended IVS "Send command" action make an HTTP `GET` request to the configured URL;
+- the observed request had no body and no `Content-Type` header;
+- the observed NVR headers were limited to `Accept`, `Host`, and `Connection`;
+- query parameters such as `probe`, `event`, and `channel` are static values configured in the command URL, not device-generated event payload; the initial `event=smd` value therefore remained visible even when IVS caused the request and did not identify the actual analytic source;
+- the application sees the Docker gateway address `172.18.0.1`, so source IP is not a reliable Camera identity in this environment;
+- two IVS requests eight seconds apart were correlated with two separate physical triggers while NVR anti-dither was set to five seconds;
+- no duplicate delivery for a single controlled IVS trigger has been observed so far;
+- the static request contains no device-generated event identifier or state that would distinguish a retry from a separate detection if identical calls occur later.
+- with IVS Authentication enabled and temporary test credentials configured, the NVR sent an `Authorization` header on its first request without receiving a prior `401` challenge;
+- PHP also exposed the `php-auth-user` and `php-auth-pw` header names, confirming that the request used HTTP Basic authentication; their values were not logged;
+- the confirmed representative IVS metadata was `event=ivs`, `channel=13`, and `rule=perimeter`, all configured statically in the command URL.
+
+The temporary probe logged only request metadata and header names, not header values or body contents. It was removed after the production endpoint was verified.
 
 ## Verification at checkpoint
 
 - current `artisan test tests/Feature/ClientsTest.php`: **16 passing tests and 88 assertions**;
 - current `artisan test tests/Feature/Models`: **7 passing tests and 15 assertions**;
-- full `artisan test`: **61 tests, 204 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to the Client changes;
+- current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **8 passing tests and 18 assertions**;
+- full `artisan test`: **71 tests, 226 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to the webhook changes;
 - targeted Pint for the Client page, Client feature tests, and `lang/ru.json`: **passes**;
 - `git diff --check`: **passes**;
 - Larastan was not repeated for this checkpoint;
@@ -60,12 +96,7 @@ Redis, Mailpit, Dahua/MAX HTTP clients, webhook handling, queues, duplicate prot
 
 ## Next exact learning block
 
-Begin Phase 10 by discovering the real Dahua webhook HTTP contract before implementing an endpoint.
-
-1. Identify the available Dahua model/firmware documentation or capture a representative event request from the actual device.
-2. Record the HTTP method, path, query parameters, headers, body, authentication behavior, and expected response.
-3. Reproduce one representative request manually in Postman without committing credentials.
-4. Only after the contract is understood, design the minimal normal Laravel route and feature test; do not use Livewire for the webhook.
+Commit and push the completed Phase 11 checkpoint. Then begin Phase 12 by deciding the minimal event/rule and allowed-time-window configuration required for the tested Camera; do not introduce queues, Redis, event persistence, or external HTTP clients yet.
 
 ## Decisions to preserve
 
@@ -83,11 +114,11 @@ Begin Phase 10 by discovering the real Dahua webhook HTTP contract before implem
 
 ## Moving to another machine
 
-On this machine, after reviewing the documentation diff:
+On this machine, after reviewing the staged Phase 11 diff:
 
 ```bash
-git add lang/ru.json resources/views/pages/clients/⚡index.blade.php tests/Feature/ClientsTest.php docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md
-git commit -m "feat: sync client camera assignments"
+git add README.md docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md
+git commit -m "feat: add authenticated Dahua webhook"
 git push
 ```
 
@@ -97,5 +128,5 @@ On the other machine:
 git pull
 ./vendor/bin/sail up -d
 ./vendor/bin/sail artisan migrate
-./vendor/bin/sail artisan test tests/Feature/ClientsTest.php
+./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
 ```

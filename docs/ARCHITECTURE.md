@@ -28,8 +28,8 @@ It also provides an authenticated administrative UI.
 As of 2026-09-26, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
-- a minimal `cameras` table with `id`, `name`, `is_active`, and timestamps;
-- a `Camera` Eloquent model with explicit mass-assignment rules and a boolean cast;
+- a `cameras` table with identity/display fields plus nullable unique HTTP Basic username and nullable hashed webhook password;
+- a `Camera` Eloquent model with explicit mass-assignment rules, boolean and hashed casts, and hidden webhook-password serialization;
 - a Camera factory and focused PostgreSQL feature test;
 - a `clients` table and Client model with unique `max_chat_id`;
 - a Client factory and focused persistence/constraint tests;
@@ -52,7 +52,7 @@ As of 2026-09-26, the application contains:
 - Client Camera assignments edited through a separately paginated table in the existing modal; current IDs are loaded from the many-to-many relation, submitted IDs are validated individually, and `sync()` makes pivot rows match the selected set;
 - focused assignment tests cover replacing an existing Camera relation and rejecting a nonexistent Camera ID without changing Client or pivot data.
 
-There is no webhook, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet.
+A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. There is no event processing, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet. The temporary metadata-only diagnostic route has been removed.
 
 ## Likely mature flow
 
@@ -106,6 +106,18 @@ Dahua events enter through normal Laravel HTTP routing/controller handling.
 
 The mature webhook should be secure, deterministic, and short-running, but the first version may intentionally be synchronous for learning.
 
+The current minimal endpoint identifies an active Camera by its unique Basic username and verifies the supplied password against the Eloquent-hashed value. Missing credentials, unknown usernames, wrong passwords, and inactive Cameras deliberately share one `401 Unauthorized` response so the endpoint does not reveal which credential check failed. Only after authentication does it validate the query contract: exact `event=ivs`, integer channel `>= 1`, and a required bounded rule label; malformed metadata receives plain-text `400` rather than browser redirect behavior. Accepted requests log only Camera identity and validated metadata. This complete boundary was verified through Postman and the real NVR using channel 7 and the `perimeter` rule.
+
+Current hardware observations from the DHI-NVR4232-4KS2/L IVS "Send command" action:
+
+- it calls the configured URL with `GET`, no request body, and no `Content-Type` header;
+- event and Camera identifiers in the tested query string are application-chosen static URL values rather than an NVR-generated payload; an `event=smd` test value remained unchanged when IVS actually triggered the call;
+- the Docker-network source IP is not suitable as Camera identity;
+- the static request has no device-generated event identifier with which to distinguish a retry from a separate detection; two IVS calls eight seconds apart were associated with two distinct triggers under a five-second anti-dither setting, and duplicate delivery for one controlled IVS trigger has not been observed.
+- with the NVR Authentication option enabled, it sends HTTP Basic credentials preemptively; the application must never log their values, and HTTPS is required before treating those credentials as confidential on an untrusted network.
+
+These findings describe the tested local setup, not yet a permanent public webhook contract.
+
 ## External integrations
 
 ### Dahua
@@ -141,7 +153,7 @@ Do not put external API calls directly in Livewire components or Eloquent models
 
 Primary DB: PostgreSQL.
 
-The current Camera schema is deliberately limited to identity, display name, enabled state, and timestamps. Network details, credentials, rules, and integration fields will be added only after their requirements and security implications are understood.
+The current Camera schema contains identity, display name, enabled state, timestamps, and the two credentials justified by the observed NVR HTTP Basic contract. `webhook_username` is nullable and unique and identifies the Camera; `webhook_password` is nullable, automatically hashed by Eloquent, and hidden from serialization. Network details and further integration fields remain postponed until their requirements are understood.
 
 Initial conceptual entities:
 
