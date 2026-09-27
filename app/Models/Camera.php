@@ -12,12 +12,15 @@ class Camera extends Model
     /** @use HasFactory<CameraFactory> */
     use HasFactory;
 
-    protected $fillable = ['name', 'is_active'];
+    protected $fillable = ['name', 'is_active', 'webhook_username', 'webhook_password'];
+
+    protected $hidden = ['webhook_password'];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'webhook_password' => 'hashed',
         ];
     }
 

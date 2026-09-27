@@ -6,6 +6,7 @@ use App\Models\Camera;
 use App\Models\Client;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CameraTest extends TestCase
@@ -75,6 +76,37 @@ class CameraTest extends TestCase
 
         $this->assertDatabaseHas('clients', [
             'id' => $client->id,
+        ]);
+    }
+
+    public function test_webhook_password_is_hashed_and_hidden(): void
+    {
+        $password = 'password';
+
+        $camera = Camera::factory()->create([
+            'webhook_username' => 'test_webhook_username',
+            'webhook_password' => $password,
+        ]);
+
+        $storedPassword = $camera->getRawOriginal('webhook_password');
+
+        $this->assertNotSame($password, $storedPassword);
+
+        $this->assertTrue(Hash::check($password, $storedPassword));
+
+        $this->assertArrayNotHasKey('webhook_password', $camera->toArray());
+    }
+
+    public function test_webhook_username_must_be_unique(): void
+    {
+        Camera::factory()->create([
+            'webhook_username' => 'user1',
+        ]);
+
+        $this->expectException(QueryException::class);
+
+        Camera::factory()->create([
+            'webhook_username' => 'user1',
         ]);
     }
 }
