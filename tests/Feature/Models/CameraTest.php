@@ -109,4 +109,23 @@ class CameraTest extends TestCase
             'webhook_username' => 'user1',
         ]);
     }
+
+    public function test_notification_window_is_stored_for_camera(): void
+    {
+        $camera = Camera::factory()->create([
+            'notify_from' => '21:00',
+            'notify_until' => '06:00',
+            'is_active' => true,
+        ]);
+
+        $camera = Camera::findOrFail($camera->id);
+
+        $this->assertSame('21:00:00', $camera->notify_from);
+        $this->assertSame('06:00:00', $camera->notify_until);
+
+        $this->assertDatabaseHas('cameras', [
+            'notify_from' => '21:00',
+            'notify_until' => '06:00',
+        ]);
+    }
 }

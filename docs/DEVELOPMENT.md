@@ -14,15 +14,17 @@ Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR423
 
 Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
+Phase 12 — Per-Camera notification-window storage, timezone configuration, and the isolated business rule are complete locally; webhook integration and administration UI remain.
+
 ## Current repository state
 
-Checkpoint date: 2026-09-26.
+Checkpoint date: 2026-09-28.
 
 - branch: `main`;
-- local `main` and `origin/main` point to `da1aca1`;
-- the production `/webhooks/dahua` route, controller, feature tests, and synchronized documentation are staged for commit;
-- the temporary `/dahua-probe` route and its route-file imports have been removed;
-- the current changes must be committed and pushed before continuing on another machine.
+- the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
+- the temporary `/dahua-probe` route remains removed;
+- the Phase 12 checkpoint adds timezone configuration, the Camera notification-window migration/model test, and the isolated `NotificationWindow` service/unit tests;
+- documentation is synchronized for the Phase 12 checkpoint and moving to another machine.
 
 ## Implemented application state
 
@@ -60,6 +62,13 @@ Checkpoint date: 2026-09-26.
 - three additional focused tests cover a non-IVS event, a non-integer channel, and a missing rule.
 - accepted requests are logged with Camera ID/name and validated event/channel/rule only; credentials and authorization headers are excluded;
 - the production `/webhooks/dahua` endpoint was successfully exercised through both Postman and the real NVR on 2026-09-27, producing matching accepted-event logs for Camera ID 7 with `event=ivs`, `channel=7`, and `rule=perimeter`.
+- a reversible migration adds nullable PostgreSQL `time` columns `notify_from` and `notify_until` to each Camera;
+- Camera mass assignment accepts both notification-window fields without treating them as datetimes;
+- a focused PostgreSQL model test verifies that submitted `HH:MM` values persist and reload as `HH:MM:SS`, including an overnight `21:00–06:00` window.
+- application timezone is environment-driven through `APP_TIMEZONE`; the local/example installation uses `Europe/Moscow`, and Sail verification reports the expected `+03:00` offset.
+- the isolated `NotificationWindow` service receives the current time explicitly and does not read the global clock itself;
+- its unit tests cover daytime and overnight windows, inclusive starts, exclusive ends, unrestricted `null/null`, rejected partial configuration, and rejected equal boundaries;
+- the time rule is not yet called by `DahuaWebhookController`, and Camera UI validation/editing for the new fields is not implemented.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed.
 
@@ -85,18 +94,20 @@ The temporary probe logged only request metadata and header names, not header va
 ## Verification at checkpoint
 
 - current `artisan test tests/Feature/ClientsTest.php`: **16 passing tests and 88 assertions**;
-- current `artisan test tests/Feature/Models`: **7 passing tests and 15 assertions**;
+- current `artisan test tests/Feature/Models`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
+- current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **8 passing tests and 18 assertions**;
-- full `artisan test`: **71 tests, 226 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to the webhook changes;
-- targeted Pint for the Client page, Client feature tests, and `lang/ru.json`: **passes**;
+- current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
+- full `artisan test`: **82 tests, 239 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to Phase 12;
+- targeted Pint for all Phase 12 files: **passes**;
 - `git diff --check`: **passes**;
-- Larastan was not repeated for this checkpoint;
-- previously known project-wide baseline issues remain: generated `lang/ru/*.php` formatting differences and two Larastan findings in Starter Kit-related code.
+- Larastan reports **3 findings**: the two previously known Starter Kit-related findings plus a missing return type on the already committed `DahuaWebhookController::__invoke()`; no finding points to the new Phase 12 migration, model changes, or `NotificationWindow`;
+- previously known generated `lang/ru/*.php` formatting differences remain outside this block.
 
 ## Next exact learning block
 
-Commit and push the completed Phase 11 checkpoint. Then begin Phase 12 by deciding the minimal event/rule and allowed-time-window configuration required for the tested Camera; do not introduce queues, Redis, event persistence, or external HTTP clients yet.
+On the next machine, first restore `APP_TIMEZONE=Europe/Moscow` in the local `.env`, migrate, and rerun the focused tests. Then add webhook feature tests for an authenticated Camera inside and outside its notification window before connecting `NotificationWindow` to the controller. A skipped event should still receive a fast `200` response so the NVR does not retry; do not add snapshot/MAX work, queues, Redis, or persistence yet.
 
 ## Decisions to preserve
 
@@ -114,19 +125,16 @@ Commit and push the completed Phase 11 checkpoint. Then begin Phase 12 by decidi
 
 ## Moving to another machine
 
-On this machine, after reviewing the staged Phase 11 diff:
-
-```bash
-git add README.md docs/DEVELOPMENT.md docs/ROADMAP.md docs/ARCHITECTURE.md
-git commit -m "feat: add authenticated Dahua webhook"
-git push
-```
-
-On the other machine:
+Before switching machines, commit and push any reviewed documentation or Phase 12 work. On the other machine:
 
 ```bash
 git pull
 ./vendor/bin/sail up -d
+./vendor/bin/sail artisan config:clear
 ./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan test tests/Unit/NotificationWindowTest.php
+./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
 ./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
 ```
+
+Because `.env` is intentionally not committed, add `APP_TIMEZONE=Europe/Moscow` to that machine's local `.env` before clearing configuration.
