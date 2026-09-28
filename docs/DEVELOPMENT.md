@@ -14,7 +14,7 @@ Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR423
 
 Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
-Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, and webhook integration are complete locally; administration UI remains.
+Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, and webhook integration are committed and pushed; administration UI remains.
 
 ## Current repository state
 
@@ -23,9 +23,9 @@ Checkpoint date: 2026-09-29.
 - branch: `main`;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
+- the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
 - the temporary `/dahua-probe` route remains removed;
-- the current Phase 12 block connects `NotificationWindow` to the webhook and adds focused inside/outside-window feature tests;
-- documentation is synchronized through the webhook time-window integration.
+- documentation is synchronized through the webhook time-window integration for continuing on another machine.
 
 ## Implemented application state
 
