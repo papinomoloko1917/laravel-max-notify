@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Camera;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -169,5 +170,75 @@ class DahuaWebhookTest extends TestCase
         $response->assertStatus(400);
 
         $response->assertContent('Invalid webhook request');
+    }
+
+    public function test_authenticated_webhook_is_ignored_outside_camera_notification_window(): void
+    {
+        $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
+
+        $username = 'user';
+
+        $password = 'password';
+
+        Camera::factory()->create([
+            'webhook_username' => $username,
+            'webhook_password' => $password,
+            'notify_from' => '21:00',
+            'notify_until' => '06:00',
+            'is_active' => true,
+        ]);
+
+        $time = CarbonImmutable::create(
+            2026,
+            9,
+            28,
+            12,
+            0,
+            0,
+            'Europe/Moscow',
+        );
+
+        $this->travelTo($time);
+
+        $response = $this->withBasicAuth($username, $password)->get($url);
+
+        $response->assertStatus(200);
+
+        $response->assertContent('Ignored');
+    }
+
+    public function test_authenticated_webhook_is_accepted_inside_camera_notification_window(): void
+    {
+        $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
+
+        $username = 'user';
+
+        $password = 'password';
+
+        Camera::factory()->create([
+            'webhook_username' => $username,
+            'webhook_password' => $password,
+            'notify_from' => '21:00',
+            'notify_until' => '06:00',
+            'is_active' => true,
+        ]);
+
+        $time = CarbonImmutable::create(
+            2026,
+            9,
+            28,
+            22,
+            0,
+            0,
+            'Europe/Moscow',
+        );
+
+        $this->travelTo($time);
+
+        $response = $this->withBasicAuth($username, $password)->get($url);
+
+        $response->assertStatus(200);
+
+        $response->assertContent('OK');
     }
 }

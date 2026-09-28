@@ -14,17 +14,18 @@ Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR423
 
 Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
-Phase 12 — Per-Camera notification-window storage, timezone configuration, and the isolated business rule are complete locally; webhook integration and administration UI remain.
+Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, and webhook integration are complete locally; administration UI remains.
 
 ## Current repository state
 
-Checkpoint date: 2026-09-28.
+Checkpoint date: 2026-09-29.
 
 - branch: `main`;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
+- the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the temporary `/dahua-probe` route remains removed;
-- the Phase 12 checkpoint adds timezone configuration, the Camera notification-window migration/model test, and the isolated `NotificationWindow` service/unit tests;
-- documentation is synchronized for the Phase 12 checkpoint and moving to another machine.
+- the current Phase 12 block connects `NotificationWindow` to the webhook and adds focused inside/outside-window feature tests;
+- documentation is synchronized through the webhook time-window integration.
 
 ## Implemented application state
 
@@ -68,7 +69,9 @@ Checkpoint date: 2026-09-28.
 - application timezone is environment-driven through `APP_TIMEZONE`; the local/example installation uses `Europe/Moscow`, and Sail verification reports the expected `+03:00` offset.
 - the isolated `NotificationWindow` service receives the current time explicitly and does not read the global clock itself;
 - its unit tests cover daytime and overnight windows, inclusive starts, exclusive ends, unrestricted `null/null`, rejected partial configuration, and rejected equal boundaries;
-- the time rule is not yet called by `DahuaWebhookController`, and Camera UI validation/editing for the new fields is not implemented.
+- `DahuaWebhookController` applies the identified Camera's window after authentication and metadata validation; outside-window events receive plain-text `200 Ignored` before accepted-event logging, while allowed events continue with `200 OK`;
+- focused feature tests freeze the Laravel clock and verify both an allowed `22:00` and rejected `12:00` request for an overnight `21:00–06:00` window;
+- Camera UI validation/editing for the new fields is not implemented.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed.
 
@@ -97,17 +100,17 @@ The temporary probe logged only request metadata and header names, not header va
 - current `artisan test tests/Feature/Models`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
-- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **8 passing tests and 18 assertions**;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
-- full `artisan test`: **82 tests, 239 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to Phase 12;
+- full `artisan test`: **84 tests, 243 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to Phase 12;
 - targeted Pint for all Phase 12 files: **passes**;
 - `git diff --check`: **passes**;
-- Larastan reports **3 findings**: the two previously known Starter Kit-related findings plus a missing return type on the already committed `DahuaWebhookController::__invoke()`; no finding points to the new Phase 12 migration, model changes, or `NotificationWindow`;
+- Larastan reports only the **2 previously known Starter Kit-related findings**; adding the controller return type resolved the webhook finding, and no finding points to the Phase 12 code;
 - previously known generated `lang/ru/*.php` formatting differences remain outside this block.
 
 ## Next exact learning block
 
-On the next machine, first restore `APP_TIMEZONE=Europe/Moscow` in the local `.env`, migrate, and rerun the focused tests. Then add webhook feature tests for an authenticated Camera inside and outside its notification window before connecting `NotificationWindow` to the controller. A skipped event should still receive a fast `200` response so the NVR does not retry; do not add snapshot/MAX work, queues, Redis, or persistence yet.
+Complete Phase 12 by exposing `notify_from` and `notify_until` in the authenticated Camera administration UI with appropriate nullable time validation and focused Livewire tests. Do not add snapshot/MAX work, queues, Redis, or event persistence yet.
 
 ## Decisions to preserve
 

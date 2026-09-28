@@ -13,7 +13,7 @@ understand the problem
 
 ## Current progress
 
-As of 2026-09-28:
+As of 2026-09-29:
 
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
@@ -21,7 +21,7 @@ As of 2026-09-28:
 - Phase 9 is complete, committed, and pushed through `da1aca1`: the Client list, creation, editing, validation, confirmed deletion, and paginated Camera assignment editing with validated `sync()` persistence are implemented and covered.
 - Phase 10 exploration is complete against a real Dahua NVR using IVS: the callback is a `GET` with an empty body, static application-defined query metadata, minimal headers, and an unusable Docker-translated source IP. Two calls eight seconds apart matched separate triggers under five-second anti-dither, with no duplicate observed for one controlled trigger. The NVR sends HTTP Basic credentials preemptively when Authentication is enabled.
 - Phase 11 is complete: the normal controller endpoint authenticates active Cameras, uniformly rejects credential failures, validates static IVS metadata, logs only safe accepted-event context, and returns explicit plain-text responses. Both Postman and the real NVR successfully reached `/webhooks/dahua` with `event=ivs`, `channel=7`, and `rule=perimeter`; the temporary diagnostic route has been removed.
-- Phase 12 is in progress: nullable PostgreSQL time fields store one per-Camera window, `APP_TIMEZONE=Europe/Moscow` makes the installation clock explicit, and an isolated `NotificationWindow` rule has ten unit tests covering daytime, overnight, boundary, unrestricted, and invalid configurations. Webhook integration and Camera UI editing are next.
+- Phase 12 is in progress: nullable PostgreSQL time fields store one per-Camera window, `APP_TIMEZONE=Europe/Moscow` makes the installation clock explicit, and an isolated `NotificationWindow` rule has ten unit tests covering daytime, overnight, boundary, unrestricted, and invalid configurations. The webhook now applies that rule and returns `200 Ignored` outside the window; Camera UI editing is next.
 - Redis, background jobs, external API clients, and event persistence remain intentionally postponed.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.

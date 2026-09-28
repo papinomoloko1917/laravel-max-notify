@@ -157,7 +157,7 @@ The current Camera schema contains identity, display name, enabled state, timest
 
 The Camera schema includes a nullable PostgreSQL `time` pair, `notify_from`/`notify_until`, for one daily notification window. Both null values mean no time restriction. A start later than the end denotes a window crossing midnight (`21:00–06:00`); midnight is stored as `00:00`, not as a separate `24:00` endpoint. Multiple disjoint daily windows are not currently required. The installation timezone is read from `APP_TIMEZONE` and currently set to `Europe/Moscow`.
 
-`App\Services\NotificationWindow` is an isolated deterministic rule: callers supply the current `CarbonInterface`, starts are inclusive, ends are exclusive, `null/null` disables filtering, and partial or equal boundaries fail closed. The class is unit-tested but is not yet connected to the webhook controller or Camera administration UI.
+`App\Services\NotificationWindow` is an isolated deterministic rule: callers supply the current `CarbonInterface`, starts are inclusive, ends are exclusive, `null/null` disables filtering, and partial or equal boundaries fail closed. The webhook controller applies it after Camera authentication and metadata validation. Requests outside the configured window receive plain-text `200 Ignored` before accepted-event logging so the NVR does not interpret the deliberate skip as a delivery failure. Camera administration UI for these fields is not yet implemented.
 
 Initial conceptual entities:
 
