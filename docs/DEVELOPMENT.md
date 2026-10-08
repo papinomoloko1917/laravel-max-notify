@@ -14,7 +14,7 @@ Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR423
 
 Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
-Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, and webhook integration are committed and pushed. Camera edit-state loading and time inputs are implemented and verified locally; persistence and invalid-window coverage remain.
+Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, webhook integration, and Camera time-input loading are committed and pushed through `3bd2175`. Notification-window persistence has started as a WIP test; persistence logic and invalid-window coverage remain.
 
 ## Current repository state
 
@@ -24,10 +24,10 @@ Checkpoint date: 2026-10-08.
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
-- documentation through that checkpoint is committed in `d636f64`, currently shared by local and remote `main`;
-- local uncommitted work adds Camera notification-window edit state, time inputs, translations, and focused loading coverage;
+- Camera notification-window edit state, time inputs, translations, loading coverage, and synchronized documentation are committed and pushed in `3bd2175`;
+- the current WIP adds `test_save_window()`, which fills both edit-time properties and calls `updateCamera()` but does not yet assert persistence;
 - the temporary `/dahua-probe` route remains removed;
-- documentation is synchronized through the local Camera edit-state/time-input slice.
+- documentation is synchronized through the WIP notification-window persistence test.
 
 ## Implemented application state
 
@@ -106,7 +106,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
-- current `artisan test tests/Feature/CamerasTest.php`: **14 passing tests and 52 assertions**;
+- current `artisan test tests/Feature/CamerasTest.php`: **15 tests run, 15 pass with 52 assertions, and the new no-assertion persistence test is risky**;
 - full `artisan test`: **84 tests, 243 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to Phase 12;
 - targeted Pint for all Phase 12 files: **passes**;
 - `git diff --check`: **passes**;
@@ -117,9 +117,10 @@ The temporary probe logged only request metadata and header names, not header va
 
 Continue the Camera notification-window form without starting later infrastructure:
 
-1. Add focused tests for saving an overnight window and clearing an existing window back to unrestricted `null/null`.
-2. Extend `updateCamera()` with nullable `H:i` validation for both edit fields and explicit empty-string-to-null persistence mapping.
-3. After successful persistence works, add rejected partial/equal-window coverage as a separate validation slice.
+1. Rename `test_save_window()` to describe Camera notification-window persistence and add `assertDatabaseHas()` for the selected Camera's `21:00–06:00` values.
+2. Extend `updateCamera()` with nullable `H:i` validation for both edit fields, column mapping, and explicit empty-string-to-null persistence conversion.
+3. Add a focused test that clears an existing window back to unrestricted `null/null`.
+4. After successful persistence works, add rejected partial/equal-window coverage as a separate validation slice.
 
 ## Decisions to preserve
 

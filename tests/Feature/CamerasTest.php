@@ -304,4 +304,18 @@ class CamerasTest extends TestCase
 
         $component->assertSet('editNotifyUntil', '');
     }
+
+    public function test_save_window(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editNotifyFrom', '21:00')
+            ->set('editNotifyUntil', '06:00')
+            ->call('updateCamera');
+    }
 }
