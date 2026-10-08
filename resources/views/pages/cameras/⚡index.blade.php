@@ -8,7 +8,8 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('Камеры')] class extends Component {
+new #[Title('Камеры')] class extends Component
+{
     use WithPagination;
 
     public array $filterOptions = [
@@ -72,13 +73,17 @@ new #[Title('Камеры')] class extends Component {
         $this->validate([
             'editName' => ['required', 'string', 'max:255'],
             'editIsActive' => ['boolean'],
+            'editNotifyFrom' => ['nullable', 'date_format:H:i', 'required_with:editNotifyUntil', 'different:editNotifyUntil'],
+            'editNotifyUntil' => ['nullable', 'date_format:H:i', 'required_with:editNotifyFrom'],
         ]);
 
-        $targetCamera = Camera::findOrFail($this->editingCameraId);
+        $camera = Camera::findOrFail($this->editingCameraId);
 
-        $targetCamera->update([
+        $camera->update([
             'name' => $this->editName,
             'is_active' => $this->editIsActive,
+            'notify_from' => $this->editNotifyFrom === '' ? null : $this->editNotifyFrom,
+            'notify_until' => $this->editNotifyUntil === '' ? null : $this->editNotifyUntil,
         ]);
 
         Flux::modal('edit-camera')->close();
@@ -110,8 +115,8 @@ new #[Title('Камеры')] class extends Component {
     public function cameras(): LengthAwarePaginator
     {
         return Camera::query()
-            ->when($this->filter === 'active', fn($q) => $q->where('is_active', true))
-            ->when($this->filter === 'inactive', fn($q) => $q->where('is_active', false))
+            ->when($this->filter === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($this->filter === 'inactive', fn ($q) => $q->where('is_active', false))
             ->orderBy('name')
             ->paginate(10);
     }
@@ -124,14 +129,11 @@ new #[Title('Камеры')] class extends Component {
 ?>
 
 <div>
-    <flux:heading level="1" size="xl">
-        {{ __('Cameras') }}
-    </flux:heading>
+    <flux:heading level="1" size="xl"> {{ __('Cameras') }} </flux:heading>
 
     {{-- Фильтр --}}
     <flux:label class="mt-5">{{ __('Filter') }}: </flux:label>
     <flux:dropdown>
-
         <flux:button class="cursor-pointer" size="xs" icon:trailing="chevron-down">
             {{ __($filterOptions[$filter]) }}</flux:button>
 
@@ -168,15 +170,25 @@ new #[Title('Камеры')] class extends Component {
                             <flux:table.cell>
                                 {{-- триггер редактирования камеры --}}
                                 <flux:modal.trigger name="edit-camera">
-                                    <flux:button wire:click='startEditing({{ $camera->id }})'
-                                        tooltip="{{ __('Edit') }}" variant="subtle" class="cursor-pointer"
-                                        icon="pencil-square" size="sm" />
+                                    <flux:button
+                                        wire:click='startEditing({{ $camera->id }})'
+                                        tooltip="{{ __('Edit') }}"
+                                        variant="subtle"
+                                        class="cursor-pointer"
+                                        icon="pencil-square"
+                                        size="sm"
+                                    />
                                 </flux:modal.trigger>
                                 {{-- триггер удаления камеры --}}
                                 <flux:modal.trigger name="delete-camera">
-                                    <flux:button wire:click="startDeleting({{ $camera->id }})"
-                                        tooltip="{{ __('Delete') }}" variant="subtle" class="cursor-pointer"
-                                        icon="trash" size="sm" />
+                                    <flux:button
+                                        wire:click="startDeleting({{ $camera->id }})"
+                                        tooltip="{{ __('Delete') }}"
+                                        variant="subtle"
+                                        class="cursor-pointer"
+                                        icon="trash"
+                                        size="sm"
+                                    />
                                 </flux:modal.trigger>
                             </flux:table.cell>
                         </flux:table.row>
@@ -186,8 +198,12 @@ new #[Title('Камеры')] class extends Component {
         </div>
         <flux:pagination :paginator="$this->cameras" />
     @else
-        <flux:callout class="mt-5" variant="secondary" icon="information-circle"
-            heading="{{ __('The list of cameras is empty...') }}" />
+        <flux:callout
+            class="mt-5"
+            variant="secondary"
+            icon="information-circle"
+            heading="{{ __('The list of cameras is empty...') }}"
+        />
     @endif
 
     {{-- Модалка добавления камеры --}}
@@ -198,15 +214,18 @@ new #[Title('Камеры')] class extends Component {
             </flux:button>
         </flux:modal.trigger>
 
-        <form wire:submit='createCamera'>
+        <form wire:submit="createCamera">
             <flux:modal name="create-camera" flyout>
                 <div class="space-y-6">
                     <div>
                         <flux:heading size="lg">{{ __('Adding a camera') }}</flux:heading>
                         <flux:text class="mt-2">{{ __('Make the settings for the new camera.') }}</flux:text>
                     </div>
-                    <flux:input wire:model="name" label="{{ __('Camera name') }}"
-                        placeholder="{{ __('Camera name') }}" />
+                    <flux:input
+                        wire:model="name"
+                        label="{{ __('Camera name') }}"
+                        placeholder="{{ __('Camera name') }}"
+                    />
 
                     {{-- чекбокс --}}
                     <flux:field variant="inline">
@@ -231,16 +250,14 @@ new #[Title('Камеры')] class extends Component {
         <form wire:submit="updateCamera">
             <flux:modal :closable="false" name="edit-camera">
                 <div class="space-y-6">
-                    <flux:heading size="lg">
-                        {{ __('Edit the camera') }}
-                    </flux:heading>
+                    <flux:heading size="lg"> {{ __('Edit the camera') }} </flux:heading>
 
                     <flux:input wire:model="editName" label="{{ __('Camera name') }}" />
 
                     <div class="grid grid-cols-2 gap-4">
                         <flux:label class="col-span-2">{{ __('Time interval') }}</flux:label>
-                        <flux:input type="time" wire:model='editNotifyFrom' label="{{ __('Beginning') }}" />
-                        <flux:input type="time" wire:model='editNotifyUntil' label="{{ __('End') }}" />
+                        <flux:input type="time" wire:model="editNotifyFrom" label="{{ __('Beginning') }}" />
+                        <flux:input type="time" wire:model="editNotifyUntil" label="{{ __('End') }}" />
                     </div>
 
                     <flux:field variant="inline">
@@ -254,9 +271,7 @@ new #[Title('Камеры')] class extends Component {
                             {{ __('Save') }}
                         </flux:button>
                         <flux:modal.close>
-                            <flux:button class="cursor-pointer">
-                                {{ __('Close') }}
-                            </flux:button>
+                            <flux:button class="cursor-pointer"> {{ __('Close') }} </flux:button>
                         </flux:modal.close>
                     </div>
                 </div>
@@ -268,14 +283,14 @@ new #[Title('Камеры')] class extends Component {
             <flux:modal :closable="false" name="delete-camera">
                 <div class="space-y-6">
                     <flux:text class="text-lg font-bold">
-                        {{ __('Are you sure you want to delete the camera :name?', [
-                            'name' => $deletingCameraName,
-                        ]) }}
+                        {{
+                            __('Are you sure you want to delete the camera :name?', [
+                                'name' => $deletingCameraName,
+                            ])
+                        }}
                     </flux:text>
 
-                    <flux:text class="text-lg">
-                        {{ __('Recovery will be impossible') }}
-                    </flux:text>
+                    <flux:text class="text-lg"> {{ __('Recovery will be impossible') }} </flux:text>
 
                     <div class="flex gap-3">
                         <flux:spacer />
@@ -283,14 +298,11 @@ new #[Title('Камеры')] class extends Component {
                             {{ __('Delete') }}
                         </flux:button>
                         <flux:modal.close>
-                            <flux:button class="cursor-pointer">
-                                {{ __('Cancel') }}
-                            </flux:button>
+                            <flux:button class="cursor-pointer"> {{ __('Cancel') }} </flux:button>
                         </flux:modal.close>
                     </div>
                 </div>
             </flux:modal>
         </form>
     </div>
-
 </div>

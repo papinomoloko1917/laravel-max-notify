@@ -57,7 +57,6 @@ new #[Title('Profile settings')] class extends Component
 
             <div>
                 <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
-
             </div>
 
             <div class="flex items-center gap-4">
@@ -66,7 +65,6 @@ new #[Title('Profile settings')] class extends Component
                         {{ __('Save') }}
                     </flux:button>
                 </div>
-
             </div>
         </form>
 

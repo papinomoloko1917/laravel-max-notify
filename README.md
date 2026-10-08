@@ -14,7 +14,7 @@ The project is being built incrementally. The roadmap describes future direction
 - minimal Camera migration, Eloquent model, factory, and focused database test;
 - Client migration, Eloquent model, factory, and initial database tests.
 
-Camera and Client administration, including many-to-many assignment editing, is implemented. A minimal synchronous IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, applies the configured per-Camera notification window, and has been verified with Postman and a real Dahua NVR. Camera UI editing for the notification window remains. Dahua snapshot/MAX integrations, queues, Redis, duplicate protection, and event history are not implemented.
+Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. A minimal synchronous IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, applies the configured per-Camera notification window, and has been verified with Postman and a real Dahua NVR. Dahua snapshot/MAX integrations, queues, Redis, duplicate protection, and event history are not implemented.
 
 See [Development Handoff](docs/DEVELOPMENT.md) for the exact current state and known quality-baseline issues.
 

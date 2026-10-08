@@ -305,7 +305,7 @@ class CamerasTest extends TestCase
         $component->assertSet('editNotifyUntil', '');
     }
 
-    public function test_save_window(): void
+    public function test_save_camera_window(): void
     {
         $camera = Camera::factory()->create([
             'name' => 'Тестовая камера',
@@ -317,5 +317,90 @@ class CamerasTest extends TestCase
             ->set('editNotifyFrom', '21:00')
             ->set('editNotifyUntil', '06:00')
             ->call('updateCamera');
+
+        $component->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+            'name' => $camera->name,
+            'is_active' => $camera->is_active,
+            'notify_from' => '21:00',
+            'notify_until' => '06:00',
+        ]);
+    }
+
+    public function test_camera_notification_window_can_be_cleared(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+            'notify_from' => '21:00',
+            'notify_until' => '06:00',
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editNotifyFrom', '')
+            ->set('editNotifyUntil', '')
+            ->call('updateCamera');
+
+        $component->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+            'notify_from' => null,
+            'notify_until' => null,
+        ]);
+    }
+
+    public function test_partial_camera_notification_window_is_rejected(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editNotifyFrom', '21:00')
+            ->call('updateCamera');
+
+        $component->assertHasErrors(
+            ['editNotifyUntil' => 'required_with']
+        );
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+            'notify_from' => null,
+            'notify_until' => null,
+        ]);
+
+        $component->assertNotDispatched('modal-close');
+    }
+
+    public function test_equal_camera_notification_window_boundaries_are_rejected(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editNotifyFrom', '21:00')
+            ->set('editNotifyUntil', '21:00')
+            ->call('updateCamera');
+
+        $component->assertHasErrors([
+            'editNotifyFrom' => 'different',
+        ]);
+
+        $this->assertDatabaseHas('cameras', [
+            'id' => $camera->id,
+            'notify_from' => null,
+            'notify_until' => null,
+        ]);
+
+        $component->assertNotDispatched('modal-close');
     }
 }

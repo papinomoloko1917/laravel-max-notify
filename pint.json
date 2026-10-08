@@ -1,11 +1,13 @@
 {
     "preset": "laravel",
     "rules": {
+        "Pint/laravel_blade": true,
         "braces_position": {
-            "anonymous_classes_opening_brace": "same_line"
-        },
-        "function_declaration": {
-            "closure_fn_spacing": "none"
+            "anonymous_classes_opening_brace": "next_line_unless_newline_at_signature_end",
+            "classes_opening_brace": "next_line_unless_newline_at_signature_end",
+            "functions_opening_brace": "next_line_unless_newline_at_signature_end",
+            "anonymous_functions_opening_brace": "same_line",
+            "control_structures_opening_brace": "same_line"
         }
     }
 }

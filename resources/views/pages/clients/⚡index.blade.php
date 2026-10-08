@@ -10,7 +10,8 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('Клиенты')] class extends Component {
+new #[Title('Клиенты')] class extends Component
+{
     use WithPagination;
 
     public string $name = '';
@@ -116,9 +117,7 @@ new #[Title('Клиенты')] class extends Component {
 ?>
 
 <div>
-    <flux:heading level="1" size="xl">
-        {{ __('Clients') }}
-    </flux:heading>
+    <flux:heading level="1" size="xl"> {{ __('Clients') }} </flux:heading>
 
     @if ($this->clients->isNotEmpty())
         <div class="mt-5 [--flux-bleed:1rem]">
@@ -141,15 +140,25 @@ new #[Title('Клиенты')] class extends Component {
                             <flux:table.cell>
                                 {{-- триггер редактирования клиента --}}
                                 <flux:modal.trigger name="edit-client">
-                                    <flux:button wire:click='startEditing({{ $client->id }})'
-                                        tooltip="{{ __('Edit') }}" variant="subtle" class="cursor-pointer"
-                                        icon="pencil-square" size="sm" />
+                                    <flux:button
+                                        wire:click='startEditing({{ $client->id }})'
+                                        tooltip="{{ __('Edit') }}"
+                                        variant="subtle"
+                                        class="cursor-pointer"
+                                        icon="pencil-square"
+                                        size="sm"
+                                    />
                                 </flux:modal.trigger>
                                 {{-- триггер удаления клиента --}}
                                 <flux:modal.trigger name="delete-client">
-                                    <flux:button wire:click="startDeleting({{ $client->id }})"
-                                        tooltip="{{ __('Delete') }}" variant="subtle" class="cursor-pointer"
-                                        icon="trash" size="sm" />
+                                    <flux:button
+                                        wire:click="startDeleting({{ $client->id }})"
+                                        tooltip="{{ __('Delete') }}"
+                                        variant="subtle"
+                                        class="cursor-pointer"
+                                        icon="trash"
+                                        size="sm"
+                                    />
                                 </flux:modal.trigger>
                             </flux:table.cell>
                         </flux:table.row>
@@ -159,8 +168,12 @@ new #[Title('Клиенты')] class extends Component {
         </div>
         <flux:pagination :paginator="$this->clients" />
     @else
-        <flux:callout class="mt-5" variant="secondary" icon="information-circle"
-            heading="{{ __('The list of clients is empty...') }}" />
+        <flux:callout
+            class="mt-5"
+            variant="secondary"
+            icon="information-circle"
+            heading="{{ __('The list of clients is empty...') }}"
+        />
     @endif
 
     {{-- Модалка добавления клиента --}}
@@ -171,18 +184,24 @@ new #[Title('Клиенты')] class extends Component {
             </flux:button>
         </flux:modal.trigger>
 
-        <form wire:submit='createClient'>
+        <form wire:submit="createClient">
             <flux:modal name="create-client" flyout>
                 <div class="space-y-6">
                     <div>
                         <flux:heading size="lg">{{ __('Adding a client') }}</flux:heading>
                         <flux:text class="mt-2">{{ __('Create a new client.') }}</flux:text>
                     </div>
-                    <flux:input wire:model="name" label="{{ __('Client name') }}"
-                        placeholder="{{ __('Client name') }}" />
+                    <flux:input
+                        wire:model="name"
+                        label="{{ __('Client name') }}"
+                        placeholder="{{ __('Client name') }}"
+                    />
 
-                    <flux:input wire:model="max_chat_id" label="{{ __('MAX chat id') }}"
-                        placeholder="{{ __('MAX chat id') }}" />
+                    <flux:input
+                        wire:model="max_chat_id"
+                        label="{{ __('MAX chat id') }}"
+                        placeholder="{{ __('MAX chat id') }}"
+                    />
 
                     <div class="flex">
                         <flux:spacer />
@@ -199,9 +218,7 @@ new #[Title('Клиенты')] class extends Component {
     <form wire:submit="updateClient">
         <flux:modal :closable="false" name="edit-client">
             <div class="space-y-6">
-                <flux:heading size="lg">
-                    {{ __('Edit the client') }}
-                </flux:heading>
+                <flux:heading size="lg"> {{ __('Edit the client') }} </flux:heading>
 
                 <flux:input wire:model="editName" label="{{ __('Name') }}" />
 
@@ -218,12 +235,16 @@ new #[Title('Клиенты')] class extends Component {
                             <flux:table.rows>
                                 @foreach ($this->cameras as $camera)
                                     <flux:table.row>
-                                        <flux:table.cell>{{ $this->cameras->firstItem() + $loop->index }}
+                                        <flux:table.cell>
+                                            {{ $this->cameras->firstItem() + $loop->index }}
                                         </flux:table.cell>
                                         <flux:table.cell>{{ $camera->name }}</flux:table.cell>
                                         <flux:table.cell class="text-center">
-                                            <flux:checkbox value="{{ $camera->id }}"
-                                                class="inline-block align-middle" wire:model="editCameraIds" />
+                                            <flux:checkbox
+                                                value="{{ $camera->id }}"
+                                                class="inline-block align-middle"
+                                                wire:model="editCameraIds"
+                                            />
                                         </flux:table.cell>
                                     </flux:table.row>
                                 @endforeach
@@ -235,14 +256,10 @@ new #[Title('Клиенты')] class extends Component {
 
                 <div class="flex gap-3">
                     <flux:spacer />
-                    <flux:button type="submit" variant="primary" class="cursor-pointer">
-                        {{ __('Save') }}
-                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="cursor-pointer"> {{ __('Save') }} </flux:button>
 
                     <flux:modal.close>
-                        <flux:button class="cursor-pointer">
-                            {{ __('Close') }}
-                        </flux:button>
+                        <flux:button class="cursor-pointer"> {{ __('Close') }} </flux:button>
                     </flux:modal.close>
                 </div>
             </div>
@@ -254,14 +271,14 @@ new #[Title('Клиенты')] class extends Component {
         <flux:modal :closable="false" name="delete-client">
             <div class="space-y-6">
                 <flux:text class="text-lg font-bold">
-                    {{ __('Are you sure you want to delete the client :name?', [
-                        'name' => $deletingClientName,
-                    ]) }}
+                    {{
+                        __('Are you sure you want to delete the client :name?', [
+                            'name' => $deletingClientName,
+                        ])
+                    }}
                 </flux:text>
 
-                <flux:text class="text-lg">
-                    {{ __('Recovery will be impossible') }}
-                </flux:text>
+                <flux:text class="text-lg"> {{ __('Recovery will be impossible') }} </flux:text>
 
                 <div class="flex gap-3">
                     <flux:spacer />
@@ -269,13 +286,10 @@ new #[Title('Клиенты')] class extends Component {
                         {{ __('Delete') }}
                     </flux:button>
                     <flux:modal.close>
-                        <flux:button class="cursor-pointer">
-                            {{ __('Cancel') }}
-                        </flux:button>
+                        <flux:button class="cursor-pointer"> {{ __('Cancel') }} </flux:button>
                     </flux:modal.close>
                 </div>
             </div>
         </flux:modal>
     </form>
-
 </div>

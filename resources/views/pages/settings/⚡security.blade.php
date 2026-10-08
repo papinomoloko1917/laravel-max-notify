@@ -10,22 +10,20 @@ use Laravel\Fortify\Fortify;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Security settings')] class extends Component {
+new #[Title('Security settings')] class extends Component
+{
     use PasswordValidationRules;
 
     public string $current_password = '';
+
     public string $password = '';
+
     public string $password_confirmation = '';
-
-
 
     /**
      * Mount the component.
      */
-    public function mount(DisableTwoFactorAuthentication $disableTwoFactorAuthentication): void
-    {
-
-    }
+    public function mount(DisableTwoFactorAuthentication $disableTwoFactorAuthentication): void {}
 
     /**
      * Update the password for the currently authenticated user.
@@ -51,8 +49,6 @@ new #[Title('Security settings')] class extends Component {
 
         Flux::toast(variant: 'success', text: __('Password updated.'));
     }
-
-
 }; ?>
 
 <section class="w-full">
@@ -60,7 +56,10 @@ new #[Title('Security settings')] class extends Component {
 
     <flux:heading level="2" class="sr-only">{{ __('Security settings') }}</flux:heading>
 
-    <x-pages::settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
+    <x-pages::settings.layout
+        :heading="__('Update password')"
+        :subheading="__('Ensure your account is using a long, random password to stay secure')"
+    >
         <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
             <flux:input
                 wire:model="current_password"
@@ -95,8 +94,5 @@ new #[Title('Security settings')] class extends Component {
                 </flux:button>
             </div>
         </form>
-
-
     </x-pages::settings.layout>
-
 </section>

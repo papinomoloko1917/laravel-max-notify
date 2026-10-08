@@ -14,20 +14,23 @@ Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR423
 
 Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
-Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, webhook integration, and Camera time-input loading are committed and pushed through `3bd2175`. Notification-window persistence has started as a WIP test; persistence logic and invalid-window coverage remain.
+Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, webhook integration, and validated Camera UI editing are complete in the current working checkpoint. Commit and push this checkpoint before moving machines.
 
 ## Current repository state
 
-Checkpoint date: 2026-10-08.
+Checkpoint date: 2026-10-09.
 
 - branch: `main`;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
 - Camera notification-window edit state, time inputs, translations, loading coverage, and synchronized documentation are committed and pushed in `3bd2175`;
-- the current WIP adds `test_save_window()`, which fills both edit-time properties and calls `updateCamera()` but does not yet assert persistence;
+- commit `37dee28` is the prior WIP checkpoint from the other machine;
+- the current working checkpoint completes nullable `H:i` validation, persistence, explicit empty-string-to-null conversion, and focused save/clear tests for the Camera notification window;
+- reciprocal `required_with` validation rejects partial windows, while `different:editNotifyUntil` rejects equal boundaries; focused tests assert the exact rules, unchanged database values, and an open modal;
+- intentional tooling changes add Prettier Blade/Tailwind packages, enable Pint's Laravel Blade formatting rule, and apply the new formatting baseline across the project;
 - the temporary `/dahua-probe` route remains removed;
-- documentation is synchronized through the WIP notification-window persistence test.
+- documentation is synchronized through completion of Phase 12.
 
 ## Implemented application state
 
@@ -75,7 +78,9 @@ Checkpoint date: 2026-10-08.
 - focused feature tests freeze the Laravel clock and verify both an allowed `22:00` and rejected `12:00` request for an overnight `21:00–06:00` window;
 - Camera edit state now loads stored notification times as `HH:MM`, maps unrestricted `null/null` to empty strings, and displays two Flux time inputs;
 - focused Livewire tests cover loading an overnight `21:00–06:00` window and loading unrestricted empty values;
-- updating and validating the notification-window fields through the Camera form is not implemented yet.
+- Camera updates validate each non-empty time as `H:i`, persist both values, and explicitly map two empty inputs back to unrestricted `null/null`;
+- focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
+- Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed.
 
@@ -106,21 +111,17 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
-- current `artisan test tests/Feature/CamerasTest.php`: **15 tests run, 15 pass with 52 assertions, and the new no-assertion persistence test is risky**;
-- full `artisan test`: **84 tests, 243 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to Phase 12;
-- targeted Pint for all Phase 12 files: **passes**;
+- current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
+- full `artisan test`: **89 tests, 261 assertions, 1 skipped and 1 risky**; only the previously known Starter Kit security test is risky;
+- full Pint check with the new formatting configuration: **passes**;
+- frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
 - Larastan reports only the **2 previously known Starter Kit-related findings**; adding the controller return type resolved the webhook finding, and no finding points to the Phase 12 code;
 - previously known generated `lang/ru/*.php` formatting differences remain outside this block.
 
 ## Next exact learning block
 
-Continue the Camera notification-window form without starting later infrastructure:
-
-1. Rename `test_save_window()` to describe Camera notification-window persistence and add `assertDatabaseHas()` for the selected Camera's `21:00–06:00` values.
-2. Extend `updateCamera()` with nullable `H:i` validation for both edit fields, column mapping, and explicit empty-string-to-null persistence conversion.
-3. Add a focused test that clears an existing window back to unrestricted `null/null`.
-4. After successful persistence works, add rejected partial/equal-window coverage as a separate validation slice.
+Commit and push the completed Phase 12 and intentional formatting-tooling changes. Then begin Phase 13 by exploring the real Dahua snapshot HTTP contract manually with Postman: determine the exact endpoint, authentication behavior, successful response status and `Content-Type`, and representative failure responses. Do not implement a Laravel Dahua client until the observed contract is understood.
 
 ## Decisions to preserve
 
@@ -143,8 +144,10 @@ Before switching machines, commit and push any reviewed documentation or Phase 1
 ```bash
 git pull
 ./vendor/bin/sail up -d
+./vendor/bin/sail npm ci
 ./vendor/bin/sail artisan config:clear
 ./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan test tests/Feature/CamerasTest.php
 ./vendor/bin/sail artisan test tests/Unit/NotificationWindowTest.php
 ./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
 ./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
