@@ -29,19 +29,27 @@ new #[Title('Камеры')] class extends Component {
 
     public bool $editIsActive = true;
 
+    public string $editNotifyFrom = '';
+
+    public string $editNotifyUntil = '';
+
     public ?int $deletingCameraId = null;
 
     public string $deletingCameraName = '';
 
     public function startEditing(int $cameraId): void
     {
-        $targetCamera = Camera::findOrFail($cameraId);
+        $camera = Camera::findOrFail($cameraId);
 
-        $this->editingCameraId = $targetCamera->id;
+        $this->editingCameraId = $camera->id;
 
-        $this->editName = $targetCamera->name;
+        $this->editName = $camera->name;
 
-        $this->editIsActive = $targetCamera->is_active;
+        $this->editIsActive = $camera->is_active;
+
+        $this->editNotifyFrom = substr($camera->notify_from ?? '', 0, 5);
+
+        $this->editNotifyUntil = substr($camera->notify_until ?? '', 0, 5);
     }
 
     public function createCamera(): void
@@ -228,6 +236,12 @@ new #[Title('Камеры')] class extends Component {
                     </flux:heading>
 
                     <flux:input wire:model="editName" label="{{ __('Camera name') }}" />
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <flux:label class="col-span-2">{{ __('Time interval') }}</flux:label>
+                        <flux:input type="time" wire:model='editNotifyFrom' label="{{ __('Beginning') }}" />
+                        <flux:input type="time" wire:model='editNotifyUntil' label="{{ __('End') }}" />
+                    </div>
 
                     <flux:field variant="inline">
                         <flux:checkbox wire:model="editIsActive" />

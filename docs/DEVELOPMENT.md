@@ -14,18 +14,20 @@ Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR423
 
 Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
-Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, and webhook integration are committed and pushed; administration UI remains.
+Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, and webhook integration are committed and pushed. Camera edit-state loading and time inputs are implemented and verified locally; persistence and invalid-window coverage remain.
 
 ## Current repository state
 
-Checkpoint date: 2026-09-29.
+Checkpoint date: 2026-10-08.
 
 - branch: `main`;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
+- documentation through that checkpoint is committed in `d636f64`, currently shared by local and remote `main`;
+- local uncommitted work adds Camera notification-window edit state, time inputs, translations, and focused loading coverage;
 - the temporary `/dahua-probe` route remains removed;
-- documentation is synchronized through the webhook time-window integration for continuing on another machine.
+- documentation is synchronized through the local Camera edit-state/time-input slice.
 
 ## Implemented application state
 
@@ -71,7 +73,9 @@ Checkpoint date: 2026-09-29.
 - its unit tests cover daytime and overnight windows, inclusive starts, exclusive ends, unrestricted `null/null`, rejected partial configuration, and rejected equal boundaries;
 - `DahuaWebhookController` applies the identified Camera's window after authentication and metadata validation; outside-window events receive plain-text `200 Ignored` before accepted-event logging, while allowed events continue with `200 OK`;
 - focused feature tests freeze the Laravel clock and verify both an allowed `22:00` and rejected `12:00` request for an overnight `21:00–06:00` window;
-- Camera UI validation/editing for the new fields is not implemented.
+- Camera edit state now loads stored notification times as `HH:MM`, maps unrestricted `null/null` to empty strings, and displays two Flux time inputs;
+- focused Livewire tests cover loading an overnight `21:00–06:00` window and loading unrestricted empty values;
+- updating and validating the notification-window fields through the Camera form is not implemented yet.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed.
 
@@ -102,6 +106,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
+- current `artisan test tests/Feature/CamerasTest.php`: **14 passing tests and 52 assertions**;
 - full `artisan test`: **84 tests, 243 assertions, 1 skipped and 1 risky**; the risky Starter Kit security test performs no assertions and is unrelated to Phase 12;
 - targeted Pint for all Phase 12 files: **passes**;
 - `git diff --check`: **passes**;
@@ -110,7 +115,11 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Complete Phase 12 by exposing `notify_from` and `notify_until` in the authenticated Camera administration UI with appropriate nullable time validation and focused Livewire tests. Do not add snapshot/MAX work, queues, Redis, or event persistence yet.
+Continue the Camera notification-window form without starting later infrastructure:
+
+1. Add focused tests for saving an overnight window and clearing an existing window back to unrestricted `null/null`.
+2. Extend `updateCamera()` with nullable `H:i` validation for both edit fields and explicit empty-string-to-null persistence mapping.
+3. After successful persistence works, add rejected partial/equal-window coverage as a separate validation slice.
 
 ## Decisions to preserve
 

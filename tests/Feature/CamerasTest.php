@@ -166,13 +166,17 @@ class CamerasTest extends TestCase
         $camera = Camera::factory()->create([
             'name' => 'Тестовая камера',
             'is_active' => true,
+            'notify_from' => '21:00',
+            'notify_until' => '06:00',
         ]);
 
-        $component = Livewire::test('pages::cameras.index')
+        Livewire::test('pages::cameras.index')
             ->call('startEditing', $camera->id)
             ->assertSet('editingCameraId', $camera->id)
             ->assertSet('editName', $camera->name)
-            ->assertSet('editIsActive', $camera->is_active);
+            ->assertSet('editIsActive', $camera->is_active)
+            ->assertSet('editNotifyFrom', '21:00')
+            ->assertSet('editNotifyUntil', '06:00');
     }
 
     public function test_camera_can_be_updated(): void
@@ -282,5 +286,22 @@ class CamerasTest extends TestCase
             'name' => $camera2->name,
             'is_active' => $camera2->is_active,
         ]);
+    }
+
+    public function test_editing_camera_without_notification_window_loads_empty_values(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Тестовая камера',
+            'is_active' => true,
+            'notify_from' => null,
+            'notify_until' => null,
+        ]);
+
+        $component = Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id);
+
+        $component->assertSet('editNotifyFrom', '');
+
+        $component->assertSet('editNotifyUntil', '');
     }
 }
