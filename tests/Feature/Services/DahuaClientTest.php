@@ -3,6 +3,7 @@
 namespace Tests\Feature\Services;
 
 use App\Services\DahuaClient;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -93,5 +94,28 @@ class DahuaClientTest extends TestCase
 
         $client->snapshot(13);
 
+    }
+
+    public function test_it_throws_when_connection_to_nvr_fails(): void
+    {
+        Http::preventStrayRequests();
+
+        config([
+            'services.dahua.base_url' => 'http://nvr.test',
+            'services.dahua.username' => 'test-user',
+            'services.dahua.password' => 'test-password',
+            'services.dahua.connect_timeout' => 3,
+            'services.dahua.timeout' => 10,
+        ]);
+
+        Http::fake([
+            'http://nvr.test/cgi-bin/snapshot.cgi*' => Http::failedConnection(),
+        ]);
+
+        $client = new DahuaClient;
+
+        $this->expectException(ConnectionException::class);
+
+        $client->snapshot(13);
     }
 }

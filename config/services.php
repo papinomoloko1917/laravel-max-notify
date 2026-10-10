@@ -39,5 +39,7 @@ return [
         'base_url' => env('DAHUA_BASE_URL'),
         'username' => env('DAHUA_USERNAME'),
         'password' => env('DAHUA_PASSWORD'),
+        'connect_timeout' => env('DAHUA_CONNECT_TIMEOUT', 3),
+        'timeout' => env('DAHUA_TIMEOUT', 10),
     ],
 ];

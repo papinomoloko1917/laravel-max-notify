@@ -18,7 +18,7 @@ Phase 12 — Per-Camera notification-window storage, timezone configuration, the
 
 Phase 13 — Dahua snapshot HTTP exploration is complete. Successful browser/Postman image retrieval and representative authentication and invalid-channel failures are confirmed against the real NVR, and the credential disclosed during exploration has been rotated.
 
-Phase 14 — The Dahua snapshot client now covers the successful response, HTTP failures, and invalid content types with `Http::fake()`. Request time limits and one real-device smoke check through the Laravel client remain before this phase is complete.
+Phase 14 — The Dahua snapshot client is complete for the currently understood contract. Automated tests cover success and representative failures, explicit request limits are configured, and a real-device smoke check confirmed Laravel/Guzzle Digest negotiation and JPEG retrieval.
 
 ## Current repository state
 
@@ -114,9 +114,12 @@ The representative success and failure contract is now sufficiently understood t
 - a focused HTTP-fake test prevents stray network requests, verifies the returned JPEG bytes, and verifies the exact GET URL for channel 13;
 - `4xx/5xx` responses are converted to Laravel `RequestException` through `Response::throw()` before content validation;
 - a successful response whose `Content-Type` is not exactly `image/jpeg` is rejected with `UnexpectedValueException` rather than returned as snapshot bytes;
-- focused verification: **3 passing tests and 4 assertions**, with Pint passing for the client, test, and service configuration;
-- full verification after this slice: **92 tests, 265 assertions, 1 skipped and the same 1 known risky Starter Kit test**; full Pint passes;
-- request time limits, a real-device smoke check through this client, and webhook integration are intentionally not implemented yet.
+- environment-backed defaults limit connection establishment to 3 seconds and the overall request to 10 seconds;
+- a focused failed-connection fake verifies that Laravel `ConnectionException` propagates from the client;
+- focused verification: **4 passing tests and 5 assertions**, with Pint passing for the client, test, and service configuration;
+- full verification after this slice: **93 tests, 266 assertions, 1 skipped and the same 1 known risky Starter Kit test**; full Pint passes;
+- a real-device Tinker smoke check on 2026-10-10 successfully retrieved channel 13 through this client; the returned binary began with the JPEG `FF D8` signature, proving real Laravel/Guzzle Digest negotiation;
+- webhook integration remains intentionally unimplemented; the client was verified independently first.
 
 ## Confirmed Dahua probe behavior
 
@@ -156,7 +159,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Continue Phase 14 by adding explicit connection/overall time limits and then perform one safe real-device smoke check through `DahuaClient` to prove Guzzle Digest negotiation. Keep the client disconnected from the webhook while finishing this boundary.
+Commit and push the reviewed Phase 14 timeout and connection-failure additions with synchronized documentation. Then begin Phase 15 by exploring the real MAX Messenger upload/send HTTP workflow manually before implementing a MAX client.
 
 ## Decisions to preserve
 

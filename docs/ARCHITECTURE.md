@@ -122,7 +122,7 @@ These findings describe the tested local setup, not yet a permanent public webho
 
 ### Dahua
 
-The first minimal client uses Laravel HTTP Client and environment-backed configuration for the single current NVR. It accepts a channel per snapshot request, converts `4xx/5xx` responses to Laravel HTTP exceptions, rejects successful non-JPEG responses, and returns validated JPEG bodies as raw string bytes. It is not connected to the webhook yet; explicit time limits and a real-device smoke check through the client remain.
+The first minimal client uses Laravel HTTP Client and environment-backed configuration for the single current NVR. It accepts a channel per snapshot request, uses a 3-second connection limit and 10-second overall limit, converts `4xx/5xx` responses to Laravel HTTP exceptions, rejects successful non-JPEG responses, and returns validated JPEG bodies as raw string bytes. A real-device Tinker smoke check confirmed Laravel/Guzzle Digest negotiation and JPEG retrieval. The client remains disconnected from the webhook while the next external contract is explored.
 
 Potential responsibilities:
 

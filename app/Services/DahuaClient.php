@@ -12,6 +12,8 @@ class DahuaClient
         $baseUrl = (string) config('services.dahua.base_url');
         $username = (string) config('services.dahua.username');
         $password = (string) config('services.dahua.password');
+        $connectTimeout = (int) config('services.dahua.connect_timeout');
+        $timeout = (int) config('services.dahua.timeout');
 
         $response = Http::withOptions([
             'auth' => [
@@ -19,10 +21,13 @@ class DahuaClient
                 $password,
                 'digest',
             ],
-        ])->get(
-            rtrim($baseUrl, '/') . '/cgi-bin/snapshot.cgi',
-            ['channel' => $channel],
-        );
+        ])
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout)
+            ->get(
+                rtrim($baseUrl, '/') . '/cgi-bin/snapshot.cgi',
+                ['channel' => $channel],
+            );
 
         $response->throw();
 
