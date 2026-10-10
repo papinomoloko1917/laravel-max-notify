@@ -25,7 +25,7 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-10-10, the application contains:
+As of 2026-10-11, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a `cameras` table with identity/display fields plus nullable unique HTTP Basic username and nullable hashed webhook password;
@@ -52,7 +52,7 @@ As of 2026-10-10, the application contains:
 - Client Camera assignments edited through a separately paginated table in the existing modal; current IDs are loaded from the many-to-many relation, submitted IDs are validated individually, and `sync()` makes pivot rows match the selected set;
 - focused assignment tests cover replacing an existing Camera relation and rejecting a nonexistent Camera ID without changing Client or pivot data.
 
-A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. A separate tested Dahua HTTP client retrieves snapshots but is not yet connected to the webhook. The tested MAX client now implements upload-URL creation, multipart JPEG upload, and image-message sending. These clients remain deliberately uncomposed while synchronous latency is investigated. There is no event processing, queue job, Redis service, or event journal yet. The temporary metadata-only diagnostic route has been removed.
+A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. A separate tested Dahua HTTP client retrieves snapshots but is not yet connected to the webhook. The tested MAX client implements upload-URL creation, multipart JPEG upload, and image-message sending. A controlled development-only composition of these clients succeeded against the real services and took 2,569 ms, confirming that this workflow should move behind a queue before webhook integration. There is no event-processing job, Redis service, or event journal yet. The temporary metadata-only diagnostic route has been removed.
 
 ## Likely mature flow
 
@@ -154,6 +154,8 @@ Understand the real HTTP sequence before adding abstractions.
 The observed image workflow uses the raw bot token in the `Authorization` header: request an upload URL with `POST /uploads?type=image`, upload one JPEG as multipart field `data`, read the resulting `photos.0.token`, then send it as an image attachment through `POST /messages?chat_id=<id>`. `GET /updates` is suitable for discovering a test dialog's `chat_id`, but not as the production event-delivery design.
 
 The three `MaxClient` slices implement upload-URL creation, multipart JPEG upload, and image-message sending. They read the base URL/token from `services.max`, use the raw `Authorization` header, reject HTTP errors, and validate the response `url`, `photos.0.token`, and `message.body.mid`. Keeping these methods separate makes each HTTP boundary independently observable and testable before the workflow is composed.
+
+The current MAX endpoints present a certificate chain issued by `Russian Trusted Sub CA`. The published Sail 8.5 image installs the official Russian Trusted Root/Sub certificates into its system CA store so Laravel HTTP Client can keep normal TLS verification enabled. Disabling verification is not an accepted workaround. This trust-store customization belongs to reproducible container infrastructure and must be rebuilt on each machine.
 
 Do not put external API calls directly in Livewire components or Eloquent models.
 

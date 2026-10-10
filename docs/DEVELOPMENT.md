@@ -22,15 +22,17 @@ Phase 14 — The Dahua snapshot client is complete for the currently understood 
 
 Phase 15 — MAX Messenger HTTP exploration is complete. Postman confirmed token authentication, image-upload URL creation, multipart JPEG upload, media-token extraction, chat-ID discovery through updates, and successful delivery of an image message to a real dialog.
 
-Phase 16 — Complete in the current working tree. The MAX client creates authenticated image-upload URLs, uploads JPEG bytes as multipart data, and sends image messages to supplied chat IDs. All three boundaries are covered for success, HTTP failure, and malformed successful responses.
+Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client creates authenticated image-upload URLs, uploads JPEG bytes as multipart data, and sends image messages to supplied chat IDs. All three boundaries are covered for success, HTTP failure, and malformed successful responses.
+
+Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-11.
 
 - branch: `main`;
-- the working tree was clean before the current message-sending work;
-- `main` matches `origin/main` at `26fe9b3` (`update`), the multipart-upload checkpoint;
+- `main` matches `origin/main` at `4aa4954` (`feat: add MAX image message client`);
+- the working tree contains the intentional Sail Docker publication and Russian Trusted CA installation required for HTTPS access to the current MAX endpoints; these infrastructure changes are not committed yet;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
@@ -46,6 +48,16 @@ Checkpoint date: 2026-10-11.
 - the one-space concatenation rule has been applied mechanically to the ten affected PHP files, the temporary backup is removed, and full Pint/tests pass;
 - the temporary `/dahua-probe` route remains removed;
 - documentation is synchronized through the current Pint configuration decision.
+
+## Phase 17 synchronous observation
+
+- the first attempt failed at the Dahua step because local `DAHUA_BASE_URL` incorrectly included `/cgi-bin/`; keeping only the recorder origin restored the expected snapshot URL;
+- the next attempt reached MAX but failed TLS verification because the current MAX certificate chain is issued by `Russian Trusted Sub CA`, which was absent from the standard Sail CA store;
+- the official `Russian Trusted Root CA` and `Russian Trusted Sub CA` certificates were added to a published Sail 8.5 Docker build, without disabling TLS verification;
+- a rebuilt container can establish verified HTTPS to `platform-api2.max.ru`;
+- the controlled real chain completed successfully with a 49,502-byte JPEG and a returned MAX message ID;
+- observed durations were 934 ms for the snapshot, 687 ms for upload-URL creation, 793 ms for image upload, and 155 ms for message send: 2,569 ms total;
+- this was a development smoke observation, not webhook integration; the production webhook still responds without starting the external workflow.
 
 ## Implemented application state
 
@@ -197,7 +209,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Begin Phase 17 by exercising the real sequential Dahua snapshot → MAX upload URL → multipart upload → test-chat send flow in a controlled development smoke check and observing its elapsed time and failure surface. Do not connect it to the production webhook or introduce queues until the synchronous cost has been observed.
+Finish and verify the reproducible Sail CA configuration, then begin Phase 18 with the smallest Laravel Queue job boundary. First learn what data the job must receive and verify dispatch/handling with the existing database queue backend; do not add Redis until the queue behavior is understood.
 
 ## Decisions to preserve
 

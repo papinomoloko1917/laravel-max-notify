@@ -13,7 +13,7 @@ understand the problem
 
 ## Current progress
 
-As of 2026-10-10:
+As of 2026-10-11:
 
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
@@ -24,9 +24,10 @@ As of 2026-10-10:
 - Phase 12 is complete, committed, and pushed through `04fdb86`: nullable PostgreSQL time fields store one per-Camera window, `APP_TIMEZONE=Europe/Moscow` makes the installation clock explicit, the isolated rule covers daytime/overnight/boundary cases, the webhook returns `200 Ignored` outside the window, and the Camera UI loads, saves, clears, and cross-validates the window.
 - Phase 13 is complete: the real NVR accepts Digest-authenticated `GET /cgi-bin/snapshot.cgi?channel=<channel>` requests, and a valid channel returns `200 OK` with an `image/jpeg` response in both a browser and Postman. A wrong password produces `401 Unauthorized` with a text error, while a nonexistent channel produces `400 Bad Request` with a different text error. The disclosed exploratory credential was rotated.
 - Phase 14 is complete: the environment-backed single-NVR configuration and Digest snapshot client are implemented. `Http::fake()` covers successful JPEG bytes, HTTP errors, invalid content types, and connection failures; explicit 3-second connection and 10-second overall limits are applied. A real-device Tinker smoke check confirmed Laravel/Guzzle Digest negotiation and returned JPEG data beginning with `FF D8`.
-- Phase 15 is complete: Postman confirmed raw `Authorization` token authentication against `platform-api2.max.ru`, image-upload URL creation, multipart JPEG upload, media-token extraction from `photos.0.token`, chat-ID discovery through `GET /updates`, and successful delivery through `POST /messages`. Representative missing-authentication, malformed-body, and unknown-recipient failures were also observed. Phase 16 MAX client implementation is next.
-- Phase 16 is complete in the current working tree: the environment-backed `MaxClient` creates upload URLs, uploads JPEG bytes as multipart field `data`, and sends text plus the resulting media token to a supplied chat ID. `Http::fake()` verifies exact authentication, URLs/query parameters, multipart and JSON payloads, returned identifiers, HTTP error propagation, and malformed-response rejection. Phase 17 synchronous observation is next.
-- Redis, background jobs, the MAX API client, webhook event processing, and event persistence remain intentionally postponed.
+- Phase 15 is complete: Postman confirmed raw `Authorization` token authentication against `platform-api2.max.ru`, image-upload URL creation, multipart JPEG upload, media-token extraction from `photos.0.token`, chat-ID discovery through `GET /updates`, and successful delivery through `POST /messages`. Representative missing-authentication, malformed-body, and unknown-recipient failures were also observed.
+- Phase 16 is complete and pushed through `4aa4954`: the environment-backed `MaxClient` creates upload URLs, uploads JPEG bytes as multipart field `data`, and sends text plus the resulting media token to a supplied chat ID. `Http::fake()` verifies exact authentication, URLs/query parameters, multipart and JSON payloads, returned identifiers, HTTP error propagation, and malformed-response rejection.
+- Phase 17 is complete: a controlled real Dahua snapshot → MAX upload URL → multipart upload → message send run delivered a 49,502-byte JPEG and returned a message ID in 2,569 ms. The measured external latency and independent failure points justify moving this work outside the webhook response. Verified MAX HTTPS currently requires the Russian Trusted Root/Sub CA chain in the Sail image; TLS verification remains enabled.
+- Redis, background jobs, webhook event processing, and event persistence remain intentionally postponed until Phase 18 begins with Laravel's existing database queue backend.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
 
