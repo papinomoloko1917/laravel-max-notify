@@ -20,13 +20,17 @@ Phase 13 — Dahua snapshot HTTP exploration is complete. Successful browser/Pos
 
 Phase 14 — The Dahua snapshot client is complete for the currently understood contract. Automated tests cover success and representative failures, explicit request limits are configured, and a real-device smoke check confirmed Laravel/Guzzle Digest negotiation and JPEG retrieval.
 
+Phase 15 — MAX Messenger HTTP exploration is complete. Postman confirmed token authentication, image-upload URL creation, multipart JPEG upload, media-token extraction, chat-ID discovery through updates, and successful delivery of an image message to a real dialog.
+
+Phase 16 — In progress. The first isolated MAX client boundary now creates an authenticated image-upload URL and is covered for success, HTTP failure, and malformed successful responses.
+
 ## Current repository state
 
 Checkpoint date: 2026-10-10.
 
 - branch: `main`;
-- the working tree was clean before this documentation-only handoff update;
-- `main` matches `origin/main` at `9ffbe93` (`feat: add Dahua request timeouts`);
+- the working tree was clean before this Phase 15 documentation update;
+- `main` matches `origin/main` at `dac746a` (`docs: checkpoint completed Dahua client`);
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
@@ -93,7 +97,30 @@ Checkpoint date: 2026-10-10.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, the MAX HTTP client, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed. The Dahua snapshot client is implemented but deliberately not yet connected to the webhook.
+Redis, Mailpit, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed. The Dahua snapshot client is implemented but deliberately not yet connected to the webhook. The MAX HTTP contract is understood, and only the first upload-URL method of its application client is implemented; multipart upload and message sending remain unimplemented.
+
+## Confirmed MAX Messenger behavior
+
+Observed on 2026-10-10 through Postman against the real MAX API:
+
+- requests use `https://platform-api2.max.ru` and pass the bot access token directly in the `Authorization` header without a `Bearer` prefix;
+- `GET /me` returns `200 OK` with the authenticated bot object;
+- a missing authorization header returns `401` with `verify.token` / `No access token`;
+- `POST /uploads?type=image` returns an upload URL;
+- a multipart `POST` to that URL with one JPEG in the `data` field returns the image token at `photos.0.token`;
+- `GET /updates` exposed the real dialog identifier at `message.recipient.chat_id` for development-time discovery;
+- `POST /messages?chat_id=<id>` with a JSON image attachment referencing the media token returned `200 OK` and delivered the text and image to the real dialog;
+- malformed JSON returned `400` with `proto.payload`, while an invalid recipient returned `400` with `Unknown recipient`;
+- bot tokens, upload URLs, media tokens, and recipient identifiers are intentionally excluded from the repository.
+
+## Current MAX client slice
+
+- environment-backed `services.max` configuration provides the MAX base URL and bot token without committing the real token;
+- `App\Services\MaxClient::createImageUploadUrl()` sends authenticated `POST /uploads?type=image` requests and returns the validated response `url`;
+- the client passes the raw access token in `Authorization` without a `Bearer` prefix and converts `4xx/5xx` responses through `Response::throw()`;
+- a successful response with a missing or empty upload URL is rejected with `UnexpectedValueException`;
+- focused tests prevent stray network access and cover the successful request/response contract, an HTTP `401`, and a malformed successful response;
+- multipart JPEG upload and `POST /messages` remain deliberately outside this first slice.
 
 ## Confirmed Dahua snapshot behavior
 
@@ -155,6 +182,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
 - current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
+- current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **3 passing tests and 4 assertions**;
 - full `artisan test`: **93 tests, 266 assertions, 1 skipped and 1 risky**; only the previously known Starter Kit security test is risky;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
@@ -164,7 +192,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Begin Phase 15 by exploring the real MAX Messenger upload/send HTTP workflow manually before implementing a MAX client. First determine the official API documentation, authentication header, upload creation/upload/send sequence, successful responses, and representative failures. Do not place the real token in Git, exported Postman collections, screenshots, or chat.
+Continue Phase 16 with the second isolated MAX client boundary: upload JPEG bytes to the previously obtained upload URL as multipart field `data`, extract and validate `photos.0.token`, and cover success plus representative HTTP/malformed-response failures with `Http::fake()`. Keep message sending outside this block.
 
 ## Decisions to preserve
 

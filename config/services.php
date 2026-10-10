@@ -42,4 +42,9 @@ return [
         'connect_timeout' => env('DAHUA_CONNECT_TIMEOUT', 3),
         'timeout' => env('DAHUA_TIMEOUT', 10),
     ],
+
+    'max' => [
+        'base_url' => env('MAX_BASE_URL'),
+        'token' => env('MAX_TOKEN'),
+    ],
 ];
