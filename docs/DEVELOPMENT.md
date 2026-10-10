@@ -16,6 +16,10 @@ Phase 11 — The minimal synchronous webhook boundary is complete and verified t
 
 Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, webhook integration, and validated Camera UI editing are complete, committed, and pushed through `04fdb86`.
 
+Phase 13 — Dahua snapshot HTTP exploration is complete. Successful browser/Postman image retrieval and representative authentication and invalid-channel failures are confirmed against the real NVR, and the credential disclosed during exploration has been rotated.
+
+Phase 14 — The Dahua snapshot client now covers the successful response, HTTP failures, and invalid content types with `Http::fake()`. Request time limits and one real-device smoke check through the Laravel client remain before this phase is complete.
+
 ## Current repository state
 
 Checkpoint date: 2026-10-10.
@@ -29,7 +33,8 @@ Checkpoint date: 2026-10-10.
 - commit `04fdb86` completes nullable `H:i` validation, persistence, explicit empty-string-to-null conversion, focused save/clear/invalid-window tests, formatting tooling, and synchronized Phase 12 documentation;
 - reciprocal `required_with` validation rejects partial windows, while `different:editNotifyUntil` rejects equal boundaries; focused tests assert the exact rules, unchanged database values, and an open modal;
 - Prettier Blade/Tailwind packages and the project-wide formatting baseline are committed in `04fdb86`;
-- the current intentional local `pint.json` change removes the special `Pint/laravel_blade` and brace-position overrides, retaining the Laravel preset with one-space concatenation;
+- commit `a8a99bc` contains the intentional `pint.json` simplification, the reviewed mechanical concatenation formatting, and synchronized documentation; `main` is pushed and matches `origin/main`;
+- the current Pint configuration removes the special `Pint/laravel_blade` and brace-position overrides, retaining the Laravel preset with one-space concatenation;
 - the one-space concatenation rule has been applied mechanically to the ten affected PHP files, the temporary backup is removed, and full Pint/tests pass;
 - the temporary `/dahua-probe` route remains removed;
 - documentation is synchronized through the current Pint configuration decision.
@@ -86,6 +91,33 @@ Checkpoint date: 2026-10-10.
 
 Redis, Mailpit, Dahua/MAX HTTP clients, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed.
 
+## Confirmed Dahua snapshot behavior
+
+Observed on 2026-10-10 against the real NVR:
+
+- a `GET` request to `/cgi-bin/snapshot.cgi?channel=<channel>` returns the current Camera image for a valid recorder channel;
+- the endpoint uses HTTP Digest authentication with a dedicated NVR account;
+- both a browser and Postman successfully displayed the response as an image;
+- the successful response was `200 OK`, `image/jpeg`, with a nonzero `Content-Length` (the exact image size is expected to vary);
+- a wrong password returns `401 Unauthorized`, `text/plain;charset=utf-8`, and the text error `Invalid Authority!`;
+- a nonexistent channel returns `400 Bad Request`, `text/plain;charset=utf-8`, and the text error `Bad Request!`;
+- real recorder addresses and credentials are intentionally excluded from the repository;
+- the credential disclosed during exploration was rotated on the NVR and is no longer valid.
+
+The representative success and failure contract is now sufficiently understood to begin a minimal Laravel client with automated HTTP fakes. Postman remains the real-device integration check because an HTTP fake cannot prove that Digest negotiation works with the NVR firmware.
+
+## Current Dahua client slice
+
+- environment-backed `services.dahua` configuration supplies the single current NVR base URL, username, and password without committing real credentials;
+- `App\Services\DahuaClient::snapshot(int $channel)` performs a Digest-configured GET to `/cgi-bin/snapshot.cgi` and passes the channel as a query parameter;
+- the successful response body is returned as raw string bytes;
+- a focused HTTP-fake test prevents stray network requests, verifies the returned JPEG bytes, and verifies the exact GET URL for channel 13;
+- `4xx/5xx` responses are converted to Laravel `RequestException` through `Response::throw()` before content validation;
+- a successful response whose `Content-Type` is not exactly `image/jpeg` is rejected with `UnexpectedValueException` rather than returned as snapshot bytes;
+- focused verification: **3 passing tests and 4 assertions**, with Pint passing for the client, test, and service configuration;
+- full verification after this slice: **92 tests, 265 assertions, 1 skipped and the same 1 known risky Starter Kit test**; full Pint passes;
+- request time limits, a real-device smoke check through this client, and webhook integration are intentionally not implemented yet.
+
 ## Confirmed Dahua probe behavior
 
 Observed on 2026-09-26 with DHI-NVR4232-4KS2/L firmware `V4.003.0000000.1.R` and DH-IPC-HFW2249SP-S-IL-0280B. IVS, rather than SMD, is the intended production event source:
@@ -124,7 +156,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Commit and push the reviewed Pint configuration, mechanical concatenation fixes, and synchronized documentation. Then begin Phase 13 by exploring the real Dahua snapshot HTTP contract manually with Postman: determine the exact endpoint, authentication behavior, successful response status and `Content-Type`, and representative failure responses. Do not implement a Laravel Dahua client until the observed contract is understood.
+Continue Phase 14 by adding explicit connection/overall time limits and then perform one safe real-device smoke check through `DahuaClient` to prove Guzzle Digest negotiation. Keep the client disconnected from the webhook while finishing this boundary.
 
 ## Decisions to preserve
 

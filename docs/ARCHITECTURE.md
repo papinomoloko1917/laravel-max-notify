@@ -25,7 +25,7 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-10-08, the application contains:
+As of 2026-10-10, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a `cameras` table with identity/display fields plus nullable unique HTTP Basic username and nullable hashed webhook password;
@@ -122,7 +122,7 @@ These findings describe the tested local setup, not yet a permanent public webho
 
 ### Dahua
 
-Use Laravel HTTP Client when implemented.
+The first minimal client uses Laravel HTTP Client and environment-backed configuration for the single current NVR. It accepts a channel per snapshot request, converts `4xx/5xx` responses to Laravel HTTP exceptions, rejects successful non-JPEG responses, and returns validated JPEG bodies as raw string bytes. It is not connected to the webhook yet; explicit time limits and a real-device smoke check through the client remain.
 
 Potential responsibilities:
 
@@ -132,6 +132,10 @@ Potential responsibilities:
 - response validation.
 
 Understand the HTTP contract first, using Postman when helpful.
+
+The snapshot contract observed against the current NVR is a Digest-authenticated `GET /cgi-bin/snapshot.cgi?channel=<channel>`. A valid channel returns `200 OK` and `image/jpeg`; a wrong password returns `401 Unauthorized` with a plain-text error; a nonexistent channel returns `400 Bad Request` with a different plain-text error. These are observed device behaviors rather than assumptions from vendor documentation.
+
+The current installation has one known NVR account shared for snapshot access. The first client may therefore use environment-backed installation configuration for its base URL and credentials while receiving the channel per request. This deliberately supports one NVR; database-backed per-recorder configuration should be introduced only if multiple recorders become a real requirement. Incoming webhook credentials are separate: their password is intentionally hashed and cannot be reused for outgoing Digest authentication.
 
 ### MAX Messenger
 
