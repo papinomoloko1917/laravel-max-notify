@@ -22,15 +22,15 @@ Phase 14 — The Dahua snapshot client is complete for the currently understood 
 
 Phase 15 — MAX Messenger HTTP exploration is complete. Postman confirmed token authentication, image-upload URL creation, multipart JPEG upload, media-token extraction, chat-ID discovery through updates, and successful delivery of an image message to a real dialog.
 
-Phase 16 — In progress. The MAX client now creates authenticated image-upload URLs and uploads JPEG bytes as multipart data, with both boundaries covered for success, HTTP failure, and malformed successful responses. Message sending remains next.
+Phase 16 — Complete in the current working tree. The MAX client creates authenticated image-upload URLs, uploads JPEG bytes as multipart data, and sends image messages to supplied chat IDs. All three boundaries are covered for success, HTTP failure, and malformed successful responses.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-11.
 
 - branch: `main`;
-- the working tree was clean before the current multipart-upload work;
-- `main` matches `origin/main` at `c074f20` (`feat: add MAX image upload URL client`);
+- the working tree was clean before the current message-sending work;
+- `main` matches `origin/main` at `26fe9b3` (`update`), the multipart-upload checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
@@ -97,7 +97,7 @@ Checkpoint date: 2026-10-11.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed. The Dahua snapshot client is implemented but deliberately not yet connected to the webhook. The MAX HTTP contract is understood; upload-URL creation and multipart JPEG upload are implemented, while message sending remains unimplemented.
+Redis, Mailpit, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed. The Dahua snapshot client and all three MAX client HTTP steps are implemented and tested, but they remain deliberately disconnected from the incoming webhook.
 
 ## Confirmed MAX Messenger behavior
 
@@ -122,7 +122,9 @@ Observed on 2026-10-10 through Postman against the real MAX API:
 - focused tests prevent stray network access and cover the successful request/response contract, an HTTP `401`, and a malformed successful response;
 - `App\Services\MaxClient::uploadImage()` sends JPEG bytes to the one-time upload URL as multipart field `data` with filename `snapshot.jpg` and returns the validated `photos.0.token` media token;
 - focused multipart tests verify the exact upload URL, raw authorization header, file field/content/name, returned media token, HTTP failure propagation, and rejection of a successful response without the token;
-- `POST /messages` remains deliberately outside the completed upload slices.
+- `App\Services\MaxClient::sendImageMessage()` sends JSON text plus an image media token to a supplied `chat_id` and returns the validated `message.body.mid` message ID;
+- focused message tests verify the exact query parameter, raw authorization, JSON body, returned message ID, HTTP failure propagation, and rejection of a successful response without `mid`;
+- the three MAX methods remain separate and are not yet composed with `DahuaClient` or the webhook.
 
 ## Confirmed Dahua snapshot behavior
 
@@ -184,8 +186,8 @@ The temporary probe logged only request metadata and header names, not header va
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
 - current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
-- current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **6 passing tests and 8 assertions**;
-- current `artisan test tests/Feature/Services`: **10 passing tests and 13 assertions**;
+- current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
+- current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
 - full `artisan test`: **93 tests, 266 assertions, 1 skipped and 1 risky**; only the previously known Starter Kit security test is risky;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
@@ -195,7 +197,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Continue Phase 16 with the third isolated MAX client boundary: send text plus the previously obtained image media token to a supplied chat ID through `POST /messages`, return useful message identity from the validated response, and cover success plus representative HTTP/malformed-response failures with `Http::fake()`. Do not connect the three steps to the webhook yet.
+Begin Phase 17 by exercising the real sequential Dahua snapshot → MAX upload URL → multipart upload → test-chat send flow in a controlled development smoke check and observing its elapsed time and failure surface. Do not connect it to the production webhook or introduce queues until the synchronous cost has been observed.
 
 ## Decisions to preserve
 

@@ -56,4 +56,40 @@ class MaxClient
 
         return $mediaToken;
     }
+
+    public function sendImageMessage(
+        int $chatId,
+        string $mediaToken,
+        string $text,
+    ): string {
+        $baseUrl = (string) config('services.max.base_url');
+
+        $token = (string) config('services.max.token');
+
+        $response = Http::acceptJson()
+            ->asJson()
+            ->withHeaders(['Authorization' => $token])
+            ->withQueryParameters(['chat_id' => $chatId])
+            ->post(rtrim($baseUrl, '/') . '/messages', [
+                'text' => $text,
+                'attachments' => [
+                    [
+                        'type' => 'image',
+                        'payload' => [
+                            'token' => $mediaToken,
+                        ],
+                    ],
+                ],
+            ]);
+
+        $response->throw();
+
+        $messageId = $response->json('message.body.mid');
+
+        if (! is_string($messageId) || $messageId === '') {
+            throw new UnexpectedValueException('MAX did not return a message ID');
+        }
+
+        return $messageId;
+    }
 }

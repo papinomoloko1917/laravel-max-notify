@@ -180,4 +180,111 @@ class MaxClientTest extends TestCase
             $jpegBytes,
         );
     }
+
+    public function test_it_sends_an_image_message_and_returns_its_id(): void
+    {
+        Http::preventStrayRequests();
+
+        config([
+            'services.max.base_url' => 'https://max.test',
+            'services.max.token' => 'test_token',
+        ]);
+
+        $chatId = 12345;
+        $mediaToken = 'test-media-token';
+        $text = 'Test notification';
+        $expectedMessageId = 'test-message-id';
+
+        $expectedBody = [
+            'text' => $text,
+            'attachments' => [
+                [
+                    'type' => 'image',
+                    'payload' => [
+                        'token' => $mediaToken,
+                    ],
+                ],
+            ],
+        ];
+
+        Http::fake([
+            'https://max.test/messages*' => Http::response([
+                'message' => [
+                    'body' => [
+                        'mid' => $expectedMessageId,
+                    ],
+                ],
+            ]),
+        ]);
+
+        $client = new MaxClient;
+
+        $actualMessageId = $client->sendImageMessage(
+            $chatId,
+            $mediaToken,
+            $text,
+        );
+
+        $this->assertSame($expectedMessageId, $actualMessageId);
+
+        Http::assertSent(
+            fn (Request $request): bool => $request->method() === 'POST'
+                && $request->url() === 'https://max.test/messages?chat_id=12345'
+                && $request->hasHeader('Authorization', 'test_token')
+                && $request->isJson()
+                && $request->data() === $expectedBody,
+        );
+    }
+
+    public function test_it_throws_when_sending_an_image_message_fails(): void
+    {
+        Http::preventStrayRequests();
+
+        config([
+            'services.max.base_url' => 'https://max.test',
+            'services.max.token' => 'test_token',
+        ]);
+
+        Http::fake([
+            'https://max.test/messages*' => Http::response([], 500),
+        ]);
+
+        $client = new MaxClient;
+
+        $this->expectException(RequestException::class);
+
+        $client->sendImageMessage(
+            12345,
+            'test-media-token',
+            'Test notification',
+        );
+    }
+
+    public function test_it_rejects_a_successful_message_response_without_an_id(): void
+    {
+        Http::preventStrayRequests();
+
+        config([
+            'services.max.base_url' => 'https://max.test',
+            'services.max.token' => 'test_token',
+        ]);
+
+        Http::fake([
+            'https://max.test/messages*' => Http::response([
+                'message' => [
+                    'body' => [],
+                ],
+            ]),
+        ]);
+
+        $client = new MaxClient;
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $client->sendImageMessage(
+            12345,
+            'test-media-token',
+            'Test notification',
+        );
+    }
 }

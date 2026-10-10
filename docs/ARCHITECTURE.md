@@ -52,7 +52,7 @@ As of 2026-10-10, the application contains:
 - Client Camera assignments edited through a separately paginated table in the existing modal; current IDs are loaded from the many-to-many relation, submitted IDs are validated individually, and `sync()` makes pivot rows match the selected set;
 - focused assignment tests cover replacing an existing Camera relation and rejecting a nonexistent Camera ID without changing Client or pivot data.
 
-A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. A separate tested Dahua HTTP client retrieves snapshots but is not yet connected to the webhook. The real MAX upload/send contract has been explored manually; tested MAX client methods now create image-upload URLs and upload JPEG bytes, while message sending remains unimplemented. There is no event processing, queue job, Redis service, or event journal yet. The temporary metadata-only diagnostic route has been removed.
+A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. A separate tested Dahua HTTP client retrieves snapshots but is not yet connected to the webhook. The tested MAX client now implements upload-URL creation, multipart JPEG upload, and image-message sending. These clients remain deliberately uncomposed while synchronous latency is investigated. There is no event processing, queue job, Redis service, or event journal yet. The temporary metadata-only diagnostic route has been removed.
 
 ## Likely mature flow
 
@@ -153,7 +153,7 @@ Understand the real HTTP sequence before adding abstractions.
 
 The observed image workflow uses the raw bot token in the `Authorization` header: request an upload URL with `POST /uploads?type=image`, upload one JPEG as multipart field `data`, read the resulting `photos.0.token`, then send it as an image attachment through `POST /messages?chat_id=<id>`. `GET /updates` is suitable for discovering a test dialog's `chat_id`, but not as the production event-delivery design.
 
-The first two `MaxClient` slices implement upload-URL creation and multipart JPEG upload. They read the base URL/token from `services.max`, use the raw `Authorization` header, reject HTTP errors, and validate both the response `url` and `photos.0.token`. Keeping message sending separate makes each step independently observable and testable before composing the workflow.
+The three `MaxClient` slices implement upload-URL creation, multipart JPEG upload, and image-message sending. They read the base URL/token from `services.max`, use the raw `Authorization` header, reject HTTP errors, and validate the response `url`, `photos.0.token`, and `message.body.mid`. Keeping these methods separate makes each HTTP boundary independently observable and testable before the workflow is composed.
 
 Do not put external API calls directly in Livewire components or Eloquent models.
 
