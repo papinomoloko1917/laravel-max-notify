@@ -14,11 +14,11 @@ Phase 10 — Dahua IVS webhook exploration is complete using the real DHI-NVR423
 
 Phase 11 — The minimal synchronous webhook boundary is complete and verified through Postman and the real NVR.
 
-Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, webhook integration, and validated Camera UI editing are complete in the current working checkpoint. Commit and push this checkpoint before moving machines.
+Phase 12 — Per-Camera notification-window storage, timezone configuration, the isolated business rule, webhook integration, and validated Camera UI editing are complete, committed, and pushed through `04fdb86`.
 
 ## Current repository state
 
-Checkpoint date: 2026-10-09.
+Checkpoint date: 2026-10-10.
 
 - branch: `main`;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -26,11 +26,13 @@ Checkpoint date: 2026-10-09.
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
 - Camera notification-window edit state, time inputs, translations, loading coverage, and synchronized documentation are committed and pushed in `3bd2175`;
 - commit `37dee28` is the prior WIP checkpoint from the other machine;
-- the current working checkpoint completes nullable `H:i` validation, persistence, explicit empty-string-to-null conversion, and focused save/clear tests for the Camera notification window;
+- commit `04fdb86` completes nullable `H:i` validation, persistence, explicit empty-string-to-null conversion, focused save/clear/invalid-window tests, formatting tooling, and synchronized Phase 12 documentation;
 - reciprocal `required_with` validation rejects partial windows, while `different:editNotifyUntil` rejects equal boundaries; focused tests assert the exact rules, unchanged database values, and an open modal;
-- intentional tooling changes add Prettier Blade/Tailwind packages, enable Pint's Laravel Blade formatting rule, and apply the new formatting baseline across the project;
+- Prettier Blade/Tailwind packages and the project-wide formatting baseline are committed in `04fdb86`;
+- the current intentional local `pint.json` change removes the special `Pint/laravel_blade` and brace-position overrides, retaining the Laravel preset with one-space concatenation;
+- the one-space concatenation rule has been applied mechanically to the ten affected PHP files, the temporary backup is removed, and full Pint/tests pass;
 - the temporary `/dahua-probe` route remains removed;
-- documentation is synchronized through completion of Phase 12.
+- documentation is synchronized through the current Pint configuration decision.
 
 ## Implemented application state
 
@@ -112,8 +114,9 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
+- current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
 - full `artisan test`: **89 tests, 261 assertions, 1 skipped and 1 risky**; only the previously known Starter Kit security test is risky;
-- full Pint check with the new formatting configuration: **passes**;
+- full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
 - Larastan reports only the **2 previously known Starter Kit-related findings**; adding the controller return type resolved the webhook finding, and no finding points to the Phase 12 code;
@@ -121,7 +124,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Commit and push the completed Phase 12 and intentional formatting-tooling changes. Then begin Phase 13 by exploring the real Dahua snapshot HTTP contract manually with Postman: determine the exact endpoint, authentication behavior, successful response status and `Content-Type`, and representative failure responses. Do not implement a Laravel Dahua client until the observed contract is understood.
+Commit and push the reviewed Pint configuration, mechanical concatenation fixes, and synchronized documentation. Then begin Phase 13 by exploring the real Dahua snapshot HTTP contract manually with Postman: determine the exact endpoint, authentication behavior, successful response status and `Content-Type`, and representative failure responses. Do not implement a Laravel Dahua client until the observed contract is understood.
 
 ## Decisions to preserve
 
