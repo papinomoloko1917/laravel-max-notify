@@ -71,7 +71,7 @@ Laravel webhook endpoint
 queue job
     |
     v
-queue backend (likely Redis)
+queue backend (database first; Redis evaluated later)
     |
     v
 process camera event
@@ -237,12 +237,14 @@ Current Sail services:
 - PostgreSQL;
 - Adminer as optional local inspection tooling.
 
+The committed Sail 8.5 runtime installs the official Russian Trusted Root/Sub CA chain required by the current MAX endpoints. This keeps normal TLS verification enabled and makes the trust-store change reproducible on each development machine after rebuilding the application image.
+
 Later/optional:
 
 - Redis when needed;
 - Mailpit only if needed.
 
-The default Laravel database-backed cache, session, and queue configuration is present. This does not mean queue processing has been introduced into the application; no application jobs or workers are currently part of the design.
+The default Laravel database-backed cache, session, and queue configuration is present, including the `jobs` and `failed_jobs` tables. This does not mean queue processing has been introduced into the application; no application jobs or workers are currently part of the design. Phase 18 starts with this database backend so dispatch, reservation, retries, and failure storage can be learned before Redis is evaluated.
 
 Demonstration User and Camera seeders are restricted to the `local` environment. The predictable local user is created or updated idempotently and marked email-verified so it can access verified administration routes.
 

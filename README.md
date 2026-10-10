@@ -13,9 +13,11 @@ The project is being built incrementally. The roadmap describes future direction
 - Pest, Pint, and Larastan;
 - authenticated Camera and Client administration with tested many-to-many assignments;
 - synchronous authenticated Dahua IVS webhook with per-Camera notification windows;
-- tested Dahua snapshot client using Digest authentication and explicit request limits.
+- tested Dahua snapshot client using Digest authentication and explicit request limits;
+- tested MAX Messenger client for upload-URL creation, JPEG upload, and image-message delivery;
+- a published Sail 8.5 image with the trusted CA chain required by the current MAX HTTPS endpoints.
 
-Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. A minimal synchronous IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, and applies the configured per-Camera notification window. A separate Dahua client retrieves JPEG snapshots through Digest authentication and has been verified with HTTP fakes and the real NVR. MAX integration, webhook event processing, queues, Redis, duplicate protection, and event history are not implemented.
+Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. A minimal synchronous IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, and applies the configured per-Camera notification window. Separate Dahua and MAX clients are covered with HTTP fakes and have completed one controlled real snapshot-to-message smoke run in 2,569 ms. They remain disconnected from the webhook. Queue jobs, Redis, duplicate protection, and event history are not implemented.
 
 See [Development Handoff](docs/DEVELOPMENT.md) for the exact current state and known quality-baseline issues.
 
@@ -32,6 +34,7 @@ Initial setup:
 ```bash
 composer install
 cp .env.example .env
+./vendor/bin/sail build --no-cache laravel.test
 ./vendor/bin/sail up -d
 ./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate
@@ -47,14 +50,17 @@ Development services:
 
 Keep `.env`, camera credentials, API tokens, and production secrets out of Git.
 
-This installation expects `APP_TIMEZONE=Europe/Moscow`. Dahua snapshot access uses the local-only `DAHUA_BASE_URL`, `DAHUA_USERNAME`, and `DAHUA_PASSWORD` values described by `.env.example`; never commit their real values. The default connection and overall request limits are 3 and 10 seconds.
+This installation expects `APP_TIMEZONE=Europe/Moscow`. Dahua snapshot access uses the local-only `DAHUA_BASE_URL`, `DAHUA_USERNAME`, and `DAHUA_PASSWORD` values described by `.env.example`; the base URL must contain only the recorder origin, without `/cgi-bin`. MAX access uses the local-only `MAX_TOKEN`. Never commit real credentials or tokens. The default Dahua connection and overall request limits are 3 and 10 seconds.
 
-## Focused Camera checks
+The application image is built from the committed `docker/8.5` runtime. Rebuild `laravel.test` after pulling changes to that Dockerfile or its certificates. TLS verification must remain enabled.
+
+## Focused integration checks
 
 ```bash
 ./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
 ./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
 ./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
+./vendor/bin/sail artisan test tests/Feature/Services/MaxClientTest.php
 ./vendor/bin/sail pint --test \
   app/Services/DahuaClient.php \
   tests/Feature/Services/DahuaClientTest.php \

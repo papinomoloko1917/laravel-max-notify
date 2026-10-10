@@ -31,8 +31,9 @@ Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart
 Checkpoint date: 2026-10-11.
 
 - branch: `main`;
-- `main` matches `origin/main` at `4aa4954` (`feat: add MAX image message client`);
-- the working tree contains the intentional Sail Docker publication and Russian Trusted CA installation required for HTTPS access to the current MAX endpoints; these infrastructure changes are not committed yet;
+- `main` matches `origin/main` at `63c01dd` (`docs: complete synchronous workflow checkpoint`) before this documentation refresh;
+- commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
+- commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
@@ -47,7 +48,7 @@ Checkpoint date: 2026-10-11.
 - the current Pint configuration removes the special `Pint/laravel_blade` and brace-position overrides, retaining the Laravel preset with one-space concatenation;
 - the one-space concatenation rule has been applied mechanically to the ten affected PHP files, the temporary backup is removed, and full Pint/tests pass;
 - the temporary `/dahua-probe` route remains removed;
-- documentation is synchronized through the current Pint configuration decision.
+- the application and infrastructure working tree was clean before this documentation refresh.
 
 ## Phase 17 synchronous observation
 
@@ -109,7 +110,7 @@ Checkpoint date: 2026-10-11.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed. The Dahua snapshot client and all three MAX client HTTP steps are implemented and tested, but they remain deliberately disconnected from the incoming webhook.
+Redis, Mailpit, webhook event processing, queue jobs, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit, but no application job or worker has been introduced. The Dahua snapshot client and all three MAX client HTTP steps are implemented and tested, but they remain deliberately disconnected from the incoming webhook.
 
 ## Confirmed MAX Messenger behavior
 
@@ -209,7 +210,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Finish and verify the reproducible Sail CA configuration, then begin Phase 18 with the smallest Laravel Queue job boundary. First learn what data the job must receive and verify dispatch/handling with the existing database queue backend; do not add Redis until the queue behavior is understood.
+Begin Phase 18 with the smallest Laravel Queue boundary: generate `ProcessCameraEvent`, give it only the Camera ID and validated channel, dispatch it for an accepted webhook, and verify dispatch/non-dispatch with `Queue::fake()`. Keep `handle()` free of external HTTP work in this first block. Use the existing database queue backend; do not add Redis yet.
 
 ## Decisions to preserve
 
@@ -231,6 +232,8 @@ Commit and push this documentation-only handoff update. On the other machine:
 
 ```bash
 git pull
+composer install
+./vendor/bin/sail build --no-cache laravel.test
 ./vendor/bin/sail up -d
 ./vendor/bin/sail npm ci
 ./vendor/bin/sail artisan config:clear
@@ -240,6 +243,7 @@ git pull
 ./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
 ./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
 ./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
+./vendor/bin/sail artisan test tests/Feature/Services/MaxClientTest.php
 ```
 
 Because `.env` is intentionally not committed, configure these values locally before clearing configuration:
@@ -248,6 +252,8 @@ Because `.env` is intentionally not committed, configure these values locally be
 - `DAHUA_BASE_URL`;
 - `DAHUA_USERNAME`;
 - `DAHUA_PASSWORD`;
-- optionally override `DAHUA_CONNECT_TIMEOUT=3` and `DAHUA_TIMEOUT=10`.
+- optionally override `DAHUA_CONNECT_TIMEOUT=3` and `DAHUA_TIMEOUT=10`;
+- `MAX_BASE_URL=https://platform-api2.max.ru`;
+- `MAX_TOKEN`.
 
-Transfer real credentials through a secure channel, never Git or chat. Automated tests use HTTP fakes and do not require LAN access to the NVR; repeat the real smoke test only when the other machine can safely reach the device and there is a reason to revalidate it.
+`DAHUA_BASE_URL` must be only the recorder origin and must not include `/cgi-bin` or the snapshot path. Transfer real credentials through a secure channel, never Git or chat. Automated tests use HTTP fakes and do not require LAN access to the NVR or MAX; repeat the real smoke test only when the other machine can safely reach the device and there is a reason to revalidate it.

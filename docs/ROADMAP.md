@@ -142,11 +142,11 @@ Exit: explain why background processing is useful.
 
 Learn jobs, dispatch, workers, retries, timeouts, failed jobs, and idempotency.
 
-Only now choose/configure a queue backend.
+Start with Laravel's already configured database queue so the job lifecycle is visible without adding infrastructure. Choose a different backend only after its benefit is understood.
 
 ## Phase 19 — Redis
 
-Introduce Redis because there is now a concrete use-case.
+Evaluate Redis against the now-understood queue use-case and introduce it if its operational benefits justify another service.
 
 Learn Redis basics, queue backend, Sail service, and Laravel configuration.
 

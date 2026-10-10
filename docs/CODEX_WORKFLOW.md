@@ -129,6 +129,13 @@ git pull --rebase
 codex
 ```
 
+If the pulled commits changed `compose.yaml`, a Dockerfile, or files copied into an image, rebuild the affected Sail image before starting work. For the current project runtime:
+
+```bash
+./vendor/bin/sail build laravel.test
+./vendor/bin/sail up -d
+```
+
 Start a fresh Codex session and paste the first prompt.
 
 It is fine if old conversation history is unavailable. Repository state is authoritative.
