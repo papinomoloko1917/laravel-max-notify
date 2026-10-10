@@ -88,4 +88,96 @@ class MaxClientTest extends TestCase
 
         $client->createImageUploadUrl();
     }
+
+    public function test_it_uploads_an_image_and_returns_its_media_token(): void
+    {
+        Http::preventStrayRequests();
+
+        config(['services.max.token' => 'test_token']);
+
+        $uploadUrl = 'https://upload.test/image?key=test';
+
+        $jpegBytes = 'fake-jpeg-content';
+
+        $expectedMediaToken = 'test-media-token';
+
+        Http::fake([
+            $uploadUrl => Http::response(
+                ['photos' => [
+                    [
+                        'token' => $expectedMediaToken,
+                    ],
+                ], ]),
+        ]);
+
+        $client = new MaxClient;
+
+        $actualMediaToken = $client->uploadImage(
+            $uploadUrl,
+            $jpegBytes,
+        );
+
+        $this->assertSame(
+            $expectedMediaToken,
+            $actualMediaToken,
+        );
+
+        Http::assertSent(fn (Request $request) => $request->method() === 'POST'
+        && $request->url() === $uploadUrl && $request->hasHeader('Authorization', 'test_token')
+        && $request->hasFile('data', $jpegBytes, 'snapshot.jpg'));
+    }
+
+    public function test_it_throws_when_image_upload_fails(): void
+    {
+        Http::preventStrayRequests();
+
+        config(['services.max.token' => 'test_token']);
+
+        $uploadUrl = 'https://upload.test/image?key=test';
+
+        $jpegBytes = 'fake-jpeg-content';
+
+        Http::fake([
+            $uploadUrl => Http::response(
+                ['test' => 'https://upload.test/image'],
+                500,
+            ),
+        ]);
+
+        $client = new MaxClient;
+
+        $this->expectException(RequestException::class);
+
+        $client->uploadImage(
+            $uploadUrl,
+            $jpegBytes,
+        );
+    }
+
+    public function test_it_rejects_a_successful_upload_without_a_media_token(): void
+    {
+        Http::preventStrayRequests();
+
+        config(['services.max.token' => 'test_token']);
+
+        $uploadUrl = 'https://upload.test/image?key=test';
+
+        $jpegBytes = 'fake-jpeg-content';
+
+        Http::fake([
+            $uploadUrl => Http::response(
+                ['photos' => []],
+                200,
+            ),
+        ]);
+
+        $client = new MaxClient;
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $client->uploadImage(
+            $uploadUrl,
+            $jpegBytes,
+        );
+    }
 }

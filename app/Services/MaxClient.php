@@ -32,4 +32,28 @@ class MaxClient
 
         return $url;
     }
+
+    public function uploadImage(string $uploadUrl, string $imageContents): string
+    {
+        $token = (string) config('services.max.token');
+
+        $response = Http::acceptJson()
+            ->withHeaders(['Authorization' => $token])
+            ->attach(
+                'data',
+                $imageContents,
+                'snapshot.jpg',
+            )
+            ->post($uploadUrl);
+
+        $response->throw();
+
+        $mediaToken = $response->json('photos.0.token');
+
+        if (! is_string($mediaToken) || $mediaToken === '') {
+            throw new UnexpectedValueException('MAX did not return a media token for the uploaded image');
+        }
+
+        return $mediaToken;
+    }
 }
