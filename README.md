@@ -11,10 +11,11 @@ The project is being built incrementally. The roadmap describes future direction
 - PostgreSQL 18;
 - Laravel Sail with Laravel, PostgreSQL, and local Adminer services;
 - Pest, Pint, and Larastan;
-- minimal Camera migration, Eloquent model, factory, and focused database test;
-- Client migration, Eloquent model, factory, and initial database tests.
+- authenticated Camera and Client administration with tested many-to-many assignments;
+- synchronous authenticated Dahua IVS webhook with per-Camera notification windows;
+- tested Dahua snapshot client using Digest authentication and explicit request limits.
 
-Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. A minimal synchronous IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, applies the configured per-Camera notification window, and has been verified with Postman and a real Dahua NVR. Dahua snapshot/MAX integrations, queues, Redis, duplicate protection, and event history are not implemented.
+Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. A minimal synchronous IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, and applies the configured per-Camera notification window. A separate Dahua client retrieves JPEG snapshots through Digest authentication and has been verified with HTTP fakes and the real NVR. MAX integration, webhook event processing, queues, Redis, duplicate protection, and event history are not implemented.
 
 See [Development Handoff](docs/DEVELOPMENT.md) for the exact current state and known quality-baseline issues.
 
@@ -46,14 +47,18 @@ Development services:
 
 Keep `.env`, camera credentials, API tokens, and production secrets out of Git.
 
+This installation expects `APP_TIMEZONE=Europe/Moscow`. Dahua snapshot access uses the local-only `DAHUA_BASE_URL`, `DAHUA_USERNAME`, and `DAHUA_PASSWORD` values described by `.env.example`; never commit their real values. The default connection and overall request limits are 3 and 10 seconds.
+
 ## Focused Camera checks
 
 ```bash
 ./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
+./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
+./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
 ./vendor/bin/sail pint --test \
-  app/Models/Camera.php \
-  database/factories/CameraFactory.php \
-  tests/Feature/Models/CameraTest.php
+  app/Services/DahuaClient.php \
+  tests/Feature/Services/DahuaClientTest.php \
+  config/services.php
 ```
 
 The full quality command is:

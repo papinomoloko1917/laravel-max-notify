@@ -25,6 +25,8 @@ Phase 14 — The Dahua snapshot client is complete for the currently understood 
 Checkpoint date: 2026-10-10.
 
 - branch: `main`;
+- the working tree was clean before this documentation-only handoff update;
+- `main` matches `origin/main` at `9ffbe93` (`feat: add Dahua request timeouts`);
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
 - the notification-window storage and isolated rule checkpoint is commit `ea19c4a` (`feat: add camera notification windows`);
 - the webhook time-window integration checkpoint is commit `f8843d2` (`feat: apply camera notification windows`) and is pushed to `origin/main`;
@@ -34,6 +36,8 @@ Checkpoint date: 2026-10-10.
 - reciprocal `required_with` validation rejects partial windows, while `different:editNotifyUntil` rejects equal boundaries; focused tests assert the exact rules, unchanged database values, and an open modal;
 - Prettier Blade/Tailwind packages and the project-wide formatting baseline are committed in `04fdb86`;
 - commit `a8a99bc` contains the intentional `pint.json` simplification, the reviewed mechanical concatenation formatting, and synchronized documentation; `main` is pushed and matches `origin/main`;
+- commit `75446e9` adds the environment-backed Digest snapshot client and its successful/error response tests;
+- commit `9ffbe93` adds explicit connection/overall time limits, connection-failure coverage, the successful real-NVR smoke-test checkpoint, and synchronized Phase 14 documentation;
 - the current Pint configuration removes the special `Pint/laravel_blade` and brace-position overrides, retaining the Laravel preset with one-space concatenation;
 - the one-space concatenation rule has been applied mechanically to the ten affected PHP files, the temporary backup is removed, and full Pint/tests pass;
 - the temporary `/dahua-probe` route remains removed;
@@ -89,7 +93,7 @@ Checkpoint date: 2026-10-10.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, Dahua/MAX HTTP clients, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed.
+Redis, Mailpit, the MAX HTTP client, webhook event processing, queues, duplicate protection, and event history remain intentionally postponed. The Dahua snapshot client is implemented but deliberately not yet connected to the webhook.
 
 ## Confirmed Dahua snapshot behavior
 
@@ -104,7 +108,7 @@ Observed on 2026-10-10 against the real NVR:
 - real recorder addresses and credentials are intentionally excluded from the repository;
 - the credential disclosed during exploration was rotated on the NVR and is no longer valid.
 
-The representative success and failure contract is now sufficiently understood to begin a minimal Laravel client with automated HTTP fakes. Postman remains the real-device integration check because an HTTP fake cannot prove that Digest negotiation works with the NVR firmware.
+The representative success and failure contract is implemented in the minimal client. Postman established the device contract, automated HTTP fakes protect application behavior, and the Tinker smoke test proved real Digest negotiation through Laravel/Guzzle.
 
 ## Current Dahua client slice
 
@@ -150,7 +154,8 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
 - current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
-- full `artisan test`: **89 tests, 261 assertions, 1 skipped and 1 risky**; only the previously known Starter Kit security test is risky;
+- current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
+- full `artisan test`: **93 tests, 266 assertions, 1 skipped and 1 risky**; only the previously known Starter Kit security test is risky;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
@@ -159,7 +164,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Commit and push the reviewed Phase 14 timeout and connection-failure additions with synchronized documentation. Then begin Phase 15 by exploring the real MAX Messenger upload/send HTTP workflow manually before implementing a MAX client.
+Begin Phase 15 by exploring the real MAX Messenger upload/send HTTP workflow manually before implementing a MAX client. First determine the official API documentation, authentication header, upload creation/upload/send sequence, successful responses, and representative failures. Do not place the real token in Git, exported Postman collections, screenshots, or chat.
 
 ## Decisions to preserve
 
@@ -177,7 +182,7 @@ Commit and push the reviewed Phase 14 timeout and connection-failure additions w
 
 ## Moving to another machine
 
-Before switching machines, commit and push any reviewed documentation or Phase 12 work. On the other machine:
+Commit and push this documentation-only handoff update. On the other machine:
 
 ```bash
 git pull
@@ -189,6 +194,15 @@ git pull
 ./vendor/bin/sail artisan test tests/Unit/NotificationWindowTest.php
 ./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
 ./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
+./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
 ```
 
-Because `.env` is intentionally not committed, add `APP_TIMEZONE=Europe/Moscow` to that machine's local `.env` before clearing configuration.
+Because `.env` is intentionally not committed, configure these values locally before clearing configuration:
+
+- `APP_TIMEZONE=Europe/Moscow`;
+- `DAHUA_BASE_URL`;
+- `DAHUA_USERNAME`;
+- `DAHUA_PASSWORD`;
+- optionally override `DAHUA_CONNECT_TIMEOUT=3` and `DAHUA_TIMEOUT=10`.
+
+Transfer real credentials through a secure channel, never Git or chat. Automated tests use HTTP fakes and do not require LAN access to the NVR; repeat the real smoke test only when the other machine can safely reach the device and there is a reason to revalidate it.

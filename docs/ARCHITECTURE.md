@@ -52,7 +52,7 @@ As of 2026-10-10, the application contains:
 - Client Camera assignments edited through a separately paginated table in the existing modal; current IDs are loaded from the many-to-many relation, submitted IDs are validated individually, and `sync()` makes pivot rows match the selected set;
 - focused assignment tests cover replacing an existing Camera relation and rejecting a nonexistent Camera ID without changing Client or pivot data.
 
-A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. There is no event processing, queue job, Redis service, Dahua/MAX HTTP client, or event journal yet. The temporary metadata-only diagnostic route has been removed.
+A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. A separate tested Dahua HTTP client retrieves snapshots but is not yet connected to the webhook. There is no MAX HTTP client, event processing, queue job, Redis service, or event journal yet. The temporary metadata-only diagnostic route has been removed.
 
 ## Likely mature flow
 
