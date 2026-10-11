@@ -26,6 +26,8 @@ Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client c
 
 Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
+Phase 18 — Started in the current working tree. An accepted webhook now dispatches a minimal queued `ProcessCameraEvent` carrying only the Camera ID and validated channel; its `handle()` method intentionally remains empty while the database queue lifecycle is learned.
+
 ## Current repository state
 
 Checkpoint date: 2026-10-11.
@@ -49,6 +51,7 @@ Checkpoint date: 2026-10-11.
 - the one-space concatenation rule has been applied mechanically to the ten affected PHP files, the temporary backup is removed, and full Pint/tests pass;
 - the temporary `/dahua-probe` route remains removed;
 - the application and infrastructure working tree was clean before this documentation refresh.
+- the current uncommitted Phase 18 block adds the minimal job/dispatch boundary and focused queue-fake assertions.
 
 ## Phase 17 synchronous observation
 
@@ -110,7 +113,7 @@ Checkpoint date: 2026-10-11.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, webhook event processing, queue jobs, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit, but no application job or worker has been introduced. The Dahua snapshot client and all three MAX client HTTP steps are implemented and tested, but they remain deliberately disconnected from the incoming webhook.
+Redis, Mailpit, real queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. A minimal `ProcessCameraEvent` job is dispatched after webhook authentication, metadata validation, and time-window acceptance, but its `handle()` method is still empty and no worker lifecycle has been introduced. The Dahua snapshot client and all three MAX client HTTP steps remain disconnected from job execution.
 
 ## Confirmed MAX Messenger behavior
 
@@ -194,7 +197,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current `artisan test tests/Feature/Models`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
-- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 22 assertions**;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 24 assertions** after adding queue dispatch/non-dispatch coverage;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
 - current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
@@ -210,7 +213,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Begin Phase 18 with the smallest Laravel Queue boundary: generate `ProcessCameraEvent`, give it only the Camera ID and validated channel, dispatch it for an accepted webhook, and verify dispatch/non-dispatch with `Queue::fake()`. Keep `handle()` free of external HTTP work in this first block. Use the existing database queue backend; do not add Redis yet.
+Observe the existing database queue directly before adding real work to `handle()`: dispatch one development job without `Queue::fake()`, inspect the new `jobs` row, execute one job with `queue:work --once`, and confirm that the completed row disappears. Do not add Redis or external HTTP work yet.
 
 ## Decisions to preserve
 

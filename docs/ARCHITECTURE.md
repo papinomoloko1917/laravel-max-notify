@@ -52,7 +52,7 @@ As of 2026-10-11, the application contains:
 - Client Camera assignments edited through a separately paginated table in the existing modal; current IDs are loaded from the many-to-many relation, submitted IDs are validated individually, and `sync()` makes pivot rows match the selected set;
 - focused assignment tests cover replacing an existing Camera relation and rejecting a nonexistent Camera ID without changing Client or pivot data.
 
-A minimal synchronous webhook endpoint now performs per-Camera HTTP Basic authentication, validates static IVS query metadata, safely logs accepted context, and returns plain text without starting event work. A separate tested Dahua HTTP client retrieves snapshots but is not yet connected to the webhook. The tested MAX client implements upload-URL creation, multipart JPEG upload, and image-message sending. A controlled development-only composition of these clients succeeded against the real services and took 2,569 ms, confirming that this workflow should move behind a queue before webhook integration. There is no event-processing job, Redis service, or event journal yet. The temporary metadata-only diagnostic route has been removed.
+A minimal webhook endpoint performs per-Camera HTTP Basic authentication, validates static IVS query metadata, applies the notification window, dispatches `ProcessCameraEvent`, safely logs accepted context, and returns plain text. The job currently carries only the Camera ID and channel and intentionally has an empty `handle()` while the database queue lifecycle is learned. Separate tested Dahua and MAX clients remain disconnected from job execution. A controlled development-only composition of these clients succeeded against the real services and took 2,569 ms, confirming the queue boundary. There is no real background event processing, Redis service, or event journal yet. The temporary metadata-only diagnostic route has been removed.
 
 ## Likely mature flow
 
@@ -244,7 +244,7 @@ Later/optional:
 - Redis when needed;
 - Mailpit only if needed.
 
-The default Laravel database-backed cache, session, and queue configuration is present, including the `jobs` and `failed_jobs` tables. This does not mean queue processing has been introduced into the application; no application jobs or workers are currently part of the design. Phase 18 starts with this database backend so dispatch, reservation, retries, and failure storage can be learned before Redis is evaluated.
+The default Laravel database-backed cache, session, and queue configuration is present, including the `jobs` and `failed_jobs` tables. The first minimal application job is now dispatched by accepted webhooks, but its handler remains empty and no persistent worker process is configured. Phase 18 uses this database backend so dispatch, reservation, retries, and failure storage can be learned before Redis is evaluated.
 
 Demonstration User and Camera seeders are restricted to the `local` environment. The predictable local user is created or updated idempotently and marked email-verified so it can access verified administration routes.
 

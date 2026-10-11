@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessCameraEvent;
 use App\Models\Camera;
 use App\Services\NotificationWindow;
 use Illuminate\Http\Request;
@@ -61,6 +62,8 @@ class DahuaWebhookController extends Controller
             return response('Ignored', 200)
                 ->header('Content-Type', 'text/plain');
         }
+
+        ProcessCameraEvent::dispatch($camera->id, (int) $validated['channel']);
 
         Log::info('Dahua IVS webhook accepted', [
             'camera_id' => $camera->id,

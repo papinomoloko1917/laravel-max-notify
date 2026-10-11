@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ProcessCameraEvent;
 use App\Models\Camera;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class DahuaWebhookTest extends TestCase
@@ -19,11 +21,13 @@ class DahuaWebhookTest extends TestCase
 
         $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
 
-        Camera::factory()->create([
+        $camera = Camera::factory()->create([
             'webhook_username' => $username,
             'webhook_password' => $password,
             'is_active' => true,
         ]);
+
+        Queue::fake();
 
         $response = $this->withBasicAuth($username, $password)->get($url);
 
@@ -32,6 +36,12 @@ class DahuaWebhookTest extends TestCase
         $response->assertHeader(
             'Content-Type',
             'text/plain; charset=utf-8',
+        );
+
+        Queue::assertPushed(
+            ProcessCameraEvent::class,
+            fn (ProcessCameraEvent $job): bool => $job->cameraId === $camera->id
+                && $job->channel === 13,
         );
     }
 
@@ -200,11 +210,15 @@ class DahuaWebhookTest extends TestCase
 
         $this->travelTo($time);
 
+        Queue::fake();
+
         $response = $this->withBasicAuth($username, $password)->get($url);
 
         $response->assertStatus(200);
 
         $response->assertContent('Ignored');
+
+        Queue::assertNotPushed(ProcessCameraEvent::class);
     }
 
     public function test_authenticated_webhook_is_accepted_inside_camera_notification_window(): void
