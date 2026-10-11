@@ -26,7 +26,7 @@ Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client c
 
 Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
-Phase 18 — Started in the current working tree. An accepted webhook now dispatches a minimal queued `ProcessCameraEvent` carrying only the Camera ID and validated channel; its `handle()` method intentionally remains empty while the database queue lifecycle is learned.
+Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion, and the job now reloads current Camera/Client state before any external work.
 
 ## Current repository state
 
@@ -51,7 +51,8 @@ Checkpoint date: 2026-10-11.
 - the one-space concatenation rule has been applied mechanically to the ten affected PHP files, the temporary backup is removed, and full Pint/tests pass;
 - the temporary `/dahua-probe` route remains removed;
 - the application and infrastructure working tree was clean before this documentation refresh.
-- the current uncommitted Phase 18 block adds the minimal job/dispatch boundary and focused queue-fake assertions.
+- commit `520b4eb` adds the minimal job/dispatch boundary and focused queue-fake assertions; it is local and not yet pushed at this checkpoint;
+- the current uncommitted block injects the two integration clients at execution time, reloads the active Camera with its current Clients, and exits before HTTP when the Camera is missing/inactive or has no recipients.
 
 ## Phase 17 synchronous observation
 
@@ -113,7 +114,7 @@ Checkpoint date: 2026-10-11.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, real queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. A minimal `ProcessCameraEvent` job is dispatched after webhook authentication, metadata validation, and time-window acceptance, but its `handle()` method is still empty and no worker lifecycle has been introduced. The Dahua snapshot client and all three MAX client HTTP steps remain disconnected from job execution.
+Redis, Mailpit, full queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. `ProcessCameraEvent` is dispatched after webhook authentication, metadata validation, and time-window acceptance. Its handler receives `DahuaClient`/`MaxClient` from the container and performs current-state guards, but the external HTTP sequence remains disconnected.
 
 ## Confirmed MAX Messenger behavior
 
@@ -198,6 +199,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 24 assertions** after adding queue dispatch/non-dispatch coverage;
+- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **3 passing tests and 3 assertions** covering deleted, inactive, and recipient-less Cameras without outgoing HTTP;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
 - current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
@@ -213,7 +215,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Observe the existing database queue directly before adding real work to `handle()`: dispatch one development job without `Queue::fake()`, inspect the new `jobs` row, execute one job with `queue:work --once`, and confirm that the completed row disappears. Do not add Redis or external HTTP work yet.
+Add the first successful `ProcessCameraEvent` path with one active Camera and one assigned Client: retrieve one snapshot, obtain one MAX upload URL, upload the JPEG once, and send one message. Cover the composed HTTP sequence with `Http::fake()` before running it through a real worker. Do not add Redis or multiple-recipient behavior in the same first success test.
 
 ## Decisions to preserve
 

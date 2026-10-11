@@ -2,6 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\Camera;
+use App\Services\DahuaClient;
+use App\Services\MaxClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -22,8 +25,20 @@ class ProcessCameraEvent implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(DahuaClient $dahuaClient, MaxClient $maxClient): void
     {
-        //
+        $camera = Camera::query()
+            ->with('clients')
+            ->whereKey($this->cameraId)
+            ->where('is_active', true)
+            ->first();
+
+        if ($camera === null) {
+            return;
+        }
+
+        if ($camera->clients->isEmpty()) {
+            return;
+        }
     }
 }
