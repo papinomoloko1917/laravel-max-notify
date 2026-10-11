@@ -13,7 +13,7 @@ understand the problem
 
 ## Current progress
 
-As of 2026-10-11:
+As of 2026-10-12:
 
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
@@ -27,8 +27,8 @@ As of 2026-10-11:
 - Phase 15 is complete: Postman confirmed raw `Authorization` token authentication against `platform-api2.max.ru`, image-upload URL creation, multipart JPEG upload, media-token extraction from `photos.0.token`, chat-ID discovery through `GET /updates`, and successful delivery through `POST /messages`. Representative missing-authentication, malformed-body, and unknown-recipient failures were also observed.
 - Phase 16 is complete and pushed through `4aa4954`: the environment-backed `MaxClient` creates upload URLs, uploads JPEG bytes as multipart field `data`, and sends text plus the resulting media token to a supplied chat ID. `Http::fake()` verifies exact authentication, URLs/query parameters, multipart and JSON payloads, returned identifiers, HTTP error propagation, and malformed-response rejection.
 - Phase 17 is complete: a controlled real Dahua snapshot → MAX upload URL → multipart upload → message send run delivered a 49,502-byte JPEG and returned a message ID in 2,569 ms. The measured external latency and independent failure points justify moving this work outside the webhook response. Verified MAX HTTPS currently requires the Russian Trusted Root/Sub CA chain in the Sail image; TLS verification remains enabled.
-- Phase 18 is in progress on Laravel's existing database queue backend: accepted webhooks dispatch `ProcessCameraEvent`, focused tests verify dispatch/non-dispatch, and a manual `queue:work --once` observation confirmed row creation, successful execution, and cleanup. The job reloads an active Camera with current recipients and exits without HTTP for missing, inactive, or recipient-less Cameras; the external success path is next.
-- Redis, real background event processing, and event persistence remain intentionally postponed while the database job/worker lifecycle is learned.
+- Phase 18 is in progress on Laravel's existing database queue backend: accepted webhooks dispatch `ProcessCameraEvent`, focused tests verify dispatch/non-dispatch, and a manual `queue:work --once` observation confirmed row creation, successful execution, and cleanup. The job reloads an active Camera with current recipients and exits without HTTP for missing, inactive, or recipient-less Cameras. Its first successful-path slice retrieves a Dahua snapshot and requests a MAX upload URL; JPEG upload and message delivery remain the next steps.
+- Redis, complete background event processing, and event persistence remain intentionally postponed while the database job/worker lifecycle is learned.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
 

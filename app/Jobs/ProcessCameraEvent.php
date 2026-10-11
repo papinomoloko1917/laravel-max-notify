@@ -40,5 +40,9 @@ class ProcessCameraEvent implements ShouldQueue
         if ($camera->clients->isEmpty()) {
             return;
         }
+
+        $jpeg = $dahuaClient->snapshot($this->channel);
+
+        $uploadUrl = $maxClient->createImageUploadUrl();
     }
 }

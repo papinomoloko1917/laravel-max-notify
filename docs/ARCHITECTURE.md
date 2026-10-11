@@ -25,7 +25,7 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-10-11, the application contains:
+As of 2026-10-12, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a `cameras` table with identity/display fields plus nullable unique HTTP Basic username and nullable hashed webhook password;
@@ -52,7 +52,7 @@ As of 2026-10-11, the application contains:
 - Client Camera assignments edited through a separately paginated table in the existing modal; current IDs are loaded from the many-to-many relation, submitted IDs are validated individually, and `sync()` makes pivot rows match the selected set;
 - focused assignment tests cover replacing an existing Camera relation and rejecting a nonexistent Camera ID without changing Client or pivot data.
 
-A minimal webhook endpoint performs per-Camera HTTP Basic authentication, validates static IVS query metadata, applies the notification window, dispatches `ProcessCameraEvent`, safely logs accepted context, and returns plain text. The job carries only the Camera ID and channel, receives integration clients from Laravel's container, and reloads the active Camera with current recipients when a worker handles it. Missing, inactive, and recipient-less Cameras finish without outgoing HTTP. Separate tested Dahua and MAX clients are not yet called by the job. A controlled development-only composition of these clients succeeded against the real services and took 2,569 ms, confirming the queue boundary. There is no complete background event flow, Redis service, or event journal yet.
+A minimal webhook endpoint performs per-Camera HTTP Basic authentication, validates static IVS query metadata, applies the notification window, dispatches `ProcessCameraEvent`, safely logs accepted context, and returns plain text. The job carries only the Camera ID and channel, receives integration clients from Laravel's container, and reloads the active Camera with current recipients when a worker handles it. Missing, inactive, and recipient-less Cameras finish without outgoing HTTP. For an active Camera with recipients, the current partial handler retrieves one Dahua snapshot and requests one MAX upload URL; it does not yet upload the JPEG or send messages. A controlled development-only composition of the complete service sequence succeeded against the real services and took 2,569 ms, confirming the queue boundary. There is no complete background event flow, Redis service, or event journal yet.
 
 ## Likely mature flow
 
@@ -244,7 +244,7 @@ Later/optional:
 - Redis when needed;
 - Mailpit only if needed.
 
-The default Laravel database-backed cache, session, and queue configuration is present, including the `jobs` and `failed_jobs` tables. A manual development run observed one job from dispatch through `queue:work --once` success and removal. The job handler currently implements only database-state guards, and no persistent worker process is configured. Phase 18 uses this backend so dispatch, reservation, retries, and failure storage can be learned before Redis is evaluated.
+The default Laravel database-backed cache, session, and queue configuration is present, including the `jobs` and `failed_jobs` tables. A manual development run observed one job from dispatch through `queue:work --once` success and removal. The job handler has database-state guards and begins the external sequence with snapshot retrieval and upload-URL creation, but upload and delivery are still absent. No persistent worker process is configured. Phase 18 uses this backend so dispatch, reservation, retries, and failure storage can be learned before Redis is evaluated.
 
 Demonstration User and Camera seeders are restricted to the `local` environment. The predictable local user is created or updated idempotently and marked email-verified so it can access verified administration routes.
 
