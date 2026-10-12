@@ -44,5 +44,7 @@ class ProcessCameraEvent implements ShouldQueue
         $jpeg = $dahuaClient->snapshot($this->channel);
 
         $uploadUrl = $maxClient->createImageUploadUrl();
+
+        $mediaToken = $maxClient->uploadImage($uploadUrl, $jpeg);
     }
 }

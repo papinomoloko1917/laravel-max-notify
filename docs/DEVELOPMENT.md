@@ -26,14 +26,14 @@ Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client c
 
 Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
-Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion. The job reloads current Camera/Client state, applies its early-exit guards, and its first successful-path slice now retrieves a Dahua snapshot and requests a MAX image-upload URL.
+Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion. The job reloads current Camera/Client state, applies its early-exit guards, retrieves a Dahua snapshot, requests a MAX image-upload URL, uploads the JPEG once, and receives its media token. Message delivery is not connected yet.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-12.
 
 - branch: `main`;
-- `main` matches `origin/main` at `83c1982` (`feat: guard queued camera processing`) before the current checkpoint changes;
+- `main` matches `origin/main` at `e6c18da` (`wip: start queued notification workflow`) before this handoff correction;
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -52,8 +52,10 @@ Checkpoint date: 2026-10-12.
 - the temporary `/dahua-probe` route remains removed;
 - commit `520b4eb` adds the minimal job/dispatch boundary and focused queue-fake assertions;
 - commit `83c1982` injects the integration clients at execution time, reloads the active Camera with its current Clients, adds early exits for a missing/inactive Camera or no recipients, and covers those guards with focused tests;
-- the current uncommitted application change starts the successful job path by retrieving one Dahua snapshot and requesting one MAX image-upload URL;
-- this path is intentionally incomplete at the checkpoint: it does not upload the JPEG, obtain a media token, or send a message to any Client.
+- commit `e6c18da` starts the successful job path by retrieving one Dahua snapshot and requesting one MAX image-upload URL;
+- the current reviewed application change uploads the retrieved JPEG to the one-time MAX URL and stores the returned media token;
+- a focused successful-path test composes the real Dahua/Max client classes over HTTP fakes and verifies exactly three requests plus the multipart field, JPEG bytes, and filename;
+- the path remains intentionally incomplete because it does not send a message to any Client.
 
 ## Phase 17 synchronous observation
 
@@ -115,7 +117,7 @@ Checkpoint date: 2026-10-12.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, full queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. `ProcessCameraEvent` is dispatched after webhook authentication, metadata validation, and time-window acceptance. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves a snapshot, and requests an upload URL. The remaining upload and message-send steps are not connected yet.
+Redis, Mailpit, full queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. `ProcessCameraEvent` is dispatched after webhook authentication, metadata validation, and time-window acceptance. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and receives a media token. Message delivery is not connected yet.
 
 ## Confirmed MAX Messenger behavior
 
@@ -200,8 +202,8 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 24 assertions** after adding queue dispatch/non-dispatch coverage;
-- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **3 passing tests and 3 assertions** covering deleted, inactive, and recipient-less Cameras without outgoing HTTP;
-- combined checkpoint run for the job and webhook suites: **13 passing tests and 27 assertions**;
+- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **4 passing tests and 5 assertions**, covering all three no-HTTP guards and the composed snapshot/upload success path;
+- current related job/webhook/Dahua/MAX regression: **27 passing tests and 46 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
 - current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
@@ -217,9 +219,9 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Continue the first successful `ProcessCameraEvent` path after the existing snapshot and upload-URL calls: upload `$jpeg` to `$uploadUrl` through `MaxClient::uploadImage()` and store the returned media token. Review and test that step before adding message delivery or a loop over multiple Clients.
+Continue the successful `ProcessCameraEvent` path for exactly one assigned Client: use the returned media token and that Client's `max_chat_id` to call `MaxClient::sendImageMessage()` once with a simple notification text. Extend the successful-path HTTP fake test to cover the fourth request before introducing a loop over multiple recipients.
 
-Do not run a real worker for accepted Camera events at this incomplete checkpoint: the job would make real Dahua and MAX requests but discard the upload URL without delivering a notification.
+Do not run a real worker for accepted Camera events at this incomplete checkpoint: the job uploads a real snapshot but still does not deliver a notification.
 
 ## Decisions to preserve
 
@@ -237,7 +239,7 @@ Do not run a real worker for accepted Camera events at this incomplete checkpoin
 
 ## Moving to another machine
 
-Commit and push the current application checkpoint together with this handoff update. On the other machine:
+Commit and push the next reviewed Phase 18 slice together with any resulting handoff update. On the other machine:
 
 ```bash
 git pull
