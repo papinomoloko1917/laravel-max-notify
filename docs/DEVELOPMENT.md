@@ -26,14 +26,14 @@ Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client c
 
 Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
-Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion. The job reloads current Camera/Client state and exits without HTTP for a missing/inactive Camera or no recipients. For the first assigned Client, it retrieves one snapshot, requests one MAX image-upload URL, uploads the JPEG once, and sends one image message. Multiple-recipient delivery, retry/timeout behavior, and failed-job observation remain next.
+Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion. The job reloads current Camera/Client state and exits without HTTP for a missing/inactive Camera or no recipients. It retrieves and uploads one snapshot, then reuses the resulting media token to send one image message to every currently assigned Client. Retry/timeout behavior and failed-job observation remain next.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-12.
 
 - branch: `main`;
-- `main` matches `origin/main` at `ec530e9` (`feat: upload queued camera snapshots`) before the current uncommitted message-delivery slice;
+- `main` matches `origin/main` at `2bb1ea6` (`feat: send queued camera notification`) before the current uncommitted multiple-recipient slice;
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -54,9 +54,10 @@ Checkpoint date: 2026-10-12.
 - commit `83c1982` injects the integration clients at execution time, reloads the active Camera with its current Clients, adds early exits for a missing/inactive Camera or no recipients, and covers those guards with focused tests;
 - commit `e6c18da` starts the successful job path by retrieving one Dahua snapshot and requesting one MAX image-upload URL;
 - commit `ec530e9` uploads the retrieved JPEG to the one-time MAX URL and stores the returned media token;
-- the current reviewed application change selects the first already-loaded Client and sends one MAX image message using that Client's `max_chat_id` and the uploaded media token;
-- a focused successful-path test composes the real Dahua/Max client classes over HTTP fakes and verifies exactly four requests, including the multipart upload and final JSON message payload;
-- the path remains intentionally incomplete for Cameras assigned to multiple Clients.
+- commit `2bb1ea6` sends one MAX image message to the first already-loaded Client using that Client's `max_chat_id` and the uploaded media token;
+- the current reviewed application change iterates over all already-loaded Clients and sends one message per `max_chat_id`, while snapshot retrieval and image upload remain outside the loop;
+- a focused successful-path test assigns two Clients and verifies exactly five requests: one snapshot request, one upload-URL request, one multipart image upload, and two JSON message sends;
+- retry/timeout behavior and failed-job observation remain intentionally incomplete.
 
 ## Phase 17 synchronous observation
 
@@ -118,7 +119,7 @@ Checkpoint date: 2026-10-12.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, full queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. `ProcessCameraEvent` is dispatched after webhook authentication, metadata validation, and time-window acceptance. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one image message to the first assigned Client. Iteration over all assigned Clients is not implemented yet.
+Redis, Mailpit, full queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. `ProcessCameraEvent` is dispatched after webhook authentication, metadata validation, and time-window acceptance. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one image message to each currently assigned Client using the shared media token.
 
 ## Confirmed MAX Messenger behavior
 
@@ -203,15 +204,15 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 24 assertions** after adding queue dispatch/non-dispatch coverage;
-- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **4 passing tests and 6 assertions**, covering all three no-HTTP guards and the composed snapshot/upload/send success path;
-- current related job/webhook/Dahua/MAX regression: **27 passing tests and 47 assertions**;
+- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **4 passing tests and 7 assertions**, covering all three no-HTTP guards and reuse of one uploaded snapshot across two message recipients;
+- current related job/webhook/Dahua/MAX regression: **27 passing tests and 48 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
 - current focused Camera/NotificationWindow/Dahua regression run after changing Pint: **38 passing tests and 98 assertions**;
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
-- full `artisan test`: **106 tests, 286 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this job slice;
+- full `artisan test`: **106 tests, 287 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this job slice;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
@@ -220,9 +221,9 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Generalize the reviewed one-recipient `ProcessCameraEvent` path to all assigned Clients. Keep the expensive snapshot retrieval and image upload outside the recipient loop, then send one message per Client using each `max_chat_id`. Extend focused HTTP-fake coverage to prove that one snapshot/upload is reused for multiple message sends.
+Study how Laravel workers treat exceptions, attempts, timeouts, backoff, and the `failed_jobs` table. Then choose and configure explicit retry/timeout behavior for `ProcessCameraEvent` and observe one controlled failure with the database queue before evaluating Redis.
 
-Do not run a real worker merely as an automated test: the current job now delivers a real notification to the first assigned Client. Use a controlled Camera/Client setup when manually observing the worker.
+Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
 ## Decisions to preserve
 

@@ -61,12 +61,13 @@ class ProcessCameraEventTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_active_camera_with_client_sends_snapshot_to_max(): void
+    public function test_active_camera_sends_snapshot_to_all_clients(): void
     {
         $camera = Camera::factory()->create(['is_active' => true]);
-        $client = Client::factory()->create(['max_chat_id' => 12345]);
+        $firstClient = Client::factory()->create(['max_chat_id' => 12345]);
+        $secondClient = Client::factory()->create(['max_chat_id' => 67890]);
 
-        $camera->clients()->attach($client);
+        $camera->clients()->attach([$firstClient->id, $secondClient->id]);
 
         config([
             'services.dahua.base_url' => 'http://nvr.test',
@@ -110,7 +111,7 @@ class ProcessCameraEventTest extends TestCase
 
         $job->handle(new DahuaClient, new MaxClient);
 
-        Http::assertSentCount(4);
+        Http::assertSentCount(5);
 
         Http::assertSent(
             fn (Request $request): bool => $request->method() === 'POST'
@@ -121,6 +122,23 @@ class ProcessCameraEventTest extends TestCase
         Http::assertSent(
             fn (Request $request): bool => $request->method() === 'POST'
                 && $request->url() === 'https://max.test/messages?chat_id=12345'
+                && $request->isJson()
+                && $request->data() === [
+                    'text' => $notificationText,
+                    'attachments' => [
+                        [
+                            'type' => 'image',
+                            'payload' => [
+                                'token' => $mediaToken,
+                            ],
+                        ],
+                    ],
+                ],
+        );
+
+        Http::assertSent(
+            fn (Request $request): bool => $request->method() === 'POST'
+                && $request->url() === 'https://max.test/messages?chat_id=67890'
                 && $request->isJson()
                 && $request->data() === [
                     'text' => $notificationText,
