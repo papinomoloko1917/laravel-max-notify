@@ -13,11 +13,17 @@ class MaxClient
 
         $token = (string) config('services.max.token');
 
+        $connectTimeout = (int) config('services.max.connect_timeout');
+
+        $timeout = (int) config('services.max.timeout');
+
         $response = Http::acceptJson()
             ->withHeaders(['Authorization' => $token])
             ->withQueryParameters([
                 'type' => 'image',
             ])
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout)
             ->post(
                 rtrim($baseUrl, '/') . '/uploads',
             );
@@ -37,6 +43,10 @@ class MaxClient
     {
         $token = (string) config('services.max.token');
 
+        $connectTimeout = (int) config('services.max.connect_timeout');
+
+        $timeout = (int) config('services.max.timeout');
+
         $response = Http::acceptJson()
             ->withHeaders(['Authorization' => $token])
             ->attach(
@@ -44,6 +54,8 @@ class MaxClient
                 $imageContents,
                 'snapshot.jpg',
             )
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout)
             ->post($uploadUrl);
 
         $response->throw();
@@ -66,10 +78,16 @@ class MaxClient
 
         $token = (string) config('services.max.token');
 
+        $connectTimeout = (int) config('services.max.connect_timeout');
+
+        $timeout = (int) config('services.max.timeout');
+
         $response = Http::acceptJson()
             ->asJson()
             ->withHeaders(['Authorization' => $token])
             ->withQueryParameters(['chat_id' => $chatId])
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout)
             ->post(rtrim($baseUrl, '/') . '/messages', [
                 'text' => $text,
                 'attachments' => [

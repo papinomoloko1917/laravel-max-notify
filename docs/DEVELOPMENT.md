@@ -26,14 +26,14 @@ Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client c
 
 Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
-Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion. The job reloads current Camera/Client state and exits without HTTP for a missing/inactive Camera or no recipients. It retrieves and uploads one snapshot, then reuses the resulting media token to send one image message to every currently assigned Client. Retry/timeout behavior and failed-job observation remain next.
+Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion. The job reloads current Camera/Client state and exits without HTTP for a missing/inactive Camera or no recipients. It retrieves and uploads one snapshot, then reuses the resulting media token to send one image message to every currently assigned Client. MAX requests now have explicit 3-second connection and 10-second overall limits; the job has an 80-second limit, is marked failed on timeout, and remains below the database queue's 90-second `retry_after`. Retry/backoff behavior and controlled failed-job observation remain next.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-12.
 
 - branch: `main`;
-- `main` matches `origin/main` at `2bb1ea6` (`feat: send queued camera notification`) before the current uncommitted multiple-recipient slice;
+- `main` matches `origin/main` at `4eee11f` (`feat: notify all assigned camera clients`) before the current uncommitted timeout slice;
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -55,9 +55,10 @@ Checkpoint date: 2026-10-12.
 - commit `e6c18da` starts the successful job path by retrieving one Dahua snapshot and requesting one MAX image-upload URL;
 - commit `ec530e9` uploads the retrieved JPEG to the one-time MAX URL and stores the returned media token;
 - commit `2bb1ea6` sends one MAX image message to the first already-loaded Client using that Client's `max_chat_id` and the uploaded media token;
-- the current reviewed application change iterates over all already-loaded Clients and sends one message per `max_chat_id`, while snapshot retrieval and image upload remain outside the loop;
-- a focused successful-path test assigns two Clients and verifies exactly five requests: one snapshot request, one upload-URL request, one multipart image upload, and two JSON message sends;
-- retry/timeout behavior and failed-job observation remain intentionally incomplete.
+- commit `4eee11f` iterates over all already-loaded Clients and sends one message per `max_chat_id`, while snapshot retrieval and image upload remain outside the loop; its focused test assigns two Clients and verifies one snapshot request, one upload-URL request, one multipart upload, and two message sends;
+- the current reviewed application change adds environment-backed 3-second connection and 10-second overall limits to all three MAX request boundaries;
+- `ProcessCameraEvent` now has an explicit 80-second timeout and is marked failed when that timeout is exceeded, remaining below the database connection's 90-second `retry_after`;
+- retry/backoff behavior and controlled failed-job observation remain intentionally incomplete.
 
 ## Phase 17 synchronous observation
 
@@ -146,7 +147,8 @@ Observed on 2026-10-10 through Postman against the real MAX API:
 - focused multipart tests verify the exact upload URL, raw authorization header, file field/content/name, returned media token, HTTP failure propagation, and rejection of a successful response without the token;
 - `App\Services\MaxClient::sendImageMessage()` sends JSON text plus an image media token to a supplied `chat_id` and returns the validated `message.body.mid` message ID;
 - focused message tests verify the exact query parameter, raw authorization, JSON body, returned message ID, HTTP failure propagation, and rejection of a successful response without `mid`;
-- the three MAX methods remain separate service boundaries and are now composed with `DahuaClient` inside the queued job for one assigned Client.
+- all three MAX methods use environment-backed 3-second connection and 10-second overall request limits;
+- the three MAX methods remain separate service boundaries and are composed with `DahuaClient` inside the queued job for all assigned Clients.
 
 ## Confirmed Dahua snapshot behavior
 
@@ -221,7 +223,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Study how Laravel workers treat exceptions, attempts, timeouts, backoff, and the `failed_jobs` table. Then choose and configure explicit retry/timeout behavior for `ProcessCameraEvent` and observe one controlled failure with the database queue before evaluating Redis.
+Study how an uncaught integration exception moves a database-backed job from `jobs` to `failed_jobs`, then perform one controlled failure observation without contacting the real Dahua or MAX services. After observing the default single attempt, decide whether retries/backoff are safe given the current possibility of partial multi-client delivery.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 

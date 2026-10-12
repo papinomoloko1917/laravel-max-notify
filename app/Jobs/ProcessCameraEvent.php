@@ -12,6 +12,10 @@ class ProcessCameraEvent implements ShouldQueue
 {
     use Queueable;
 
+    public int $timeout = 80;
+
+    public bool $failOnTimeout = true;
+
     /**
      * Create a new job instance.
      */

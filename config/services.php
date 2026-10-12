@@ -46,5 +46,7 @@ return [
     'max' => [
         'base_url' => env('MAX_BASE_URL'),
         'token' => env('MAX_TOKEN'),
+        'connect_timeout' => env('MAX_CONNECT_TIMEOUT', 3),
+        'timeout' => env('MAX_TIMEOUT', 10),
     ],
 ];
