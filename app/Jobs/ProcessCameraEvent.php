@@ -37,7 +37,9 @@ class ProcessCameraEvent implements ShouldQueue
             return;
         }
 
-        if ($camera->clients->isEmpty()) {
+        $client = $camera->clients->first();
+
+        if ($client === null) {
             return;
         }
 
@@ -46,5 +48,13 @@ class ProcessCameraEvent implements ShouldQueue
         $uploadUrl = $maxClient->createImageUploadUrl();
 
         $mediaToken = $maxClient->uploadImage($uploadUrl, $jpeg);
+
+        $notificationText = "Событие камеры: {$camera->name}";
+
+        $maxClient->sendImageMessage(
+            $client->max_chat_id,
+            $mediaToken,
+            $notificationText,
+        );
     }
 }
