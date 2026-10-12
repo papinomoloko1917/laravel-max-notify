@@ -33,7 +33,8 @@ Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` wi
 Checkpoint date: 2026-10-12.
 
 - branch: `main`;
-- `main` matches `origin/main` at `4eee11f` (`feat: notify all assigned camera clients`) before the current uncommitted timeout slice;
+- working tree was clean before this documentation-only handoff update;
+- `main` matches `origin/main` at `55d8471` (`feat: bound queued notification requests`);
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -56,8 +57,8 @@ Checkpoint date: 2026-10-12.
 - commit `ec530e9` uploads the retrieved JPEG to the one-time MAX URL and stores the returned media token;
 - commit `2bb1ea6` sends one MAX image message to the first already-loaded Client using that Client's `max_chat_id` and the uploaded media token;
 - commit `4eee11f` iterates over all already-loaded Clients and sends one message per `max_chat_id`, while snapshot retrieval and image upload remain outside the loop; its focused test assigns two Clients and verifies one snapshot request, one upload-URL request, one multipart upload, and two message sends;
-- the current reviewed application change adds environment-backed 3-second connection and 10-second overall limits to all three MAX request boundaries;
-- `ProcessCameraEvent` now has an explicit 80-second timeout and is marked failed when that timeout is exceeded, remaining below the database connection's 90-second `retry_after`;
+- commit `55d8471` adds environment-backed 3-second connection and 10-second overall limits to all three MAX request boundaries;
+- the same commit gives `ProcessCameraEvent` an explicit 80-second timeout and marks it failed when that timeout is exceeded, remaining below the database connection's 90-second `retry_after`;
 - retry/backoff behavior and controlled failed-job observation remain intentionally incomplete.
 
 ## Phase 17 synchronous observation
@@ -243,7 +244,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-Commit and push the next reviewed Phase 18 slice together with any resulting handoff update. On the other machine:
+The application/configuration checkpoint through `55d8471` is committed and pushed. Commit and push this documentation-only handoff update before switching machines. On the other machine:
 
 ```bash
 git pull
@@ -270,6 +271,7 @@ Because `.env` is intentionally not committed, configure these values locally be
 - `DAHUA_PASSWORD`;
 - optionally override `DAHUA_CONNECT_TIMEOUT=3` and `DAHUA_TIMEOUT=10`;
 - `MAX_BASE_URL=https://platform-api2.max.ru`;
-- `MAX_TOKEN`.
+- `MAX_TOKEN`;
+- optionally override `MAX_CONNECT_TIMEOUT=3` and `MAX_TIMEOUT=10`.
 
 `DAHUA_BASE_URL` must be only the recorder origin and must not include `/cgi-bin` or the snapshot path. Transfer real credentials through a secure channel, never Git or chat. Automated tests use HTTP fakes and do not require LAN access to the NVR or MAX; repeat the real smoke test only when the other machine can safely reach the device and there is a reason to revalidate it.
