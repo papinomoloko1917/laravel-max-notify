@@ -26,15 +26,15 @@ Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client c
 
 Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
-Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually from queued row through `queue:work --once` completion. The job reloads current Camera/Client state and exits without HTTP for a missing/inactive Camera or no recipients. It retrieves and uploads one snapshot, then reuses the resulting media token to send one image message to every currently assigned Client. MAX requests now have explicit 3-second connection and 10-second overall limits; the job has an 80-second limit, is marked failed on timeout, and remains below the database queue's 90-second `retry_after`. Retry/backoff behavior and controlled failed-job observation remain next.
+Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually for both success and failure: a successful job was removed after `queue:work --once`, while a controlled HTTP-fake exception moved a one-attempt job from `jobs` to `failed_jobs` without contacting Dahua or MAX. The handler reloads current Camera/Client state, applies early exits, retrieves and uploads one snapshot, and reuses the media token for every assigned Client. MAX requests have explicit 3/10-second limits; the job has an 80-second limit below the database queue's 90-second `retry_after` and fails on timeout. An explicit retry policy remains next.
 
 ## Current repository state
 
-Checkpoint date: 2026-10-12.
+Checkpoint date: 2026-10-13.
 
 - branch: `main`;
-- working tree was clean before this documentation-only handoff update;
-- `main` matches `origin/main` at `55d8471` (`feat: bound queued notification requests`);
+- working tree was clean before this documentation-only checkpoint update;
+- `main` matches `origin/main` at `a3358af` (`docs: update queue handoff checkpoint`);
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -59,7 +59,9 @@ Checkpoint date: 2026-10-12.
 - commit `4eee11f` iterates over all already-loaded Clients and sends one message per `max_chat_id`, while snapshot retrieval and image upload remain outside the loop; its focused test assigns two Clients and verifies one snapshot request, one upload-URL request, one multipart upload, and two message sends;
 - commit `55d8471` adds environment-backed 3-second connection and 10-second overall limits to all three MAX request boundaries;
 - the same commit gives `ProcessCameraEvent` an explicit 80-second timeout and marks it failed when that timeout is exceeded, remaining below the database connection's 90-second `retry_after`;
-- retry/backoff behavior and controlled failed-job observation remain intentionally incomplete.
+- on 2026-10-13, a controlled `Http::fake()` exception was processed through the real database worker with `--once --tries=1`: the job changed from `jobs=1`/`failed_jobs=0` to `jobs=0`/`failed_jobs=1` and appeared in `queue:failed`;
+- the experimental Camera, Client, pivot row, and failed-job record were removed afterward; both queue tables returned to zero rows and no repository files changed;
+- retry/backoff behavior remains intentionally undecided because retrying the whole multi-recipient job after partial delivery can duplicate earlier messages.
 
 ## Phase 17 synchronous observation
 
@@ -224,7 +226,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Study how an uncaught integration exception moves a database-backed job from `jobs` to `failed_jobs`, then perform one controlled failure observation without contacting the real Dahua or MAX services. After observing the default single attempt, decide whether retries/backoff are safe given the current possibility of partial multi-client delivery.
+Make the current single-attempt policy explicit on `ProcessCameraEvent` rather than depending on each worker command's `--tries` option. Do not add backoff yet: with only one attempt it has no effect, and enabling whole-job retries before idempotency or per-recipient progress tracking can duplicate notifications after partial delivery.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -244,7 +246,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The application/configuration checkpoint through `55d8471` is committed and pushed. Commit and push this documentation-only handoff update before switching machines. On the other machine:
+The repository checkpoint through `a3358af` is committed and pushed. Commit and push any later reviewed Phase 18 slice with its handoff update before switching machines. On the other machine:
 
 ```bash
 git pull
