@@ -28,7 +28,9 @@ Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart
 
 Phase 18 — Complete for the current database-queue design. An accepted webhook dispatches `ProcessCameraEvent`; successful and failed worker lifecycles have both been observed manually. The handler reloads current Camera/Client state, applies early exits, retrieves and uploads one snapshot, and reuses the media token for every assigned Client. MAX requests have explicit 3/10-second limits. The job has an 80-second timeout below `retry_after=90`, fails on timeout, and explicitly allows one attempt. Whole-job retries/backoff are deliberately absent because partial multi-client delivery is not idempotent.
 
-Phase 19 — Next. Evaluate Redis against the now-understood database queue rather than installing it automatically. Database queue remains the baseline unless Redis solves an observed queue or upcoming duplicate-protection requirement clearly enough to justify another service.
+Phase 19 — Complete as an explicit decision not to add Redis yet. The observed queue volume is low, PostgreSQL queue behavior is understood and sufficient, and the existing database cache supports atomic `Cache::add()` plus locks through the already migrated `cache` and `cache_locks` tables. Redis remains a future option if measured queue latency, throughput, or lock/cache contention justifies another service.
+
+Phase 20 — Next. Add minimal duplicate-event protection at the authenticated and validated webhook boundary using the current database cache, a short TTL, and an atomic add operation.
 
 ## Current repository state
 
@@ -229,7 +231,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Evaluate whether Redis should replace the working database queue now. Compare the concrete behavior already observed (durable PostgreSQL rows, simple inspection, low current volume) with Redis benefits (lower queue latency, in-memory operations, and a natural future cache/lock store). Record a decision; do not add Redis unless the benefit is justified now.
+Cover and implement minimal duplicate webhook suppression with the existing database cache. Build a bounded key from Camera ID, validated channel, and validated rule; atomically claim it for a short five-second window after authentication, validation, and notification-window acceptance but before job dispatch. The first request should dispatch and return `OK`; an identical request inside the TTL should not dispatch and should return `Ignored`; the same request after TTL expiry should be accepted again.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 

@@ -190,7 +190,9 @@ Do not create `CameraEvent` before we know which operational data is worth stori
 
 ## Redis
 
-Not required at bootstrap.
+Not currently required. Phase 19 evaluated it after the database queue lifecycle was understood and deliberately retained PostgreSQL for queue and cache at the current low volume.
+
+The existing database cache supports atomic `Cache::add()` through a primary-key insert and provides database-backed locks using the already migrated `cache` and `cache_locks` tables. That is sufficient for the first short-TTL duplicate-event guard without adding another service.
 
 Expected future uses:
 
@@ -199,7 +201,7 @@ Expected future uses:
 - cache;
 - locks where justified.
 
-Introduce it when one of those is a real requirement.
+Re-evaluate it when measured queue latency/throughput, cache/lock contention, or another concrete operational requirement justifies the extra service.
 
 ## Postman
 
