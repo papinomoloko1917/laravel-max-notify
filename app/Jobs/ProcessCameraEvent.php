@@ -24,6 +24,7 @@ class ProcessCameraEvent implements ShouldQueue
     public function __construct(
         public int $cameraId,
         public int $channel,
+        public int $cameraEventId,
     ) {
         //
     }

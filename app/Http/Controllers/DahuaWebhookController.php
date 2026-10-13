@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ProcessCameraEvent;
 use App\Models\Camera;
+use App\Models\CameraEvent;
 use App\Services\NotificationWindow;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -82,6 +83,8 @@ class DahuaWebhookController extends Controller
             return response('Ignored', 200)
                 ->header('Content-Type', 'text/plain');
         }
+
+        $cameraEvent = new CameraEvent();
 
         ProcessCameraEvent::dispatch($camera->id, (int) $validated['channel']);
 
