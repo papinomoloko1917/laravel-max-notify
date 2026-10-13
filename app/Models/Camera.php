@@ -6,6 +6,7 @@ use Database\Factories\CameraFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Camera extends Model
 {
@@ -28,5 +29,10 @@ class Camera extends Model
     public function clients(): BelongsToMany
     {
         return $this->belongsToMany(Client::class)->withTimestamps();
+    }
+
+    public function cameraEvents(): HasMany
+    {
+        return $this->hasMany(CameraEvent::class);
     }
 }

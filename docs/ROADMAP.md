@@ -30,8 +30,8 @@ As of 2026-10-12:
 - Phase 18 is complete for the current database-queue design: accepted webhooks dispatch `ProcessCameraEvent`; focused tests cover dispatch, guards, and multi-recipient delivery; manual worker observations confirmed both successful removal and `failed_jobs` storage without external network access. The job reloads current state, retrieves/uploads one snapshot, reuses its token for every recipient, limits MAX requests to 3/10 seconds, times out at 80 seconds below `retry_after=90`, fails on timeout, and explicitly permits one attempt. Whole-job retry/backoff is deliberately postponed because partial multi-client delivery can duplicate notifications.
 - Phase 19 is complete as a deliberate deferral: the working PostgreSQL queue is sufficient at current volume, while the existing database cache already provides atomic `Cache::add()` and locks for the upcoming duplicate-protection slice. Redis remains available later if measured latency, throughput, or contention provides a concrete reason for another service.
 - Phase 20 is complete: after authentication, validation, and notification-window acceptance, the webhook atomically claims a five-second database-cache key derived from Camera ID, validated channel, and rule. Immediate identical requests return `200 Ignored` without dispatch; expiry and independent key dimensions are covered, including one test against the actual database store.
-- Phase 21 is next: use the now-observed processing lifecycle to design a minimal Camera event journal before creating its migration.
-- Redis remains deliberately deferred; event persistence is the next requirement to investigate.
+- Phase 21 is in progress: the minimal `camera_events` migration, model, factory, Camera relationship, and focused persistence/relationship/deletion tests are implemented. The journal is deliberately not connected to the webhook or job yet.
+- Redis remains deliberately deferred; the next step is to connect the journal to the accepted-event lifecycle incrementally.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
 

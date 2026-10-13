@@ -174,7 +174,7 @@ Initial conceptual entities:
 - User;
 - Camera;
 - Client;
-- CameraEvent later, if useful.
+- CameraEvent, now used as the minimal operational event journal.
 
 Expected Camera ↔ Client relation: many-to-many.
 
@@ -186,7 +186,7 @@ Current relationship decision:
 - deleting a Camera or Client cascades only to its pivot rows;
 - pivot timestamps record assignment creation and updates and are populated by Eloquent through `withTimestamps()` on both relationships.
 
-Do not create `CameraEvent` before we know which operational data is worth storing.
+`CameraEvent` stores the Camera reference and name snapshot, channel, rule, lifecycle status, aggregate recipient totals, an optional failure type, and processing time. Its nullable Camera foreign key uses `nullOnDelete()`: deleting configuration must not erase operational history. This persistence layer is not yet connected to the webhook or queue job.
 
 ## Redis
 

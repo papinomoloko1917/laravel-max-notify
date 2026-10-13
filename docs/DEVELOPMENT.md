@@ -32,15 +32,15 @@ Phase 19 — Complete as an explicit decision not to add Redis yet. The observed
 
 Phase 20 — Complete. After authentication, metadata validation, and notification-window acceptance, the webhook atomically claims a database-cache key derived from Camera ID, channel, and rule for five seconds. The first request dispatches normally; an identical request inside the TTL returns `200 Ignored`; distinct Cameras/channels/rules and requests after expiry remain independent.
 
-Phase 21 — Next. Design the smallest useful Camera event journal from the processing facts now known. Decide which accepted, ignored, completed, and failed information is operationally valuable before creating a migration.
+Phase 21 — In progress. The minimal `camera_events` persistence layer is implemented and tested: an event retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Deleting a Camera sets `camera_id` to null while preserving its historical events. The journal is not yet connected to the webhook or queued job.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-13.
 
 - branch: `main`;
-- working tree was clean before this documentation-only checkpoint update;
-- `main` matches `origin/main` at `a3358af` (`docs: update queue handoff checkpoint`);
+- committed baseline `main` matches `origin/main` at `c64d6b2` (`feat: suppress duplicate camera events`);
+- the current uncommitted Phase 21 slice adds the `CameraEvent` model/factory/migration, the Camera relationship, and focused model tests; it does not yet change webhook or job behavior;
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -72,6 +72,7 @@ Checkpoint date: 2026-10-13.
 - commit `db89649` records the Phase 19 decision to retain PostgreSQL queue/cache and defer Redis;
 - the current reviewed webhook change uses an atomic five-second database-cache claim before dispatch, returning the existing `200 Ignored` response for an identical Camera/channel/rule inside the TTL;
 - focused tests cover immediate suppression, expiry, independent Camera/channel/rule keys, notification-window ordering, and the actual database cache store.
+- focused CameraEvent model tests cover database defaults and casts, both relationship directions, and preservation of the event/name with a null Camera reference after Camera deletion.
 
 ## Phase 17 synchronous observation
 
@@ -215,7 +216,7 @@ The temporary probe logged only request metadata and header names, not header va
 ## Verification at checkpoint
 
 - current `artisan test tests/Feature/ClientsTest.php`: **16 passing tests and 88 assertions**;
-- current `artisan test tests/Feature/Models`: **10 passing tests and 22 assertions**;
+- current focused `artisan test tests/Feature/Models/CameraEventTest.php`: **3 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **14 passing tests and 48 assertions**, including database-cache duplicate suppression, expiry, key independence, and notification-window ordering;
@@ -227,7 +228,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
-- full `artisan test`: **110 tests, 311 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this webhook slice;
+- full `artisan test`: **113 tests, 324 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-journal slice;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
@@ -236,7 +237,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Define the operational questions a Camera event journal must answer before creating storage: which Camera/rule/channel triggered, when it was accepted, whether background processing completed or failed, and what recipient-level detail is genuinely needed. Then design only the minimal schema justified by those questions.
+Connect the new journal to one lifecycle boundary at a time. Start by deciding where an accepted webhook creates its `pending` event and how the resulting event ID reaches `ProcessCameraEvent`; cover that boundary before adding completion or failure transitions.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -256,7 +257,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The repository checkpoint through `8af50d4` is committed and pushed before the current single-attempt application change. Commit and push the reviewed Phase 18 completion slice with this handoff update before switching machines. On the other machine:
+The committed baseline through `c64d6b2` is pushed. The Phase 21 persistence slice is currently uncommitted and should be committed only after review. On the other machine after that checkpoint is pushed:
 
 ```bash
 git pull
