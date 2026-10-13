@@ -14,6 +14,8 @@ class ProcessCameraEvent implements ShouldQueue
 
     public int $timeout = 80;
 
+    public int $tries = 1;
+
     public bool $failOnTimeout = true;
 
     /**

@@ -26,7 +26,9 @@ Phase 16 — Complete, committed, and pushed through `4aa4954`. The MAX client c
 
 Phase 17 — The real sequential Dahua snapshot → MAX upload URL → multipart upload → message send flow has been observed successfully. One development run took 2,569 ms, proving that the slow external work should not hold the NVR webhook response open.
 
-Phase 18 — In progress. An accepted webhook dispatches `ProcessCameraEvent` with the Camera ID and validated channel. The database lifecycle has been observed manually for both success and failure: a successful job was removed after `queue:work --once`, while a controlled HTTP-fake exception moved a one-attempt job from `jobs` to `failed_jobs` without contacting Dahua or MAX. The handler reloads current Camera/Client state, applies early exits, retrieves and uploads one snapshot, and reuses the media token for every assigned Client. MAX requests have explicit 3/10-second limits; the job has an 80-second limit below the database queue's 90-second `retry_after` and fails on timeout. An explicit retry policy remains next.
+Phase 18 — Complete for the current database-queue design. An accepted webhook dispatches `ProcessCameraEvent`; successful and failed worker lifecycles have both been observed manually. The handler reloads current Camera/Client state, applies early exits, retrieves and uploads one snapshot, and reuses the media token for every assigned Client. MAX requests have explicit 3/10-second limits. The job has an 80-second timeout below `retry_after=90`, fails on timeout, and explicitly allows one attempt. Whole-job retries/backoff are deliberately absent because partial multi-client delivery is not idempotent.
+
+Phase 19 — Next. Evaluate Redis against the now-understood database queue rather than installing it automatically. Database queue remains the baseline unless Redis solves an observed queue or upcoming duplicate-protection requirement clearly enough to justify another service.
 
 ## Current repository state
 
@@ -61,7 +63,8 @@ Checkpoint date: 2026-10-13.
 - the same commit gives `ProcessCameraEvent` an explicit 80-second timeout and marks it failed when that timeout is exceeded, remaining below the database connection's 90-second `retry_after`;
 - on 2026-10-13, a controlled `Http::fake()` exception was processed through the real database worker with `--once --tries=1`: the job changed from `jobs=1`/`failed_jobs=0` to `jobs=0`/`failed_jobs=1` and appeared in `queue:failed`;
 - the experimental Camera, Client, pivot row, and failed-job record were removed afterward; both queue tables returned to zero rows and no repository files changed;
-- retry/backoff behavior remains intentionally undecided because retrying the whole multi-recipient job after partial delivery can duplicate earlier messages.
+- the current reviewed application change sets `ProcessCameraEvent::$tries` to `1`, making the single-attempt policy independent of worker CLI defaults;
+- whole-job retry/backoff is deliberately postponed because retrying after partial multi-client delivery can duplicate earlier messages.
 
 ## Phase 17 synchronous observation
 
@@ -226,7 +229,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Make the current single-attempt policy explicit on `ProcessCameraEvent` rather than depending on each worker command's `--tries` option. Do not add backoff yet: with only one attempt it has no effect, and enabling whole-job retries before idempotency or per-recipient progress tracking can duplicate notifications after partial delivery.
+Evaluate whether Redis should replace the working database queue now. Compare the concrete behavior already observed (durable PostgreSQL rows, simple inspection, low current volume) with Redis benefits (lower queue latency, in-memory operations, and a natural future cache/lock store). Record a decision; do not add Redis unless the benefit is justified now.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -246,7 +249,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The repository checkpoint through `a3358af` is committed and pushed. Commit and push any later reviewed Phase 18 slice with its handoff update before switching machines. On the other machine:
+The repository checkpoint through `8af50d4` is committed and pushed before the current single-attempt application change. Commit and push the reviewed Phase 18 completion slice with this handoff update before switching machines. On the other machine:
 
 ```bash
 git pull
