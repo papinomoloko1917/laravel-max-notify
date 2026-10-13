@@ -7,6 +7,7 @@ use App\Models\Camera;
 use App\Services\NotificationWindow;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -59,6 +60,25 @@ class DahuaWebhookController extends Controller
         $isAllowed = $window->allows(now());
 
         if ($isAllowed === false) {
+            return response('Ignored', 200)
+                ->header('Content-Type', 'text/plain');
+        }
+
+        $fingerprint = implode('|', [
+            (string) $camera->id,
+            (string) $validated['channel'],
+            (string) $validated['rule'],
+        ]);
+
+        $duplicateKey = 'dahua-event:' . hash('sha256', $fingerprint);
+
+        $isFirstRequest = Cache::add(
+            $duplicateKey,
+            true,
+            5,
+        );
+
+        if ($isFirstRequest === false) {
             return response('Ignored', 200)
                 ->header('Content-Type', 'text/plain');
         }

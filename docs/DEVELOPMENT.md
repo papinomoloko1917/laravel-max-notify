@@ -30,7 +30,9 @@ Phase 18 — Complete for the current database-queue design. An accepted webhook
 
 Phase 19 — Complete as an explicit decision not to add Redis yet. The observed queue volume is low, PostgreSQL queue behavior is understood and sufficient, and the existing database cache supports atomic `Cache::add()` plus locks through the already migrated `cache` and `cache_locks` tables. Redis remains a future option if measured queue latency, throughput, or lock/cache contention justifies another service.
 
-Phase 20 — Next. Add minimal duplicate-event protection at the authenticated and validated webhook boundary using the current database cache, a short TTL, and an atomic add operation.
+Phase 20 — Complete. After authentication, metadata validation, and notification-window acceptance, the webhook atomically claims a database-cache key derived from Camera ID, channel, and rule for five seconds. The first request dispatches normally; an identical request inside the TTL returns `200 Ignored`; distinct Cameras/channels/rules and requests after expiry remain independent.
+
+Phase 21 — Next. Design the smallest useful Camera event journal from the processing facts now known. Decide which accepted, ignored, completed, and failed information is operationally valuable before creating a migration.
 
 ## Current repository state
 
@@ -67,6 +69,9 @@ Checkpoint date: 2026-10-13.
 - the experimental Camera, Client, pivot row, and failed-job record were removed afterward; both queue tables returned to zero rows and no repository files changed;
 - the current reviewed application change sets `ProcessCameraEvent::$tries` to `1`, making the single-attempt policy independent of worker CLI defaults;
 - whole-job retry/backoff is deliberately postponed because retrying after partial multi-client delivery can duplicate earlier messages.
+- commit `db89649` records the Phase 19 decision to retain PostgreSQL queue/cache and defer Redis;
+- the current reviewed webhook change uses an atomic five-second database-cache claim before dispatch, returning the existing `200 Ignored` response for an identical Camera/channel/rule inside the TTL;
+- focused tests cover immediate suppression, expiry, independent Camera/channel/rule keys, notification-window ordering, and the actual database cache store.
 
 ## Phase 17 synchronous observation
 
@@ -128,7 +133,7 @@ Checkpoint date: 2026-10-13.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, full queued event processing, duplicate protection, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. `ProcessCameraEvent` is dispatched after webhook authentication, metadata validation, and time-window acceptance. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one image message to each currently assigned Client using the shared media token.
+Redis, Mailpit, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. After authentication, metadata validation, notification-window acceptance, and a five-second atomic duplicate claim, `ProcessCameraEvent` is dispatched. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one image message to each currently assigned Client using the shared media token.
 
 ## Confirmed MAX Messenger behavior
 
@@ -213,7 +218,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current `artisan test tests/Feature/Models`: **10 passing tests and 22 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
-- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **10 passing tests and 24 assertions** after adding queue dispatch/non-dispatch coverage;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **14 passing tests and 48 assertions**, including database-cache duplicate suppression, expiry, key independence, and notification-window ordering;
 - current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **4 passing tests and 7 assertions**, covering all three no-HTTP guards and reuse of one uploaded snapshot across two message recipients;
 - current related job/webhook/Dahua/MAX regression: **27 passing tests and 48 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
@@ -222,7 +227,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
-- full `artisan test`: **106 tests, 287 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this job slice;
+- full `artisan test`: **110 tests, 311 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this webhook slice;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
@@ -231,7 +236,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Cover and implement minimal duplicate webhook suppression with the existing database cache. Build a bounded key from Camera ID, validated channel, and validated rule; atomically claim it for a short five-second window after authentication, validation, and notification-window acceptance but before job dispatch. The first request should dispatch and return `OK`; an identical request inside the TTL should not dispatch and should return `Ignored`; the same request after TTL expiry should be accepted again.
+Define the operational questions a Camera event journal must answer before creating storage: which Camera/rule/channel triggered, when it was accepted, whether background processing completed or failed, and what recipient-level detail is genuinely needed. Then design only the minimal schema justified by those questions.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
