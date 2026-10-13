@@ -39,8 +39,9 @@ Phase 21 — In progress. The minimal `camera_events` persistence layer is imple
 Checkpoint date: 2026-10-13.
 
 - branch: `main`;
-- committed baseline `main` matches `origin/main` at `c64d6b2` (`feat: suppress duplicate camera events`);
-- the current uncommitted Phase 21 slice adds the `CameraEvent` model/factory/migration, the Camera relationship, and focused model tests; it does not yet change webhook or job behavior;
+- working tree was clean at the start of this documentation checkpoint;
+- `main` matches `origin/main` at `d6a1511` (`feat: add camera event journal foundation`);
+- commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -257,7 +258,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The committed baseline through `c64d6b2` is pushed. The Phase 21 persistence slice is currently uncommitted and should be committed only after review. On the other machine after that checkpoint is pushed:
+The application checkpoint through `d6a1511` is committed and pushed to `origin/main`. The only changes after it are this documentation checkpoint. On the other machine:
 
 ```bash
 git pull
@@ -270,6 +271,7 @@ composer install
 ./vendor/bin/sail artisan test tests/Feature/CamerasTest.php
 ./vendor/bin/sail artisan test tests/Unit/NotificationWindowTest.php
 ./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
+./vendor/bin/sail artisan test tests/Feature/Models/CameraEventTest.php
 ./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
 ./vendor/bin/sail artisan test tests/Feature/Jobs/ProcessCameraEventTest.php
 ./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
