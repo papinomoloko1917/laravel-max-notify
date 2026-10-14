@@ -31,7 +31,8 @@ As of 2026-10-14:
 - Phase 19 is complete as a deliberate deferral: the working PostgreSQL queue is sufficient at current volume, while the existing database cache already provides atomic `Cache::add()` and locks for the upcoming duplicate-protection slice. Redis remains available later if measured latency, throughput, or contention provides a concrete reason for another service.
 - Phase 20 is complete: after authentication, validation, and notification-window acceptance, the webhook atomically claims a five-second database-cache key derived from Camera ID, validated channel, and rule. Immediate identical requests return `200 Ignored` without dispatch; expiry and independent key dimensions are covered, including one test against the actual database store.
 - Phase 21 is complete for the current server-side journal: accepted non-duplicate webhooks persist `pending` events and dispatch their IDs; the job records explicit `skipped`, successful `completed`, and terminal `failed` outcomes while preserving aggregate and partial recipient counts. Focused tests cover persistence, correlation, guard outcomes, complete delivery, safe failure metadata, and missing journal rows.
-- Phase 22 is in progress: the event-history portion is complete for current requirements, including newest-first pagination, lifecycle filtering/reset, contextual empty states, and read-only processing/failure details that survive Camera deletion. The minimal operational dashboard remains.
+- Phase 22 is complete for current requirements: event history provides pagination, lifecycle filtering/reset, contextual empty states, and safe read-only details, while Dashboard provides live Camera/Client/status counts and the five newest events without speculative charts or caching.
+- Phase 23 remains deferred because there is no new email workflow requiring Mailpit. The next work starts Phase 24 with an authorization audit.
 - Redis remains deliberately deferred; PostgreSQL continues to support the current queue, cache, duplicate protection, and event journal volume.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
@@ -173,7 +174,7 @@ Current exit: the server-side journal records pending, skipped, completed, and f
 
 Learn Livewire filtering/pagination and Flux tables/badges/modals.
 
-Current state: the protected event page has a newest-first paginated table, translated lifecycle filters/badges, delivery progress, contextual empty states, and read-only details for processing/failure metadata and deleted Camera records. Focused tests cover access, rendering, filtering, pagination/reset, details, null outcomes, and retained history. The next slice replaces the placeholder dashboard with a minimal read-only operational summary.
+Current exit: the protected event page has a newest-first paginated table, translated lifecycle filters/badges, delivery progress, contextual empty states, and safe read-only details. The protected Livewire Dashboard shows current Camera, active-Camera, Client, and lifecycle-status counts plus the five newest events and a journal link. Focused tests cover both surfaces.
 
 ## Phase 23 — Email only if needed
 

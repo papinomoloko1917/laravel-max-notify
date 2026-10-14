@@ -34,15 +34,15 @@ Phase 20 — Complete. After authentication, metadata validation, and notificati
 
 Phase 21 — Complete for the current server-side journal design. The minimal `camera_events` persistence layer retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Accepted non-duplicate webhooks create `pending` rows and dispatch their IDs. The job records explicit `skipped` outcomes, successful `completed` delivery with recipient totals, and a terminal `failed` callback that stores only the safe exception class while preserving partial progress. Deleting a Camera nulls its foreign key without erasing history.
 
-Phase 22 — In progress, with the event-history portion complete for the current requirements. The read-only page has authenticated navigation and routing, newest-first database pagination, a Flux table, lifecycle-status filtering with page reset, context-sensitive empty states, and a read-only details modal. Details expose received/processed times, the Camera name snapshot and record state, channel, rule, status, delivery progress, and safe failure type; deleted Camera configuration does not erase or break history. Mutation and retry controls are intentionally absent. The dashboard portion of the phase remains.
+Phase 22 — Complete for the current requirements. The read-only event-history page provides newest-first pagination, lifecycle filtering with page reset, context-sensitive empty states, and safe details that survive Camera deletion. The Starter Kit dashboard placeholder is replaced by an authenticated Livewire operational summary with Camera, active-Camera, Client, and per-status event counts, the five newest events, and a link to the full journal. No charts, caching, mutation, or retry controls were introduced.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `ff82f6e` (`feat: filter camera event history`);
-- the current uncommitted Phase 22 slice adds read-only event selection/details, explicit pending/no-failure presentation, deleted-Camera state using the retained name snapshot, translations, and focused detail coverage;
+- committed `main` matches `origin/main` at `a44ecc4` (`feat: show camera event details`);
+- the current uncommitted Phase 22 slice replaces the static dashboard placeholder with a protected Livewire summary, seven current database counts, the five newest events, an empty state, a journal link, translations, and focused access/count/order coverage;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -237,7 +237,8 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
 - focused `artisan test tests/Feature/CameraEventsTest.php`: **9 passing tests and 50 assertions**, covering access, newest-first rendering, empty state, lifecycle filters, pagination/reset, read-only processing details, pending/null presentation, and history after Camera deletion;
-- full `artisan test`: **125 tests, 408 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-history slice;
+- focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 16 assertions**, covering guest rejection, authenticated access, exact operational counts, five-event newest-first limiting, and the empty state;
+- full `artisan test`: **128 tests, 421 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this dashboard slice;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
@@ -249,7 +250,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Continue Phase 22 by inspecting the Starter Kit dashboard and defining the smallest useful operational summary from existing data. Prefer a few read-only counts and a link to event history; do not add charts, caching, or new persistence until a concrete need appears.
+Phase 23 remains deferred because no new email workflow currently needs Mailpit. Begin Phase 24 with a narrow authorization audit: establish whether public registration is enabled and whether every authenticated verified User should have administrative access before changing policies or middleware.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -269,7 +270,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The filtered event-history page through `ff82f6e` is committed and pushed to `origin/main`. Current uncommitted changes complete the current read-only history UI with event details, safe processing/failure metadata, deleted-Camera presentation, focused tests, and synchronized documentation. The next slice begins the minimal operational dashboard.
+The complete event-history UI through `a44ecc4` is committed and pushed to `origin/main`. Current uncommitted changes complete Phase 22 with the minimal operational Dashboard, focused tests, translations, and synchronized documentation. Phase 23 is deliberately deferred; the next slice is an authorization audit at the start of Phase 24.
 
 On the other machine:
 
