@@ -11,6 +11,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('/cameras', 'pages::cameras.index')->name('cameras.index');
 
     Route::livewire('/clients', 'pages::clients.index')->name('clients.index');
+
+    Route::livewire('/events', 'pages::events.index')->name('events.index');
 });
 
 Route::get('/webhooks/dahua', DahuaWebhookController::class);

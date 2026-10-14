@@ -31,7 +31,7 @@ As of 2026-10-14:
 - Phase 19 is complete as a deliberate deferral: the working PostgreSQL queue is sufficient at current volume, while the existing database cache already provides atomic `Cache::add()` and locks for the upcoming duplicate-protection slice. Redis remains available later if measured latency, throughput, or contention provides a concrete reason for another service.
 - Phase 20 is complete: after authentication, validation, and notification-window acceptance, the webhook atomically claims a five-second database-cache key derived from Camera ID, validated channel, and rule. Immediate identical requests return `200 Ignored` without dispatch; expiry and independent key dimensions are covered, including one test against the actual database store.
 - Phase 21 is complete for the current server-side journal: accepted non-duplicate webhooks persist `pending` events and dispatch their IDs; the job records explicit `skipped`, successful `completed`, and terminal `failed` outcomes while preserving aggregate and partial recipient counts. Focused tests cover persistence, correlation, guard outcomes, complete delivery, safe failure metadata, and missing journal rows.
-- Phase 22 is next: expose the stored operational history through a minimal read-only authenticated Livewire/Flux page before considering filters or detail views.
+- Phase 22 is in progress: the minimal authenticated read-only Livewire/Flux history page now lists newest events with status and recipient progress using database pagination. Status filtering, explicit pagination coverage, and any justified detail view remain.
 - Redis remains deliberately deferred; PostgreSQL continues to support the current queue, cache, duplicate protection, and event journal volume.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
@@ -172,6 +172,8 @@ Current exit: the server-side journal records pending, skipped, completed, and f
 ## Phase 22 — Dashboard and event UI
 
 Learn Livewire filtering/pagination and Flux tables/badges/modals.
+
+Current state: the protected read-only event page, newest-first paginated table, translated status badges, delivery progress, empty state, navigation, and focused access/rendering tests are implemented. The next slice adds status filtering and verifies page navigation/reset behavior.
 
 ## Phase 23 — Email only if needed
 

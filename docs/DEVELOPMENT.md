@@ -32,14 +32,17 @@ Phase 19 — Complete as an explicit decision not to add Redis yet. The observed
 
 Phase 20 — Complete. After authentication, metadata validation, and notification-window acceptance, the webhook atomically claims a database-cache key derived from Camera ID, channel, and rule for five seconds. The first request dispatches normally; an identical request inside the TTL returns `200 Ignored`; distinct Cameras/channels/rules and requests after expiry remain independent.
 
-Phase 21 — Complete for the current server-side journal design. The minimal `camera_events` persistence layer retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Accepted non-duplicate webhooks create `pending` rows and dispatch their IDs. The job records explicit `skipped` outcomes, successful `completed` delivery with recipient totals, and a terminal `failed` callback that stores only the safe exception class while preserving partial progress. Deleting a Camera nulls its foreign key without erasing history. Event-history UI is not implemented yet.
+Phase 21 — Complete for the current server-side journal design. The minimal `camera_events` persistence layer retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Accepted non-duplicate webhooks create `pending` rows and dispatch their IDs. The job records explicit `skipped` outcomes, successful `completed` delivery with recipient totals, and a terminal `failed` callback that stores only the safe exception class while preserving partial progress. Deleting a Camera nulls its foreign key without erasing history.
+
+Phase 22 — In progress. The first read-only event-history slice is implemented: authenticated navigation and routing, newest-first database pagination, a Flux table with received time, Camera name snapshot, channel, rule, translated status badge, and recipient progress, plus an empty state. Mutation controls are intentionally absent. Status filtering and detail presentation have not been added.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `e530ba3` (`wip: connect camera event journal`);
+- committed `main` matches `origin/main` at `a8350d9` (`feat: record failed camera events`);
+- the current uncommitted Phase 22 slice adds the protected `/events` Livewire page, sidebar navigation, newest-first pagination, the minimal read-only table and empty state, translations, and focused access/rendering coverage;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -139,7 +142,7 @@ Checkpoint date: 2026-10-14.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis, Mailpit, and event history remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. After authentication, metadata validation, notification-window acceptance, and a five-second atomic duplicate claim, `ProcessCameraEvent` is dispatched. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one image message to each currently assigned Client using the shared media token.
+Redis and Mailpit remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. After authentication, metadata validation, notification-window acceptance, and a five-second atomic duplicate claim, `ProcessCameraEvent` is dispatched. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one image message to each currently assigned Client using the shared media token. The resulting operational history is now visible through the authenticated read-only event page.
 
 ## Confirmed MAX Messenger behavior
 
@@ -233,7 +236,8 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
-- full `artisan test`: **116 tests, 358 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-journal slice;
+- focused `artisan test tests/Feature/CameraEventsTest.php`: **4 passing tests and 10 assertions**, covering guest rejection, authenticated access, newest-first processing details, and the empty state;
+- full `artisan test`: **120 tests, 368 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-history slice;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
@@ -245,7 +249,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Begin Phase 22 with a read-only authenticated event-history page. First decide the smallest useful table columns and ordering from the persisted fields, then implement list access and rendering before adding filters or detail views. Do not add mutation controls for operational history.
+Continue Phase 22 with a status filter over `pending`, `skipped`, `completed`, and `failed`, reset pagination when the filter changes, and add focused coverage for both filtering and moving between pages. Keep operational history read-only; postpone a detail view until the need for failure metadata is explored.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -265,7 +269,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The normal-outcome checkpoint through `2238e5f` is committed and pushed to `origin/main`. Current uncommitted changes add the terminal `failed` callback, its focused tests, and synchronized documentation. The full server-side CameraEvent lifecycle is green; the read-only event-history UI is next.
+The complete server-side event-journal checkpoint through `a8350d9` is committed and pushed to `origin/main`. Current uncommitted changes add the first read-only event-history UI, its focused tests, translations, navigation, and synchronized documentation. The base page is green; status filtering and explicit pagination coverage are next.
 
 On the other machine:
 

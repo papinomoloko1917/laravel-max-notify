@@ -33,6 +33,7 @@
                 >
                     {{ __('Cameras') }}
                 </flux:sidebar.item>
+
                 <flux:sidebar.item
                     icon="users"
                     :href="route('clients.index')"
@@ -40,6 +41,15 @@
                     wire:navigate
                 >
                     {{ __('Clients') }}
+                </flux:sidebar.item>
+
+                <flux:sidebar.item
+                    icon="book-open"
+                    :href="route('events.index')"
+                    :current="request()->routeIs('events.index')"
+                    wire:navigate
+                >
+                    {{ __('The history of events') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
