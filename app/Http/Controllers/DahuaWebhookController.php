@@ -84,9 +84,14 @@ class DahuaWebhookController extends Controller
                 ->header('Content-Type', 'text/plain');
         }
 
-        $cameraEvent = new CameraEvent();
+        $cameraEvent = CameraEvent::create([
+            'camera_id' => $camera->id,
+            'camera_name' => $camera->name,
+            'channel' => (int) $validated['channel'],
+            'rule' => $validated['rule'],
+        ]);
 
-        ProcessCameraEvent::dispatch($camera->id, (int) $validated['channel']);
+        ProcessCameraEvent::dispatch($camera->id, (int) $validated['channel'], $cameraEvent->id);
 
         Log::info('Dahua IVS webhook accepted', [
             'camera_id' => $camera->id,

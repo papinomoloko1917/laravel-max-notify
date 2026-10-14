@@ -4,6 +4,7 @@ namespace Tests\Feature\Jobs;
 
 use App\Jobs\ProcessCameraEvent;
 use App\Models\Camera;
+use App\Models\CameraEvent;
 use App\Models\Client;
 use App\Services\DahuaClient;
 use App\Services\MaxClient;
@@ -19,13 +20,14 @@ class ProcessCameraEventTest extends TestCase
     public function test_deleted_camera_does_not_make_http_requests(): void
     {
         $camera = Camera::factory()->create();
+        $cameraEvent = CameraEvent::factory()->for($camera)->create();
         $cameraId = (int) $camera->id;
 
         $camera->delete();
 
         Http::preventStrayRequests();
 
-        $job = new ProcessCameraEvent($cameraId, 13);
+        $job = new ProcessCameraEvent($cameraId, 13, (int) $cameraEvent->id);
 
         $job->handle(new DahuaClient, new MaxClient);
 
@@ -35,13 +37,14 @@ class ProcessCameraEventTest extends TestCase
     public function test_inactive_camera_does_not_make_http_requests(): void
     {
         $camera = Camera::factory()->create(['is_active' => false]);
+        $cameraEvent = CameraEvent::factory()->for($camera)->create();
         $client = Client::factory()->create();
 
         $camera->clients()->attach($client);
 
         Http::preventStrayRequests();
 
-        $job = new ProcessCameraEvent((int) $camera->id, 13);
+        $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
 
         $job->handle(new DahuaClient, new MaxClient);
 
@@ -51,10 +54,11 @@ class ProcessCameraEventTest extends TestCase
     public function test_active_camera_without_clients_does_not_make_http_requests(): void
     {
         $camera = Camera::factory()->create(['is_active' => true]);
+        $cameraEvent = CameraEvent::factory()->for($camera)->create();
 
         Http::preventStrayRequests();
 
-        $job = new ProcessCameraEvent((int) $camera->id, 13);
+        $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
 
         $job->handle(new DahuaClient, new MaxClient);
 
@@ -64,6 +68,7 @@ class ProcessCameraEventTest extends TestCase
     public function test_active_camera_sends_snapshot_to_all_clients(): void
     {
         $camera = Camera::factory()->create(['is_active' => true]);
+        $cameraEvent = CameraEvent::factory()->for($camera)->create();
         $firstClient = Client::factory()->create(['max_chat_id' => 12345]);
         $secondClient = Client::factory()->create(['max_chat_id' => 67890]);
 
@@ -107,7 +112,7 @@ class ProcessCameraEventTest extends TestCase
             ]),
         ]);
 
-        $job = new ProcessCameraEvent((int) $camera->id, 13);
+        $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
 
         $job->handle(new DahuaClient, new MaxClient);
 

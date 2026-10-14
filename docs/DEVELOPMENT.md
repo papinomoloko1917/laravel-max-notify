@@ -32,17 +32,18 @@ Phase 19 — Complete as an explicit decision not to add Redis yet. The observed
 
 Phase 20 — Complete. After authentication, metadata validation, and notification-window acceptance, the webhook atomically claims a database-cache key derived from Camera ID, channel, and rule for five seconds. The first request dispatches normally; an identical request inside the TTL returns `200 Ignored`; distinct Cameras/channels/rules and requests after expiry remain independent.
 
-Phase 21 — In progress. The minimal `camera_events` persistence layer is implemented and tested: an event retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Deleting a Camera sets `camera_id` to null while preserving its historical events. A work-in-progress integration now adds `cameraEventId` to the queued job constructor and places an unsaved `CameraEvent` object at the correct webhook boundary; persistence and dispatch wiring are deliberately unfinished at this checkpoint.
+Phase 21 — In progress. The minimal `camera_events` persistence layer is implemented and tested: an event retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Deleting a Camera sets `camera_id` to null while preserving its historical events. An accepted, non-duplicate webhook persists a `pending` event before dispatch and passes its ID to `ProcessCameraEvent`; focused tests cover the stored snapshot, queued correlation, duplicate suppression, and outside-window omission. Lifecycle updates inside the job are not implemented yet.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-13.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `816d989` (`docs: update camera event journal checkpoint`);
+- committed `main` matches `origin/main` at `e530ba3` (`wip: connect camera event journal`);
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
-- the current WIP modifies `DahuaWebhookController` and `ProcessCameraEvent`: the job constructor requires a third `cameraEventId`, while the controller currently creates only an empty, unsaved `CameraEvent` and still dispatches two arguments;
-- this WIP is intentionally incomplete and currently returns HTTP 500 for otherwise accepted webhooks; no event row is persisted yet and the existing direct job tests still construct the job with two arguments;
+- the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
+- the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
+- webhook coverage verifies the complete initial journal row, matches its ID to the queued job, keeps one row for an immediate duplicate, and stores no row for an outside-window request;
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -221,7 +222,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraEventTest.php`: **3 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
-- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **14 passing tests and 48 assertions**, including database-cache duplicate suppression, expiry, key independence, and notification-window ordering;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **14 passing tests and 52 assertions**, including database-cache duplicate suppression, expiry, key independence, notification-window ordering, persisted event contents, queued event-ID correlation, and journal omission for ignored requests;
 - current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **4 passing tests and 7 assertions**, covering all three no-HTTP guards and reuse of one uploaded snapshot across two message recipients;
 - current related job/webhook/Dahua/MAX regression: **27 passing tests and 48 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
@@ -230,9 +231,10 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
-- full `artisan test`: **113 tests, 324 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-journal slice;
-- latest WIP webhook/job run: **18 tests total; 8 passed, 6 failed, and 4 errored**. The failures have one expected cause: `ProcessCameraEvent` now requires three constructor arguments, while all callers still provide two;
-- latest WIP targeted Pint reports `DahuaWebhookController` as not formatted; defer formatting until the unfinished empty model construction is replaced;
+- full `artisan test`: **113 tests, 328 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-journal slice;
+- current combined webhook/job run: **18 passing tests and 55 assertions**;
+- current CameraEvent model/webhook/job regression: **21 passing tests and 72 assertions**;
+- targeted Pint for the controller and job test: **passes**;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
@@ -241,14 +243,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Finish the already-started accepted-webhook boundary before doing anything else:
-
-1. replace the empty `new CameraEvent()` with persisted Eloquent creation using Camera ID/name and validated channel/rule, leaving database defaults to provide `pending` and zero counters;
-2. pass the saved event ID as the third `ProcessCameraEvent::dispatch()` argument;
-3. run only `test_active_camera_can_send_authenticated_ivs_webhook` first;
-4. after the controller works, update the webhook assertions and the four direct job constructions to include an event ID.
-
-Do not add completed/failed transitions or recipient counters until this boundary and its tests are green.
+Define the job-side lifecycle before changing `ProcessCameraEvent`: decide the final status and `processed_at` behavior for a missing/deleted Camera, an inactive Camera, no recipients, complete delivery, and an exception. Then implement and test one coherent status transition block without adding UI yet.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -268,14 +263,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The last green checkpoint through `816d989` is committed and pushed to `origin/main`. To carry the current deliberately incomplete controller/job work to another machine, commit and push it together with this handoff as a clearly labelled WIP commit. After pulling it on the other machine, expect the webhook/job tests to remain red until the steps in **Next exact learning block** are completed.
-
-Current WIP files before this documentation update:
-
-```text
-M app/Http/Controllers/DahuaWebhookController.php
-M app/Jobs/ProcessCameraEvent.php
-```
+The WIP checkpoint through `e530ba3` is committed and pushed to `origin/main`. Current uncommitted changes finish event persistence/dispatch in the controller, update the four direct job tests for the event ID, add focused webhook journal assertions, and synchronize this handoff. The CameraEvent model/webhook/job boundary is green; job-side lifecycle transitions remain the next step.
 
 On the other machine:
 

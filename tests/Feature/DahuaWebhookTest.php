@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\ProcessCameraEvent;
 use App\Models\Camera;
+use App\Models\CameraEvent;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -38,10 +39,28 @@ class DahuaWebhookTest extends TestCase
             'text/plain; charset=utf-8',
         );
 
+        $this->assertDatabaseCount('camera_events', 1);
+
+        $cameraEvent = CameraEvent::query()->firstOrFail();
+
+        $this->assertDatabaseHas('camera_events', [
+            'id' => $cameraEvent->id,
+            'camera_id' => $camera->id,
+            'camera_name' => $camera->name,
+            'channel' => 13,
+            'rule' => 'perimeter',
+            'status' => 'pending',
+            'recipients_total' => 0,
+            'recipients_sent' => 0,
+            'failure_type' => null,
+            'processed_at' => null,
+        ]);
+
         Queue::assertPushed(
             ProcessCameraEvent::class,
             fn (ProcessCameraEvent $job): bool => $job->cameraId === $camera->id
-                && $job->channel === 13,
+                && $job->channel === 13
+                && $job->cameraEventId === $cameraEvent->id,
         );
     }
 
@@ -219,6 +238,8 @@ class DahuaWebhookTest extends TestCase
         $response->assertContent('Ignored');
 
         Queue::assertNotPushed(ProcessCameraEvent::class);
+
+        $this->assertDatabaseCount('camera_events', 0);
     }
 
     public function test_authenticated_webhook_is_accepted_inside_camera_notification_window(): void
@@ -285,6 +306,8 @@ class DahuaWebhookTest extends TestCase
         $secondResponse->assertContent('Ignored');
 
         Queue::assertPushed(ProcessCameraEvent::class, 1);
+
+        $this->assertDatabaseCount('camera_events', 1);
     }
 
     public function test_identical_webhook_is_accepted_after_duplicate_window_expires(): void
