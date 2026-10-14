@@ -41,6 +41,8 @@ return [
         'password' => env('DAHUA_PASSWORD'),
         'connect_timeout' => env('DAHUA_CONNECT_TIMEOUT', 3),
         'timeout' => env('DAHUA_TIMEOUT', 10),
+        'webhook_username_limit_per_minute' => (int) env('DAHUA_WEBHOOK_USERNAME_LIMIT_PER_MINUTE', 60),
+        'webhook_ip_limit_per_minute' => (int) env('DAHUA_WEBHOOK_IP_LIMIT_PER_MINUTE', 300),
     ],
 
     'max' => [

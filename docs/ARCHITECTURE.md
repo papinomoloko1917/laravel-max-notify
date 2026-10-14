@@ -116,6 +116,8 @@ The mature webhook should be secure, deterministic, and short-running, but the f
 
 The current minimal endpoint identifies an active Camera by its unique Basic username and verifies the supplied password against the Eloquent-hashed value. Missing credentials, unknown usernames, wrong passwords, and inactive Cameras deliberately share one `401 Unauthorized` response so the endpoint does not reveal which credential check failed. Only after authentication does it validate the query contract: exact `event=ivs`, integer channel `>= 1`, and a required bounded rule label; malformed metadata receives plain-text `400` rather than browser redirect behavior. Accepted requests log only Camera identity and validated metadata. This complete boundary was verified through Postman and the real NVR using channel 7 and the `perimeter` rule.
 
+Before the controller, the `dahua-webhook` named limiter applies two independent fixed-window budgets: 60 requests/minute per presented Basic username and 300 requests/minute per source IP by default. Both values are environment-backed. The username bucket uses SHA-256 rather than storing the presented username in a cache key; the IP bucket limits aggregate abuse but is not used to identify a Camera. A rejected flood receives Laravel's `429 Too Many Requests` with `Retry-After`. This security boundary intentionally precedes authentication, while the later five-second Camera/channel/rule cache claim solves business duplicate delivery after authentication and notification-window checks.
+
 Current hardware observations from the DHI-NVR4232-4KS2/L IVS "Send command" action:
 
 - it calls the configured URL with `GET`, no request body, and no `Content-Type` header;

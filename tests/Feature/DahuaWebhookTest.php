@@ -438,4 +438,72 @@ class DahuaWebhookTest extends TestCase
 
         Queue::assertPushed(ProcessCameraEvent::class, 1);
     }
+
+    public function test_repeated_requests_for_same_webhook_username_are_rate_limited(): void
+    {
+        $username = 'rate-limited-user';
+
+        Camera::factory()->create([
+            'webhook_username' => $username,
+            'webhook_password' => 'correct-password',
+            'is_active' => true,
+        ]);
+
+        config([
+            'services.dahua.webhook_username_limit_per_minute' => 2,
+            'services.dahua.webhook_ip_limit_per_minute' => 100,
+        ]);
+
+        Queue::fake();
+
+        $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
+
+        $firstResponse = $this->withBasicAuth($username, 'wrong-password')->get($url);
+        $secondResponse = $this->withBasicAuth($username, 'wrong-password')->get($url);
+        $limitedResponse = $this->withBasicAuth($username, 'wrong-password')->get($url);
+
+        $firstResponse->assertUnauthorized();
+        $secondResponse->assertUnauthorized();
+        $limitedResponse->assertTooManyRequests();
+        $limitedResponse->assertHeader('Retry-After');
+
+        Queue::assertNothingPushed();
+        $this->assertDatabaseCount('camera_events', 0);
+    }
+
+    public function test_webhook_username_rate_limit_buckets_are_independent(): void
+    {
+        config([
+            'services.dahua.webhook_username_limit_per_minute' => 1,
+            'services.dahua.webhook_ip_limit_per_minute' => 100,
+        ]);
+
+        $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
+
+        $firstUsernameResponse = $this->withBasicAuth('first-user', 'password')->get($url);
+        $secondUsernameResponse = $this->withBasicAuth('second-user', 'password')->get($url);
+        $limitedFirstUsernameResponse = $this->withBasicAuth('first-user', 'password')->get($url);
+
+        $firstUsernameResponse->assertUnauthorized();
+        $secondUsernameResponse->assertUnauthorized();
+        $limitedFirstUsernameResponse->assertTooManyRequests();
+    }
+
+    public function test_webhook_ip_rate_limit_caps_requests_across_usernames(): void
+    {
+        config([
+            'services.dahua.webhook_username_limit_per_minute' => 100,
+            'services.dahua.webhook_ip_limit_per_minute' => 2,
+        ]);
+
+        $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
+
+        $firstResponse = $this->withBasicAuth('first-user', 'password')->get($url);
+        $secondResponse = $this->withBasicAuth('second-user', 'password')->get($url);
+        $limitedResponse = $this->withBasicAuth('third-user', 'password')->get($url);
+
+        $firstResponse->assertUnauthorized();
+        $secondResponse->assertUnauthorized();
+        $limitedResponse->assertTooManyRequests();
+    }
 }

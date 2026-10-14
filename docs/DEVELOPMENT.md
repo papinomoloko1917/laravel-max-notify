@@ -38,16 +38,17 @@ Phase 22 — Complete for the current requirements. The read-only event-history 
 
 Phase 23 — Deferred because no new email workflow currently requires Mailpit.
 
-Phase 24 — In progress. The authorization audit confirmed that public registration and Fortify email verification are disabled, `User` does not implement `MustVerifyEmail`, and the previous `verified` middleware was therefore a no-op. The current product intentionally has one trusted administrative user type: every existing authenticated User can access the administration UI, while account provisioning remains outside public HTTP routes. Misleading `verified` middleware has been removed without introducing speculative roles or an `is_admin` field.
+Phase 24 — In progress. The authorization audit established a closed-registration, single-role administration model and removed ineffective `verified` middleware. The Dahua webhook now has a named two-dimensional limiter before the controller: 60 requests/minute per SHA-256-hashed presented Basic username and 300 requests/minute per source IP by default, both environment-configurable. IP is an aggregate abuse bucket rather than Camera identity. This security limit is separate from the five-second authenticated Camera/channel/rule duplicate guard.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `4ad0ee6` (`security: clarify administrative access`);
+- committed `main` matches `origin/main` at `1f05e9d` (`docs: switch to agent-led development`);
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
-- project collaboration is now agent-led by default: `AGENTS.md` and `docs/CODEX_WORKFLOW.md` authorize Codex to implement coherent requested blocks with tests and documentation without per-file confirmation; commits and pushes remain user-controlled unless explicitly requested;
+- commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
+- the current uncommitted hardening slice adds configurable per-username and aggregate-IP webhook rate limits, route middleware, and focused coverage without changing authentication, duplicate suppression, or accepted-event behavior;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -232,7 +233,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraEventTest.php`: **3 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
-- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **14 passing tests and 52 assertions**, including database-cache duplicate suppression, expiry, key independence, notification-window ordering, persisted event contents, queued event-ID correlation, and journal omission for ignored requests;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **17 passing tests and 64 assertions**, including authentication/validation, notification windows, duplicate suppression, journal/queue correlation, repeated-username limiting, independent username buckets, and aggregate IP limiting;
 - current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **7 passing tests and 37 assertions**, covering all three persisted `skipped` outcomes, a two-recipient `completed` outcome, safe exception/unknown failure metadata, preserved partial counters, and a missing journal row;
 - current related job/webhook/Dahua/MAX regression: **27 passing tests and 48 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
@@ -244,19 +245,19 @@ The temporary probe logged only request metadata and header names, not header va
 - focused `artisan test tests/Feature/CameraEventsTest.php`: **9 passing tests and 50 assertions**, covering access, newest-first rendering, empty state, lifecycle filters, pagination/reset, read-only processing details, pending/null presentation, and history after Camera deletion;
 - focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 16 assertions**, covering guest rejection, authenticated access, exact operational counts, five-event newest-first limiting, and the empty state;
 - focused `artisan test tests/Feature/AdminAccessTest.php`: **3 passing tests and 13 assertions**, covering disabled public registration, guest rejection from all administration pages, and the intentional single-role access model without email verification;
-- full `artisan test`: **131 tests, 434 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this authorization slice;
+- full `artisan test`: **134 tests, 446 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this rate-limiting slice;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
-- Larastan reports only the **2 previously known Starter Kit-related findings**; adding the controller return type resolved the webhook finding, and no finding points to the Phase 12 code;
+- Larastan reports **4 pre-existing findings outside this slice**: one unused Starter Kit trait, one missing Starter Kit factory return, and missing relationship generics on `Camera::cameraEvents()` and `CameraEvent::camera()`; no finding points to the webhook limiter;
 - previously known generated `lang/ru/*.php` formatting differences remain outside this block.
 
 ## Next exact development block
 
-Continue Phase 24 with a focused webhook rate-limiting audit. Inspect Laravel's existing login limiter and the observed NVR request pattern, then choose a limit/key that reduces brute-force and event-flood risk without treating the Docker-translated source IP as Camera identity or suppressing legitimate events.
+Continue Phase 24 with a database-index audit based on the queries now used by webhook lookup, duplicate protection, event history filtering/pagination, Dashboard counts, and the queue. Add only indexes justified by those concrete query shapes; do not introduce speculative indexes or caching.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -276,7 +277,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The first Phase 24 authorization slice is committed and pushed through `4ad0ee6`. Current uncommitted changes switch the repository instructions and multi-machine workflow to agent-led implementation. The next development slice audits webhook rate limiting before implementing any limiter.
+Agent-led workflow and the authorization slice are committed and pushed through `1f05e9d`. Current uncommitted changes add the named Dahua webhook limiter, configurable defaults, focused tests, and synchronized documentation. The next development slice audits existing indexes against actual query shapes.
 
 On the other machine:
 
@@ -305,6 +306,7 @@ Because `.env` is intentionally not committed, configure these values locally be
 - `DAHUA_USERNAME`;
 - `DAHUA_PASSWORD`;
 - optionally override `DAHUA_CONNECT_TIMEOUT=3` and `DAHUA_TIMEOUT=10`;
+- optionally override `DAHUA_WEBHOOK_USERNAME_LIMIT_PER_MINUTE=60` and `DAHUA_WEBHOOK_IP_LIMIT_PER_MINUTE=300`;
 - `MAX_BASE_URL=https://platform-api2.max.ru`;
 - `MAX_TOKEN`;
 - optionally override `MAX_CONNECT_TIMEOUT=3` and `MAX_TIMEOUT=10`.

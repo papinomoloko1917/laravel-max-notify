@@ -15,6 +15,7 @@ Route::middleware(['auth'])->group(function () {
     Route::livewire('/events', 'pages::events.index')->name('events.index');
 });
 
-Route::get('/webhooks/dahua', DahuaWebhookController::class);
+Route::get('/webhooks/dahua', DahuaWebhookController::class)
+    ->middleware('throttle:dahua-webhook');
 
 require __DIR__ . '/settings.php';
