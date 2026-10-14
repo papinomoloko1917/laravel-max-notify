@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Camera;
 use App\Models\CameraEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use RuntimeException;
 use Tests\TestCase;
 
 class CameraEventsTest extends TestCase
@@ -139,5 +141,66 @@ class CameraEventsTest extends TestCase
             ->assertSet('paginators.page', 1)
             ->assertSee('Event camera 03')
             ->assertDontSee('Event camera 13');
+    }
+
+    public function test_selecting_camera_event_loads_read_only_processing_details(): void
+    {
+        $processedAt = now()->startOfSecond();
+
+        $event = CameraEvent::factory()->create([
+            'camera_name' => 'Detailed event camera',
+            'channel' => 13,
+            'rule' => 'perimeter',
+            'status' => 'failed',
+            'recipients_total' => 2,
+            'recipients_sent' => 1,
+            'failure_type' => RuntimeException::class,
+            'processed_at' => $processedAt,
+        ]);
+
+        Livewire::test('pages::events.index')
+            ->assertDontSee(RuntimeException::class)
+            ->call('showDetails', $event->id)
+            ->assertSet('selectedEventId', $event->id)
+            ->assertSee(__('Event details'))
+            ->assertSee($event->camera_name)
+            ->assertSee($processedAt->format('d.m.Y H:i:s'))
+            ->assertSee(RuntimeException::class)
+            ->assertSee('1 / 2');
+    }
+
+    public function test_pending_event_details_show_unprocessed_and_no_failure(): void
+    {
+        $event = CameraEvent::factory()->create([
+            'status' => 'pending',
+            'failure_type' => null,
+            'processed_at' => null,
+        ]);
+
+        Livewire::test('pages::events.index')
+            ->call('showDetails', $event->id)
+            ->assertSee(__('Not processed yet'))
+            ->assertSee(__('None'));
+    }
+
+    public function test_event_details_keep_camera_snapshot_after_camera_is_deleted(): void
+    {
+        $camera = Camera::factory()->create([
+            'name' => 'Camera to delete',
+        ]);
+
+        $event = CameraEvent::factory()->for($camera)->create([
+            'camera_name' => 'Historical camera name',
+        ]);
+
+        $camera->delete();
+        $event->refresh();
+
+        $this->assertNull($event->camera_id);
+
+        Livewire::test('pages::events.index')
+            ->call('showDetails', $event->id)
+            ->assertSee('Historical camera name')
+            ->assertSee(__('Deleted camera'));
     }
 }
