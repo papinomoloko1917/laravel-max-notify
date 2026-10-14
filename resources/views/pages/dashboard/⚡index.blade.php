@@ -4,6 +4,7 @@ use App\Models\Camera;
 use App\Models\CameraEvent;
 use App\Models\Client;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -14,6 +15,11 @@ new #[Title('Dashboard')] class extends Component
     #[Computed]
     public function stats(): array
     {
+        $queueConnection = config('queue.connections.database.connection');
+        $queueTable = config('queue.connections.database.table', 'jobs');
+        $failedQueueConnection = config('queue.failed.database');
+        $failedQueueTable = config('queue.failed.table', 'failed_jobs');
+
         return [
             'cameras_total' => Camera::query()->count(),
             'cameras_active' => Camera::query()->where('is_active', true)->count(),
@@ -22,6 +28,12 @@ new #[Title('Dashboard')] class extends Component
             'events_skipped' => CameraEvent::query()->where('status', 'skipped')->count(),
             'events_completed' => CameraEvent::query()->where('status', 'completed')->count(),
             'events_failed' => CameraEvent::query()->where('status', 'failed')->count(),
+            'queue_jobs' => DB::connection(is_string($queueConnection) ? $queueConnection : null)
+                ->table(is_string($queueTable) ? $queueTable : 'jobs')
+                ->count(),
+            'queue_failed_jobs' => DB::connection(is_string($failedQueueConnection) ? $failedQueueConnection : null)
+                ->table(is_string($failedQueueTable) ? $failedQueueTable : 'failed_jobs')
+                ->count(),
         ];
     }
 
@@ -80,6 +92,22 @@ new #[Title('Dashboard')] class extends Component
         <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
             <flux:text>{{ __('Failed events') }}</flux:text>
             <flux:heading size="xl">{{ $this->stats['events_failed'] }}</flux:heading>
+        </div>
+    </div>
+
+    <div>
+        <flux:heading size="lg">{{ __('Queue health') }}</flux:heading>
+
+        <div class="mt-3 grid gap-4 sm:grid-cols-2">
+            <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                <flux:text>{{ __('Queued jobs') }}</flux:text>
+                <flux:heading size="xl">{{ $this->stats['queue_jobs'] }}</flux:heading>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                <flux:text>{{ __('Failed queue jobs') }}</flux:text>
+                <flux:heading size="xl">{{ $this->stats['queue_failed_jobs'] }}</flux:heading>
+            </div>
         </div>
     </div>
 

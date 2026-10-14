@@ -5,6 +5,7 @@ use App\Models\CameraEvent;
 use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -46,6 +47,34 @@ test('dashboard shows current operational counts', function () {
         'status' => 'failed',
     ]);
 
+    DB::table('jobs')->insert([
+        [
+            'queue' => 'default',
+            'payload' => '{}',
+            'attempts' => 0,
+            'reserved_at' => null,
+            'available_at' => now()->timestamp,
+            'created_at' => now()->timestamp,
+        ],
+        [
+            'queue' => 'default',
+            'payload' => '{}',
+            'attempts' => 1,
+            'reserved_at' => now()->timestamp,
+            'available_at' => now()->timestamp,
+            'created_at' => now()->timestamp,
+        ],
+    ]);
+
+    DB::table('failed_jobs')->insert([
+        'uuid' => fake()->uuid(),
+        'connection' => 'database',
+        'queue' => 'default',
+        'payload' => '{}',
+        'exception' => RuntimeException::class,
+        'failed_at' => now(),
+    ]);
+
     $component = Livewire::test('pages::dashboard.index');
 
     expect($component->get('stats'))->toBe([
@@ -56,6 +85,8 @@ test('dashboard shows current operational counts', function () {
         'events_skipped' => 2,
         'events_completed' => 3,
         'events_failed' => 4,
+        'queue_jobs' => 2,
+        'queue_failed_jobs' => 1,
     ]);
 
     $component
@@ -65,7 +96,10 @@ test('dashboard shows current operational counts', function () {
         ->assertSee(__('Pending events'))
         ->assertSee(__('Skipped events'))
         ->assertSee(__('Completed events'))
-        ->assertSee(__('Failed events'));
+        ->assertSee(__('Failed events'))
+        ->assertSee(__('Queue health'))
+        ->assertSee(__('Queued jobs'))
+        ->assertSee(__('Failed queue jobs'));
 });
 
 test('dashboard shows only five newest events in order', function () {

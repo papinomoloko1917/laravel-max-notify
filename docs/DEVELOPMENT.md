@@ -38,19 +38,20 @@ Phase 22 — Complete for the current requirements. The read-only event-history 
 
 Phase 23 — Deferred because no new email workflow currently requires Mailpit.
 
-Phase 24 — In progress. Authorization now uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. A query/index audit added only three PostgreSQL indexes justified by existing access paths: `camera_events(status, id)` for status counts and filtered newest-first history, `camera_events(camera_id)` for the nullable foreign-key relationship and `nullOnDelete`, and `camera_client(client_id)` for reverse Client assignments and cascade deletion. Existing primary/unique/queue/cache indexes were retained; low-selectivity `is_active` and small administrative name lists were not indexed speculatively. Larastan is now a clean project gate: Eloquent relationships have explicit generic types, one-use profile validation is local to its Volt component, and unsupported Starter Kit two-factor remnants were removed instead of suppressed.
+Phase 24 — In progress. Authorization now uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. A query/index audit added only three PostgreSQL indexes justified by existing access paths: `camera_events(status, id)` for status counts and filtered newest-first history, `camera_events(camera_id)` for the nullable foreign-key relationship and `nullOnDelete`, and `camera_client(client_id)` for reverse Client assignments and cascade deletion. Existing primary/unique/queue/cache indexes were retained; low-selectivity `is_active` and small administrative name lists were not indexed speculatively. Larastan is now a clean project gate. The authenticated Dashboard also exposes read-only totals from the configured database `jobs` and `failed_jobs` tables so queue failures are visible without introducing unsafe retry controls.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `0b243cc` (`perf: index camera event queries`);
+- committed `main` matches `origin/main` at `7705580` (`chore: restore clean static analysis`);
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
 - commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
 - commit `148fe7a` adds configurable per-username and aggregate-IP webhook limits with focused coverage and no change to accepted-event behavior;
 - commit `0b243cc` adds one reversible migration and a PostgreSQL schema test for the three query/FK indexes justified by current application behavior;
-- the current uncommitted hardening slice restores a clean Larastan gate with typed CameraEvent relationships, local profile validation, and removal of unsupported two-factor factory/component/test/provider remnants; password settings behavior is unchanged;
+- commit `7705580` restores a clean Larastan gate with typed CameraEvent relationships, local profile validation, and removal of unsupported two-factor factory/component/test/provider remnants; password settings behavior is unchanged;
+- the current uncommitted hardening slice adds read-only queued/failed job totals to the Dashboard using the database queue table and connection names from Laravel configuration;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -245,11 +246,11 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
 - focused `artisan test tests/Feature/CameraEventsTest.php`: **9 passing tests and 50 assertions**, covering access, newest-first rendering, empty state, lifecycle filters, pagination/reset, read-only processing details, pending/null presentation, and history after Camera deletion;
-- focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 16 assertions**, covering guest rejection, authenticated access, exact operational counts, five-event newest-first limiting, and the empty state;
+- focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 19 assertions**, covering guest rejection, authenticated access, exact domain and queue counts, five-event newest-first limiting, and the empty state;
 - focused `artisan test tests/Feature/AdminAccessTest.php`: **3 passing tests and 13 assertions**, covering disabled public registration, guest rejection from all administration pages, and the intentional single-role access model without email verification;
 - focused `artisan test tests/Feature/DatabaseIndexesTest.php`: **1 passing test and 3 assertions**, verifying the exact PostgreSQL index column sequences;
 - related index/model/Client/event-history regression: **29 passing tests and 154 assertions**;
-- full `artisan test`: **133 passing tests and 449 assertions**, with no skipped or risky tests;
+- full `artisan test`: **133 passing tests and 452 assertions**, with no skipped or risky tests;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
@@ -261,7 +262,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact development block
 
-Continue Phase 24 with database-queue observability: expose pending and failed queue-job counts on the authenticated Dashboard, cover both values with focused tests, and keep recovery read-only. Do not add a retry button yet because `ProcessCameraEvent` deliberately has one attempt and a whole-job retry can duplicate messages already delivered to earlier Clients.
+Continue Phase 24 with a focused sensitive-data audit of application logging and persisted failure metadata. Verify with automated tests where practical that incoming Basic credentials, MAX/Dahua secrets, and exception messages are not written to application-owned logs or `camera_events`. Keep Laravel's framework-managed `failed_jobs.exception` diagnostic payload restricted to trusted operators; do not display it in the administration UI.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -281,7 +282,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The query/index audit is committed and pushed through `0b243cc`. Current uncommitted changes make Larastan a clean gate and remove unsupported Starter Kit two-factor remnants while retaining the working password settings page. The next slice adds read-only pending/failed database-queue visibility to the Dashboard without introducing unsafe retries.
+Static-analysis cleanup is committed and pushed through `7705580`. Current uncommitted changes add read-only database-queue health totals to the Dashboard with focused coverage and no retry controls. The next slice audits logs and persisted failure metadata for accidental secret or exception-message exposure.
 
 On the other machine:
 
