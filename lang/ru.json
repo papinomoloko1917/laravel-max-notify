@@ -17,6 +17,7 @@
     "Time interval": "Диапазон времени",
     "The history of events": "История событий",
     "The event history is empty...": "История событий пуста...",
+    "No events match the selected status...": "Нет событий с выбранным статусом...",
     "Received at": "Получено",
     "Channel": "Канал",
     "Rule": "Правило",

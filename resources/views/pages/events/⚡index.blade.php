@@ -11,18 +11,51 @@ new #[Title('История событий')] class extends Component
 {
     use WithPagination;
 
+    public array $filterOptions = [
+        'all' => 'All',
+        'pending' => 'Pending',
+        'skipped' => 'Skipped',
+        'completed' => 'Completed',
+        'failed' => 'Failed',
+    ];
+
+    public string $filter = 'all';
+
     #[Computed]
     public function events(): LengthAwarePaginator
     {
         return CameraEvent::query()
+            ->when($this->filter !== 'all', fn ($query) => $query->where('status', $this->filter))
             ->orderByDesc('id')
             ->paginate(10);
+    }
+
+    public function updatedFilter(): void
+    {
+        $this->resetPage();
     }
 };
 ?>
 
 <div>
     <flux:heading level="1" size="xl">{{ __('The history of events') }}</flux:heading>
+
+    <flux:label class="mt-5">{{ __('Filter') }}:</flux:label>
+    <flux:dropdown>
+        <flux:button class="cursor-pointer" size="xs" icon:trailing="chevron-down">
+            {{ __($filterOptions[$filter]) }}
+        </flux:button>
+
+        <flux:menu>
+            <flux:menu.radio.group wire:model.live="filter">
+                @foreach ($filterOptions as $key => $label)
+                    <flux:menu.radio class="cursor-pointer text-xs" value="{{ $key }}">
+                        {{ __($label) }}
+                    </flux:menu.radio>
+                @endforeach
+            </flux:menu.radio.group>
+        </flux:menu>
+    </flux:dropdown>
 
     @if ($this->events->isNotEmpty())
         <div class="mt-5 [--flux-bleed:1rem]">
@@ -71,7 +104,7 @@ new #[Title('История событий')] class extends Component
             class="mt-5"
             variant="secondary"
             icon="information-circle"
-            heading="{{ __('The event history is empty...') }}"
+            heading="{{ __($filter === 'all' ? 'The event history is empty...' : 'No events match the selected status...') }}"
         />
     @endif
 </div>
