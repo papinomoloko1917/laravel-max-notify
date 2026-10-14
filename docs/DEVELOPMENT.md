@@ -38,21 +38,22 @@ Phase 22 — Complete for the current requirements. The read-only event-history 
 
 Phase 23 — Deferred because no new email workflow currently requires Mailpit.
 
-Phase 24 — In progress. Authorization now uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. A query/index audit added only three PostgreSQL indexes justified by existing access paths: `camera_events(status, id)` for status counts and filtered newest-first history, `camera_events(camera_id)` for the nullable foreign-key relationship and `nullOnDelete`, and `camera_client(client_id)` for reverse Client assignments and cascade deletion. Existing primary/unique/queue/cache indexes were retained; low-selectivity `is_active` and small administrative name lists were not indexed speculatively. Larastan is now a clean project gate. The authenticated Dashboard exposes read-only queue totals without payloads, exception text, or retry controls. A sensitive-data audit now protects the accepted-webhook log whitelist, secret-free serialized job payload, safe CameraEvent failure metadata, and the Dashboard boundary with regression tests.
+Phase 24 — Complete for the current application. Authorization uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. Three PostgreSQL indexes cover only demonstrated status/FK/reverse-pivot paths, and Larastan is a clean project gate. The authenticated Dashboard exposes read-only queue totals without payloads, exception text, or retry controls. Regression tests protect the accepted-webhook log whitelist, secret-free serialized job payload, safe CameraEvent failure metadata, and Dashboard boundary. The operator runbook defines protected investigation, 30-day failed-job retention, individual cleanup, and the prohibition on unsafe whole-job retry. Deployment-specific workers, scheduled pruning, backups, and restore belong to Phase 25.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `45b1958` (`feat: show queue health on dashboard`);
+- committed `main` matches `origin/main` at `bb1bc2d` (`test: protect sensitive queue data`);
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
 - commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
 - commit `148fe7a` adds configurable per-username and aggregate-IP webhook limits with focused coverage and no change to accepted-event behavior;
 - commit `0b243cc` adds one reversible migration and a PostgreSQL schema test for the three query/FK indexes justified by current application behavior;
 - commit `7705580` restores a clean Larastan gate with typed CameraEvent relationships, local profile validation, and removal of unsupported two-factor factory/component/test/provider remnants; password settings behavior is unchanged;
 - commit `45b1958` adds read-only queued/failed job totals to the Dashboard using the database queue table and connection names from Laravel configuration;
-- the current uncommitted hardening slice adds regression guarantees that explicit webhook logs contain only approved context, serialized jobs contain no integration credentials, `camera_events` retain only exception classes, and the Dashboard never renders queue payloads or exception text;
+- commit `bb1bc2d` adds regression guarantees that explicit webhook logs contain only approved context, serialized jobs contain no integration credentials, `camera_events` retain only exception classes, and the Dashboard never renders queue payloads or exception text;
+- the current uncommitted documentation slice adds the trusted-operator runbook, selects 30-day failed-job retention, documents investigation/individual cleanup, explicitly prohibits unsafe retry and closes Phase 24 for the current application;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -264,7 +265,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact development block
 
-Finish the current Phase 24 queue-hardening work by defining a minimal operator policy for `failed_jobs`: how long diagnostic records are retained, how an operator investigates and removes a resolved record, and why `queue:retry` remains prohibited for `ProcessCameraEvent` until per-recipient delivery becomes idempotent. Keep this as trusted operational documentation; do not add failed payloads, exception text, delete buttons, or retry controls to the web UI.
+Start Phase 25 with deployment-target discovery before writing production configuration. Record the actual host/OS, Docker availability, public domain and TLS termination, private connectivity to the NVR, expected PostgreSQL persistence/backup destination, and the process manager available for persistent `queue:work` and `schedule:work`. Do not copy the development Sail topology into production until these constraints are known.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -284,7 +285,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-Queue-health visibility is committed and pushed through `45b1958`. Current uncommitted tests lock down the safe webhook-log context, secret-free queued-job serialization, class-only CameraEvent failure metadata, and non-disclosure of queue diagnostics on the Dashboard. The next slice defines trusted-operator failed-job retention and cleanup without enabling unsafe retries.
+Sensitive-data regression coverage is committed and pushed through `bb1bc2d`. Current uncommitted documentation adds `docs/OPERATIONS.md`, updates the stale README, defines 30-day failed-job retention and safe individual cleanup, and closes Phase 24 without enabling retries. Phase 25 must begin by identifying the real deployment target and its worker, TLS, network, persistence, and backup constraints.
 
 On the other machine:
 

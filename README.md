@@ -1,8 +1,8 @@
 # max-notify
 
-Learning-oriented Laravel application that will receive Dahua camera events and notify configured MAX Messenger recipients with camera snapshots.
+Laravel application that receives Dahua camera events and notifies configured MAX Messenger recipients with camera snapshots.
 
-The project is being built incrementally. The roadmap describes future direction; it does not mean queues, Redis, webhooks, or external API integrations are already implemented.
+The project is being built incrementally. The roadmap describes future direction rather than features that must all be installed in advance.
 
 ## Current status
 
@@ -12,14 +12,17 @@ The project is being built incrementally. The roadmap describes future direction
 - Laravel Sail with Laravel, PostgreSQL, and local Adminer services;
 - Pest, Pint, and Larastan;
 - authenticated Camera and Client administration with tested many-to-many assignments;
-- synchronous authenticated Dahua IVS webhook with per-Camera notification windows;
+- authenticated Dahua IVS webhook with per-Camera notification windows;
 - tested Dahua snapshot client using Digest authentication and explicit request limits;
 - tested MAX Messenger client for upload-URL creation, JPEG upload, and image-message delivery;
+- asynchronous snapshot delivery through the PostgreSQL-backed Laravel queue;
+- atomic duplicate-event suppression through the PostgreSQL-backed Laravel cache;
+- persisted CameraEvent history, operational Dashboard, and read-only queue-health counts;
 - a published Sail 8.5 image with the trusted CA chain required by the current MAX HTTPS endpoints.
 
-Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. A minimal synchronous IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, and applies the configured per-Camera notification window. Separate Dahua and MAX clients are covered with HTTP fakes and have completed one controlled real snapshot-to-message smoke run in 2,569 ms. They remain disconnected from the webhook. Queue jobs, Redis, duplicate protection, and event history are not implemented.
+Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. The IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, applies the configured notification window, suppresses immediate duplicates, persists a pending CameraEvent, and dispatches slow Dahua/MAX work to the database queue. The worker retrieves and uploads one snapshot and sends it to every assigned Client while updating event history. Redis remains deliberately deferred because PostgreSQL currently satisfies the observed queue and cache requirements.
 
-See [Development Handoff](docs/DEVELOPMENT.md) for the exact current state and known quality-baseline issues.
+See [Development Handoff](docs/DEVELOPMENT.md) for the exact current state and verification baseline.
 
 ## Local development
 
@@ -73,12 +76,13 @@ The full quality command is:
 ./vendor/bin/sail composer test
 ```
 
-It currently exposes pre-existing Starter Kit/localization baseline issues recorded in `docs/DEVELOPMENT.md`.
+It runs Pint, Larastan, and the full automated test suite. The current baseline passes without ignored static-analysis findings.
 
 ## Project documentation
 
-- [Learning roadmap](docs/ROADMAP.md)
+- [Development roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development handoff](docs/DEVELOPMENT.md)
+- [Operations runbook](docs/OPERATIONS.md)
 - [Codex and Git workflow](docs/CODEX_WORKFLOW.md)
-- [Teaching rules](AGENTS.md)
+- [Agent rules](AGENTS.md)
