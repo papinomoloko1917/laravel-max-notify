@@ -38,18 +38,19 @@ Phase 22 — Complete for the current requirements. The read-only event-history 
 
 Phase 23 — Deferred because no new email workflow currently requires Mailpit.
 
-Phase 24 — In progress. Authorization now uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. A query/index audit added only three PostgreSQL indexes justified by existing access paths: `camera_events(status, id)` for status counts and filtered newest-first history, `camera_events(camera_id)` for the nullable foreign-key relationship and `nullOnDelete`, and `camera_client(client_id)` for reverse Client assignments and cascade deletion. Existing primary/unique/queue/cache indexes were retained; low-selectivity `is_active` and small administrative name lists were not indexed speculatively.
+Phase 24 — In progress. Authorization now uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. A query/index audit added only three PostgreSQL indexes justified by existing access paths: `camera_events(status, id)` for status counts and filtered newest-first history, `camera_events(camera_id)` for the nullable foreign-key relationship and `nullOnDelete`, and `camera_client(client_id)` for reverse Client assignments and cascade deletion. Existing primary/unique/queue/cache indexes were retained; low-selectivity `is_active` and small administrative name lists were not indexed speculatively. Larastan is now a clean project gate: Eloquent relationships have explicit generic types, one-use profile validation is local to its Volt component, and unsupported Starter Kit two-factor remnants were removed instead of suppressed.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `148fe7a` (`security: rate limit Dahua webhook`);
+- committed `main` matches `origin/main` at `0b243cc` (`perf: index camera event queries`);
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
 - commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
 - commit `148fe7a` adds configurable per-username and aggregate-IP webhook limits with focused coverage and no change to accepted-event behavior;
-- the current uncommitted hardening slice adds one reversible migration and a PostgreSQL schema test for the three query/FK indexes justified by current application behavior;
+- commit `0b243cc` adds one reversible migration and a PostgreSQL schema test for the three query/FK indexes justified by current application behavior;
+- the current uncommitted hardening slice restores a clean Larastan gate with typed CameraEvent relationships, local profile validation, and removal of unsupported two-factor factory/component/test/provider remnants; password settings behavior is unchanged;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -248,19 +249,19 @@ The temporary probe logged only request metadata and header names, not header va
 - focused `artisan test tests/Feature/AdminAccessTest.php`: **3 passing tests and 13 assertions**, covering disabled public registration, guest rejection from all administration pages, and the intentional single-role access model without email verification;
 - focused `artisan test tests/Feature/DatabaseIndexesTest.php`: **1 passing test and 3 assertions**, verifying the exact PostgreSQL index column sequences;
 - related index/model/Client/event-history regression: **29 passing tests and 154 assertions**;
-- full `artisan test`: **135 tests, 449 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this index slice;
+- full `artisan test`: **133 passing tests and 449 assertions**, with no skipped or risky tests;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
 - `git diff --check`: **passes**;
-- Larastan reports **4 pre-existing findings outside this slice**: one unused Starter Kit trait, one missing Starter Kit factory return, and missing relationship generics on `Camera::cameraEvents()` and `CameraEvent::camera()`; no finding points to the webhook limiter;
+- `composer types:check`: **passes with 0 errors**;
 - previously known generated `lang/ru/*.php` formatting differences remain outside this block.
 
 ## Next exact development block
 
-Continue Phase 24 by resolving the four known Larastan findings so `composer types:check` becomes a reliable green gate: add correct Eloquent relationship generics, repair or remove the incomplete Starter Kit factory method, and determine whether the unused validation trait should be integrated or deleted. Do not suppress findings with ignores or a baseline.
+Continue Phase 24 with database-queue observability: expose pending and failed queue-job counts on the authenticated Dashboard, cover both values with focused tests, and keep recovery read-only. Do not add a retry button yet because `ProcessCameraEvent` deliberately has one attempt and a whole-job retry can duplicate messages already delivered to earlier Clients.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -280,7 +281,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-Webhook rate limiting is committed and pushed through `148fe7a`. Current uncommitted changes add the justified CameraEvent/pivot indexes, schema coverage, and synchronized documentation; the migration has been applied successfully to the local PostgreSQL database. The next slice resolves the four known Larastan findings.
+The query/index audit is committed and pushed through `0b243cc`. Current uncommitted changes make Larastan a clean gate and remove unsupported Starter Kit two-factor remnants while retaining the working password settings page. The next slice adds read-only pending/failed database-queue visibility to the Dashboard without introducing unsafe retries.
 
 On the other machine:
 

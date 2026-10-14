@@ -108,6 +108,8 @@ The current installation is a closed, single-role administration system. Fortify
 
 Email verification is not authorization. `User` does not implement `MustVerifyEmail`, so the former `verified` middleware did not restrict access and has been removed. Do not add `is_admin`, roles, Gates, or Policies until a real non-administrator user type or permission boundary exists.
 
+Fortify two-factor authentication is also intentionally disabled and the current User schema has no two-factor columns. Starter Kit factory, component, provider, and test remnants for that unavailable feature were removed; the authenticated password-change flow remains supported. Reintroduce two-factor authentication only as a complete schema, configuration, UI, and test change.
+
 ## Webhook boundary
 
 Dahua events enter through normal Laravel HTTP routing/controller handling.

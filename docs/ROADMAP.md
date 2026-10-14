@@ -33,7 +33,7 @@ As of 2026-10-14:
 - Phase 21 is complete for the current server-side journal: accepted non-duplicate webhooks persist `pending` events and dispatch their IDs; the job records explicit `skipped`, successful `completed`, and terminal `failed` outcomes while preserving aggregate and partial recipient counts. Focused tests cover persistence, correlation, guard outcomes, complete delivery, safe failure metadata, and missing journal rows.
 - Phase 22 is complete for current requirements: event history provides pagination, lifecycle filtering/reset, contextual empty states, and safe read-only details, while Dashboard provides live Camera/Client/status counts and the five newest events without speculative charts or caching.
 - Phase 23 remains deferred because there is no new email workflow requiring Mailpit. The next work starts Phase 24 with an authorization audit.
-- Phase 24 is in progress: authorization uses a closed-registration single-role model, the Dahua webhook has configurable abuse limits, and three PostgreSQL indexes now cover justified CameraEvent status/FK and reverse pivot access paths. Restoring a clean Larastan gate is next.
+- Phase 24 is in progress: authorization uses a closed-registration single-role model, the Dahua webhook has configurable abuse limits, three PostgreSQL indexes cover justified CameraEvent status/FK and reverse pivot access paths, and Larastan passes without ignored findings. Read-only database-queue health visibility is next; unsafe whole-job retries remain excluded.
 - Redis remains deliberately deferred; PostgreSQL continues to support the current queue, cache, duplicate protection, and event journal volume.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
@@ -187,7 +187,7 @@ Do not add it merely because Laravel supports mail.
 
 Authorization, secrets, encrypted fields, rate limiting where justified, queue recovery, indexes, logs, backups.
 
-Current state: public registration is disabled, every provisioned authenticated User is intentionally an administrator, and email verification is not misrepresented as authorization. The Dahua route applies independent per-presented-username and source-IP abuse budgets before controller authentication. Concrete event-status, event-FK, and reverse Client-pivot queries are indexed; low-selectivity or currently tiny lookup paths remain unindexed until measurements justify them.
+Current state: public registration is disabled, every provisioned authenticated User is intentionally an administrator, and email verification is not misrepresented as authorization. Unsupported two-factor Starter Kit remnants have been removed because the feature and its database columns are absent. The Dahua route applies independent per-presented-username and source-IP abuse budgets before controller authentication. Concrete event-status, event-FK, and reverse Client-pivot queries are indexed; low-selectivity or currently tiny lookup paths remain unindexed until measurements justify them. Larastan passes with no ignored findings.
 
 ## Phase 25 — Deployment preparation
 

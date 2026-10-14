@@ -31,6 +31,7 @@ class Camera extends Model
         return $this->belongsToMany(Client::class)->withTimestamps();
     }
 
+    /** @return HasMany<CameraEvent, $this> */
     public function cameraEvents(): HasMany
     {
         return $this->hasMany(CameraEvent::class);
