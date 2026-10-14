@@ -196,7 +196,9 @@ Current relationship decision:
 - deleting a Camera or Client cascades only to its pivot rows;
 - pivot timestamps record assignment creation and updates and are populated by Eloquent through `withTimestamps()` on both relationships.
 
-`CameraEvent` stores the Camera reference and name snapshot, channel, rule, lifecycle status, aggregate recipient totals, an optional failure type, and processing time. Its nullable Camera foreign key uses `nullOnDelete()`: deleting configuration must not erase operational history. Accepted webhooks create `pending` rows, and the queue job terminates them as `skipped`, `completed`, or `failed`. The journal is operational history and is currently read-only at the domain level; its administration UI is not implemented yet.
+`CameraEvent` stores the Camera reference and name snapshot, channel, rule, lifecycle status, aggregate recipient totals, an optional failure type, and processing time. Its nullable Camera foreign key uses `nullOnDelete()`: deleting configuration must not erase operational history. Accepted webhooks create `pending` rows, and the queue job terminates them as `skipped`, `completed`, or `failed`. The journal is operational history and remains read-only both at the domain level and in its administration UI.
+
+PostgreSQL indexes follow current query and foreign-key paths rather than every column. `camera_events(status, id)` supports Dashboard status counts and filtered newest-first history; `camera_events(camera_id)` supports relationship reads and avoids scanning an unbounded journal when a Camera is deleted; `camera_client(client_id)` supports Client-to-Camera reads and Client cascade deletion, while the existing unique `(camera_id, client_id)` index already covers the opposite direction. Primary, unique, queue, and cache indexes remain unchanged. Separate indexes for boolean `is_active`, administrative name ordering, or other speculative combinations are deferred until scale or query plans justify them.
 
 ## Redis
 
