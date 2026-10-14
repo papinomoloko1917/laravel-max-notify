@@ -11,6 +11,7 @@ use App\Services\MaxClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Tests\TestCase;
 
 class ProcessCameraEventTest extends TestCase
@@ -189,5 +190,54 @@ class ProcessCameraEventTest extends TestCase
         $this->assertNotNull($cameraEvent->processed_at);
         $this->assertSame(2, $cameraEvent->recipients_total);
         $this->assertSame(2, $cameraEvent->recipients_sent);
+    }
+
+    public function test_failed_callback_records_exception_type_and_preserves_recipient_progress(): void
+    {
+        $camera = Camera::factory()->create();
+        $cameraEvent = CameraEvent::factory()->for($camera)->create([
+            'recipients_total' => 2,
+            'recipients_sent' => 1,
+        ]);
+
+        $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
+
+        $job->failed(new RuntimeException('Sensitive failure details'));
+
+        $cameraEvent->refresh();
+
+        $this->assertSame('failed', $cameraEvent->status);
+        $this->assertSame(RuntimeException::class, $cameraEvent->failure_type);
+        $this->assertNotNull($cameraEvent->processed_at);
+        $this->assertSame(2, $cameraEvent->recipients_total);
+        $this->assertSame(1, $cameraEvent->recipients_sent);
+        $this->assertNotSame('Sensitive failure details', $cameraEvent->failure_type);
+    }
+
+    public function test_failed_callback_records_unknown_when_exception_is_missing(): void
+    {
+        $camera = Camera::factory()->create();
+        $cameraEvent = CameraEvent::factory()->for($camera)->create();
+
+        $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
+
+        $job->failed(null);
+
+        $cameraEvent->refresh();
+
+        $this->assertSame('failed', $cameraEvent->status);
+        $this->assertSame('unknown', $cameraEvent->failure_type);
+        $this->assertNotNull($cameraEvent->processed_at);
+    }
+
+    public function test_failed_callback_ignores_missing_camera_event(): void
+    {
+        $camera = Camera::factory()->create();
+
+        $job = new ProcessCameraEvent((int) $camera->id, 13, 999999);
+
+        $job->failed(new RuntimeException('Controlled failure'));
+
+        $this->assertDatabaseCount('camera_events', 0);
     }
 }

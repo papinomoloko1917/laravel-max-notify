@@ -32,7 +32,7 @@ Phase 19 — Complete as an explicit decision not to add Redis yet. The observed
 
 Phase 20 — Complete. After authentication, metadata validation, and notification-window acceptance, the webhook atomically claims a database-cache key derived from Camera ID, channel, and rule for five seconds. The first request dispatches normally; an identical request inside the TTL returns `200 Ignored`; distinct Cameras/channels/rules and requests after expiry remain independent.
 
-Phase 21 — In progress. The minimal `camera_events` persistence layer is implemented and tested: an event retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Deleting a Camera sets `camera_id` to null while preserving its historical events. An accepted, non-duplicate webhook persists a `pending` event before dispatch and passes its ID to `ProcessCameraEvent`. The job now records `skipped` outcomes for missing/inactive Cameras and no recipients, or `completed` with recipient totals after successful delivery. Exception-driven `failed` transitions remain unimplemented.
+Phase 21 — Complete for the current server-side journal design. The minimal `camera_events` persistence layer retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Accepted non-duplicate webhooks create `pending` rows and dispatch their IDs. The job records explicit `skipped` outcomes, successful `completed` delivery with recipient totals, and a terminal `failed` callback that stores only the safe exception class while preserving partial progress. Deleting a Camera nulls its foreign key without erasing history. Event-history UI is not implemented yet.
 
 ## Current repository state
 
@@ -45,6 +45,7 @@ Checkpoint date: 2026-10-14.
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
 - webhook coverage verifies the complete initial journal row, matches its ID to the queued job, keeps one row for an immediate duplicate, and stores no row for an outside-window request;
 - the current job change loads the correlated event, records three safe `skipped` reasons, stores the intended recipient total before external I/O, increments the sent count after each successful message, and marks fully delivered events `completed`;
+- the current failure callback safely ignores a missing journal row, records `failed` with the exception class or `unknown`, sets `processed_at`, and leaves any accumulated recipient counters unchanged;
 - commit `4085dee` publishes the used Sail 8.5/PostgreSQL Docker files and installs the official Russian Trusted Root/Sub CA certificates required for verified HTTPS to the current MAX endpoints;
 - commit `63c01dd` records the completed synchronous observation checkpoint;
 - the Phase 11 baseline is commit `c90ac2f` (`feat: add authenticated Dahua webhook`);
@@ -224,7 +225,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **14 passing tests and 52 assertions**, including database-cache duplicate suppression, expiry, key independence, notification-window ordering, persisted event contents, queued event-ID correlation, and journal omission for ignored requests;
-- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **4 passing tests and 27 assertions**, covering all three persisted `skipped` outcomes and a two-recipient `completed` outcome in addition to HTTP behavior;
+- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **7 passing tests and 37 assertions**, covering all three persisted `skipped` outcomes, a two-recipient `completed` outcome, safe exception/unknown failure metadata, preserved partial counters, and a missing journal row;
 - current related job/webhook/Dahua/MAX regression: **27 passing tests and 48 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
@@ -232,9 +233,9 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
-- full `artisan test`: **113 tests, 348 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-journal slice;
+- full `artisan test`: **116 tests, 358 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this event-journal slice;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
-- current CameraEvent model/webhook/job regression: **21 passing tests and 92 assertions**;
+- current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
 - frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
@@ -244,7 +245,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Add the exception-driven terminal transition without changing retry policy: use the queued job's failure callback to mark the correlated event `failed`, store only a safe exception class/type (never its message), set `processed_at`, and preserve any recipient totals already recorded by `handle()`. Cover both an early external failure and a partial multi-recipient failure before considering UI.
+Begin Phase 22 with a read-only authenticated event-history page. First decide the smallest useful table columns and ordering from the persisted fields, then implement list access and rendering before adding filters or detail views. Do not add mutation controls for operational history.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -264,7 +265,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The accepted-event checkpoint is committed locally through `c86ba71` but is not yet pushed (`origin/main` remains at `e530ba3`). Current uncommitted changes add normal job-side `skipped/completed` lifecycle transitions, focused assertions for all four outcomes, and synchronized documentation. The full suite is green; exception-driven `failed` persistence remains next.
+The normal-outcome checkpoint through `2238e5f` is committed and pushed to `origin/main`. Current uncommitted changes add the terminal `failed` callback, its focused tests, and synchronized documentation. The full server-side CameraEvent lifecycle is green; the read-only event-history UI is next.
 
 On the other machine:
 

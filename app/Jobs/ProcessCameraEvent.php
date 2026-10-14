@@ -8,6 +8,7 @@ use App\Services\DahuaClient;
 use App\Services\MaxClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 class ProcessCameraEvent implements ShouldQueue
 {
@@ -103,6 +104,21 @@ class ProcessCameraEvent implements ShouldQueue
         $cameraEvent->update([
             'status' => 'completed',
             'failure_type' => null,
+            'processed_at' => now(),
+        ]);
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        $cameraEvent = CameraEvent::find($this->cameraEventId);
+
+        if ($cameraEvent === null) {
+            return;
+        }
+
+        $cameraEvent->update([
+            'status' => 'failed',
+            'failure_type' => $exception === null ? 'unknown' : $exception::class,
             'processed_at' => now(),
         ]);
     }
