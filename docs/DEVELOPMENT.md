@@ -45,8 +45,9 @@ Phase 24 — In progress. The authorization audit confirmed that public registra
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `c3455bc` (`feat: add operational dashboard`);
-- the current uncommitted Phase 24 slice removes the ineffective `verified` middleware from administration/settings routes while retaining `auth` and the Security page's `password.confirm`; focused tests document closed registration, guest rejection, and administrative access for an existing User without a verified email;
+- committed `main` matches `origin/main` at `4ad0ee6` (`security: clarify administrative access`);
+- commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
+- project collaboration is now agent-led by default: `AGENTS.md` and `docs/CODEX_WORKFLOW.md` authorize Codex to implement coherent requested blocks with tests and documentation without per-file confirmation; commits and pushes remain user-controlled unless explicitly requested;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -253,7 +254,7 @@ The temporary probe logged only request metadata and header names, not header va
 - Larastan reports only the **2 previously known Starter Kit-related findings**; adding the controller return type resolved the webhook finding, and no finding points to the Phase 12 code;
 - previously known generated `lang/ru/*.php` formatting differences remain outside this block.
 
-## Next exact learning block
+## Next exact development block
 
 Continue Phase 24 with a focused webhook rate-limiting audit. Inspect Laravel's existing login limiter and the observed NVR request pattern, then choose a limit/key that reduces brute-force and event-flood risk without treating the Docker-translated source IP as Camera identity or suppressing legitimate events.
 
@@ -271,11 +272,11 @@ Do not run a real worker merely as an automated test: the current job delivers r
 - the Dahua webhook will use normal Laravel HTTP routing, not Livewire.
 - external API calls do not belong in Livewire components or Eloquent models.
 - Redis and queues are introduced only when a concrete requirement appears.
-- application code remains learner-written unless explicit permission is given; Codex maintains checkpoint documentation.
+- development is agent-led by default: Codex implements coherent requested blocks with tests and documentation, while commits and pushes remain user-controlled unless explicitly requested.
 
 ## Moving to another machine
 
-Phase 22 is committed and pushed through `c3455bc`. Current uncommitted changes complete the first Phase 24 authorization slice with explicit single-role authenticated access, closed-registration/access tests, and synchronized documentation. The next slice audits webhook rate limiting before implementing any limiter.
+The first Phase 24 authorization slice is committed and pushed through `4ad0ee6`. Current uncommitted changes switch the repository instructions and multi-machine workflow to agent-led implementation. The next development slice audits webhook rate limiting before implementing any limiter.
 
 On the other machine:
 

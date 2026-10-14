@@ -6,7 +6,7 @@ Codex conversation history is convenient locally, but is not the source of truth
 
 ## Context files
 
-- `AGENTS.md` — permanent teaching rules.
+- `AGENTS.md` — permanent agent collaboration and implementation rules.
 - `docs/ROADMAP.md` — direction, not an immediate checklist.
 - `docs/ARCHITECTURE.md` — decisions and reasons.
 - `docs/DEVELOPMENT.md` — short session/machine handoff.
@@ -46,11 +46,10 @@ codex
 Не предполагай, что всё описанное в ROADMAP уже должно быть установлено:
 ROADMAP описывает направление развития проекта.
 
-Мы работаем в учебном режиме.
-Код и конфигурацию по умолчанию пишу я.
-
-Не изменяй файлы приложения, compose.yaml или конфигурацию и не реализуй
-текущее учебное задание за меня без моего явного разрешения.
+Мы работаем в режиме совместной агентной разработки.
+Самостоятельно реализуй следующий согласованный цельный блок, включая код, тесты и документацию.
+Не запрашивай отдельное подтверждение для обычных правок в рамках этого блока.
+Не делай commit и push без моей явной просьбы.
 
 Сначала расскажи:
 
@@ -59,31 +58,21 @@ ROADMAP описывает направление развития проект�
 3. Что из отсутствующего действительно необходимо СЕЙЧАС, а что понадобится позже.
 4. Есть ли расхождения между документацией и реальным проектом.
 
-Затем объясни только следующий необходимый концептуальный блок.
-
-После объяснения дай мне 2–4 тесно связанных практических задания одним
-учебным блоком по формату AGENTS.md и остановись. Одно задание допустимо,
-только если тема новая, рискованная или блокирует следующие шаги.
-
-Не показывай готовую реализацию задания.
+Затем сопоставь checkpoint с реальным кодом, выбери следующий необходимый цельный блок,
+реализуй его, добавь тесты, выполни проверки и актуализируй документацию.
+В конце кратко объясни результат, риски и предложи commit message.
 ```
 
-## Normal learning cycle
+## Normal agent development cycle
 
 ```text
-Codex explains
+Codex inspects checkpoint and repository
       ↓
-Codex gives one coherent block of 2–4 related tasks
+Codex implements one coherent block with tests
       ↓
-I implement the block
+Codex reviews the diff and runs verification
       ↓
-I request review
-      ↓
-Codex inspects git diff/tests
-      ↓
-I fix issues
-      ↓
-Codex verifies
+Codex updates handoff/architecture documentation
       ↓
 I commit
 ```
@@ -93,7 +82,6 @@ I commit
 ```text
 Я закончил текущее задание.
 
-Не исправляй код сам.
 Посмотри git diff и проведи review по правилам AGENTS.md.
 
 Раздели замечания на:
@@ -102,8 +90,7 @@ I commit
 - Laravel/PHP практики;
 - необязательные улучшения.
 
-Не показывай сразу готовую реализацию.
-Сначала объясни проблемы и дай мне возможность исправить их самостоятельно.
+Не изменяй код в этом режиме review, если я явно не попросил исправить найденные проблемы.
 ```
 
 ## Before changing machines
@@ -156,7 +143,7 @@ codex resume --last
 
 Use this as convenience only. Do not synchronize the entire local Codex history directory through Git.
 
-## HTTP/Postman learning flow
+## HTTP/Postman exploration flow
 
 ```text
 Read API docs
