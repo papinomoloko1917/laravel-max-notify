@@ -272,6 +272,14 @@ Demonstration User and Camera seeders are restricted to the `local` environment.
 
 A new machine should be recoverable from Git, lock files, `.env.example`, migrations, and documented setup.
 
+## Production target
+
+The first deployment target is a dedicated on-premises MiniPC MA01 (Intel N150, 16 GB RAM, 512 GB storage) running Ubuntu Server 26.04.1 LTS on the same LAN as the Dahua NVR. The selected direction is Docker Engine plus Compose, but the Sail development `compose.yaml` is not a production artifact.
+
+Production will use a separate immutable application image and topology: reverse proxy, PHP-FPM application, one database queue worker, one Laravel scheduler, and an internal-only PostgreSQL service with persistent storage. Only the reverse proxy publishes host ports; Adminer, Vite, Xdebug, source bind mounts, the development PHP server, and a public database port are excluded. Redis remains unnecessary at the observed load.
+
+The administration UI should use private-CA HTTPS on the LAN. If the NVR cannot validate that CA, an HTTP webhook listener may exist only for the fixed NVR source IP and exact webhook path; it must not expose administration pages. Exact firewall/TLS configuration waits for the static server/NVR addresses and administrator access scope. PostgreSQL backups must leave the MiniPC because a volume on its single SSD is not a backup. See `docs/DEPLOYMENT.md` for the full decision and remaining inputs.
+
 ## Testing strategy
 
 Prefer:

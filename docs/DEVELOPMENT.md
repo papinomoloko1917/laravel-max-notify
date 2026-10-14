@@ -40,12 +40,14 @@ Phase 23 — Deferred because no new email workflow currently requires Mailpit.
 
 Phase 24 — Complete for the current application. Authorization uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. Three PostgreSQL indexes cover only demonstrated status/FK/reverse-pivot paths, and Larastan is a clean project gate. The authenticated Dashboard exposes read-only queue totals without payloads, exception text, or retry controls. Regression tests protect the accepted-webhook log whitelist, secret-free serialized job payload, safe CameraEvent failure metadata, and Dashboard boundary. The operator runbook defines protected investigation, 30-day failed-job retention, individual cleanup, and the prohibition on unsafe whole-job retry. Deployment-specific workers, scheduled pruning, backups, and restore belong to Phase 25.
 
+Phase 25 — In progress. The deployment target is a dedicated MiniPC MA01 with Intel N150, 16 GB RAM, 512 GB storage, Ubuntu Server 26.04.1 LTS, and a LAN connection to the NVR without a public domain. Docker Engine plus Compose is selected, but the Sail development topology will not be reused as production. The proposed production boundary is reverse proxy + PHP-FPM app + one database queue worker + one scheduler + internal PostgreSQL, with no production Adminer/Vite/Xdebug, source bind mount, development server, or published database port. Network addressing, private-CA capability, administrator access scope, off-device backup destination, and UPS availability remain open before implementation.
+
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `bb1bc2d` (`test: protect sensitive queue data`);
+- committed `main` matches `origin/main` at `aa9f8ca` (`docs: add failed job operations runbook`);
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
 - commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
 - commit `148fe7a` adds configurable per-username and aggregate-IP webhook limits with focused coverage and no change to accepted-event behavior;
@@ -53,7 +55,8 @@ Checkpoint date: 2026-10-14.
 - commit `7705580` restores a clean Larastan gate with typed CameraEvent relationships, local profile validation, and removal of unsupported two-factor factory/component/test/provider remnants; password settings behavior is unchanged;
 - commit `45b1958` adds read-only queued/failed job totals to the Dashboard using the database queue table and connection names from Laravel configuration;
 - commit `bb1bc2d` adds regression guarantees that explicit webhook logs contain only approved context, serialized jobs contain no integration credentials, `camera_events` retain only exception classes, and the Dashboard never renders queue payloads or exception text;
-- the current uncommitted documentation slice adds the trusted-operator runbook, selects 30-day failed-job retention, documents investigation/individual cleanup, explicitly prohibits unsafe retry and closes Phase 24 for the current application;
+- commit `aa9f8ca` adds the trusted-operator runbook, selects 30-day failed-job retention, documents investigation/individual cleanup, explicitly prohibits unsafe retry and closes Phase 24 for the current application;
+- the current uncommitted deployment-discovery slice records the confirmed MiniPC/Ubuntu/LAN target, selects a production Docker topology distinct from Sail, identifies the HTTPS/webhook split and off-device backup boundary, and lists the network/backup inputs still required before configuration files are created;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -265,7 +268,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact development block
 
-Start Phase 25 with deployment-target discovery before writing production configuration. Record the actual host/OS, Docker availability, public domain and TLS termination, private connectivity to the NVR, expected PostgreSQL persistence/backup destination, and the process manager available for persistent `queue:work` and `schedule:work`. Do not copy the development Sail topology into production until these constraints are known.
+Complete the Phase 25 network and recovery inventory before writing production files: record the reserved/static MiniPC and NVR IPs, administrator devices or subnet, private-CA availability for those devices, NVR HTTPS/private-CA support, off-device PostgreSQL backup destination, and UPS availability. Then implement the production image/Compose boundary against those decisions rather than exposing development Sail services.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -285,7 +288,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-Sensitive-data regression coverage is committed and pushed through `bb1bc2d`. Current uncommitted documentation adds `docs/OPERATIONS.md`, updates the stale README, defines 30-day failed-job retention and safe individual cleanup, and closes Phase 24 without enabling retries. Phase 25 must begin by identifying the real deployment target and its worker, TLS, network, persistence, and backup constraints.
+The failed-job operations runbook and Phase 24 closure are committed and pushed through `aa9f8ca`. Current uncommitted documentation records the confirmed on-premises MiniPC target and the production topology decision in `docs/DEPLOYMENT.md`. Production files remain intentionally absent until static addressing, administration/TLS scope, NVR HTTPS capability, off-device backup destination, and UPS availability are known.
 
 On the other machine:
 

@@ -84,5 +84,6 @@ It runs Pint, Larastan, and the full automated test suite. The current baseline 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development handoff](docs/DEVELOPMENT.md)
 - [Operations runbook](docs/OPERATIONS.md)
+- [Deployment plan](docs/DEPLOYMENT.md)
 - [Codex and Git workflow](docs/CODEX_WORKFLOW.md)
 - [Agent rules](AGENTS.md)

@@ -193,6 +193,8 @@ Current state: complete for the current application. Public registration is disa
 
 Production environment, queue worker lifecycle, HTTPS/reverse proxy basics, persistence, backups, and migrations.
 
+Current target: a dedicated MiniPC MA01 (Intel N150, 16 GB RAM, 512 GB) running Ubuntu Server 26.04.1 LTS on the same LAN as the NVR, with no public domain. Docker Engine plus Compose is selected, using a separate production topology rather than Sail. `docs/DEPLOYMENT.md` records the proposed reverse proxy, PHP-FPM app, single worker, scheduler, internal PostgreSQL, private-CA administration HTTPS, restricted NVR webhook listener, and off-device backup boundary. Static IPs, administrator subnet/devices, NVR private-CA capability, backup destination, and UPS availability must be confirmed before production files are created.
+
 ## Rule for changing the roadmap
 
 Before adding a new tool, abstraction, or service, ask:
