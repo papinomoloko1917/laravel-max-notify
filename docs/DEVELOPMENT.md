@@ -36,13 +36,17 @@ Phase 21 — Complete for the current server-side journal design. The minimal `c
 
 Phase 22 — Complete for the current requirements. The read-only event-history page provides newest-first pagination, lifecycle filtering with page reset, context-sensitive empty states, and safe details that survive Camera deletion. The Starter Kit dashboard placeholder is replaced by an authenticated Livewire operational summary with Camera, active-Camera, Client, and per-status event counts, the five newest events, and a link to the full journal. No charts, caching, mutation, or retry controls were introduced.
 
+Phase 23 — Deferred because no new email workflow currently requires Mailpit.
+
+Phase 24 — In progress. The authorization audit confirmed that public registration and Fortify email verification are disabled, `User` does not implement `MustVerifyEmail`, and the previous `verified` middleware was therefore a no-op. The current product intentionally has one trusted administrative user type: every existing authenticated User can access the administration UI, while account provisioning remains outside public HTTP routes. Misleading `verified` middleware has been removed without introducing speculative roles or an `is_admin` field.
+
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `a44ecc4` (`feat: show camera event details`);
-- the current uncommitted Phase 22 slice replaces the static dashboard placeholder with a protected Livewire summary, seven current database counts, the five newest events, an empty state, a journal link, translations, and focused access/count/order coverage;
+- committed `main` matches `origin/main` at `c3455bc` (`feat: add operational dashboard`);
+- the current uncommitted Phase 24 slice removes the ineffective `verified` middleware from administration/settings routes while retaining `auth` and the Security page's `password.confirm`; focused tests document closed registration, guest rejection, and administrative access for an existing User without a verified email;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -238,7 +242,8 @@ The temporary probe logged only request metadata and header names, not header va
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
 - focused `artisan test tests/Feature/CameraEventsTest.php`: **9 passing tests and 50 assertions**, covering access, newest-first rendering, empty state, lifecycle filters, pagination/reset, read-only processing details, pending/null presentation, and history after Camera deletion;
 - focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 16 assertions**, covering guest rejection, authenticated access, exact operational counts, five-event newest-first limiting, and the empty state;
-- full `artisan test`: **128 tests, 421 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this dashboard slice;
+- focused `artisan test tests/Feature/AdminAccessTest.php`: **3 passing tests and 13 assertions**, covering disabled public registration, guest rejection from all administration pages, and the intentional single-role access model without email verification;
+- full `artisan test`: **131 tests, 434 assertions, 1 skipped and 1 risky**; the skip/risky result comes from the previously known Starter Kit Fortify feature guard, not this authorization slice;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
@@ -250,7 +255,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact learning block
 
-Phase 23 remains deferred because no new email workflow currently needs Mailpit. Begin Phase 24 with a narrow authorization audit: establish whether public registration is enabled and whether every authenticated verified User should have administrative access before changing policies or middleware.
+Continue Phase 24 with a focused webhook rate-limiting audit. Inspect Laravel's existing login limiter and the observed NVR request pattern, then choose a limit/key that reduces brute-force and event-flood risk without treating the Docker-translated source IP as Camera identity or suppressing legitimate events.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -270,7 +275,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The complete event-history UI through `a44ecc4` is committed and pushed to `origin/main`. Current uncommitted changes complete Phase 22 with the minimal operational Dashboard, focused tests, translations, and synchronized documentation. Phase 23 is deliberately deferred; the next slice is an authorization audit at the start of Phase 24.
+Phase 22 is committed and pushed through `c3455bc`. Current uncommitted changes complete the first Phase 24 authorization slice with explicit single-role authenticated access, closed-registration/access tests, and synchronized documentation. The next slice audits webhook rate limiting before implementing any limiter.
 
 On the other machine:
 

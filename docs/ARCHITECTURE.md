@@ -102,6 +102,12 @@ Likely sections:
 
 Livewire must not own machine-to-machine webhook processing.
 
+## Administrative access
+
+The current installation is a closed, single-role administration system. Fortify public registration and email verification are disabled, and every trusted User provisioned in the database is intentionally an administrator after authentication. Administrative and settings routes therefore use `auth`; the Security settings page additionally retains `password.confirm`.
+
+Email verification is not authorization. `User` does not implement `MustVerifyEmail`, so the former `verified` middleware did not restrict access and has been removed. Do not add `is_admin`, roles, Gates, or Policies until a real non-administrator user type or permission boundary exists.
+
 ## Webhook boundary
 
 Dahua events enter through normal Laravel HTTP routing/controller handling.
@@ -250,7 +256,7 @@ Later/optional:
 
 The default Laravel database-backed cache, session, and queue configuration is present, including the `jobs` and `failed_jobs` tables. Manual development runs observed both successful removal after `queue:work --once` and storage in `failed_jobs` after one controlled HTTP-fake exception; the failure experiment was cleaned up completely. The job handler has database-state guards and completes snapshot retrieval, upload-URL creation, one JPEG upload, and one message send per assigned Client. Its explicit 80-second timeout is below `retry_after=90`, timeout termination marks it failed, and `$tries=1` prevents worker CLI settings from enabling unsafe whole-job retries. No persistent worker process is configured. The database backend remains the working baseline while Redis is evaluated against real queue and duplicate-protection needs.
 
-Demonstration User and Camera seeders are restricted to the `local` environment. The predictable local user is created or updated idempotently and marked email-verified so it can access verified administration routes.
+Demonstration User and Camera seeders are restricted to the `local` environment. The predictable local user is created or updated idempotently; its populated `email_verified_at` value is conventional seed data and is not an authorization requirement.
 
 A new machine should be recoverable from Git, lock files, `.env.example`, migrations, and documented setup.
 

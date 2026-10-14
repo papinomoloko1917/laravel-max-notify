@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::livewire('/dashboard', 'pages::dashboard.index')->name('dashboard');
 
     Route::livewire('/cameras', 'pages::cameras.index')->name('cameras.index');
