@@ -13,7 +13,7 @@ understand the problem
 
 ## Current progress
 
-As of 2026-10-13:
+As of 2026-10-14:
 
 - Phases 0–6 are complete, committed, and pushed.
 - Phase 7 is complete and committed: the application has a protected Cameras Livewire page, navigation entry, custom Flux-compatible icon, and access tests.
@@ -30,8 +30,8 @@ As of 2026-10-13:
 - Phase 18 is complete for the current database-queue design: accepted webhooks dispatch `ProcessCameraEvent`; focused tests cover dispatch, guards, and multi-recipient delivery; manual worker observations confirmed both successful removal and `failed_jobs` storage without external network access. The job reloads current state, retrieves/uploads one snapshot, reuses its token for every recipient, limits MAX requests to 3/10 seconds, times out at 80 seconds below `retry_after=90`, fails on timeout, and explicitly permits one attempt. Whole-job retry/backoff is deliberately postponed because partial multi-client delivery can duplicate notifications.
 - Phase 19 is complete as a deliberate deferral: the working PostgreSQL queue is sufficient at current volume, while the existing database cache already provides atomic `Cache::add()` and locks for the upcoming duplicate-protection slice. Redis remains available later if measured latency, throughput, or contention provides a concrete reason for another service.
 - Phase 20 is complete: after authentication, validation, and notification-window acceptance, the webhook atomically claims a five-second database-cache key derived from Camera ID, validated channel, and rule. Immediate identical requests return `200 Ignored` without dispatch; expiry and independent key dimensions are covered, including one test against the actual database store.
-- Phase 21 is in progress and committed through `d6a1511`: the minimal `camera_events` migration, model, factory, Camera relationship, and focused persistence/relationship/deletion tests are implemented. The journal is deliberately not connected to the webhook or job yet.
-- Redis remains deliberately deferred; the next step is to connect the journal to the accepted-event lifecycle incrementally.
+- Phase 21 is in progress: accepted non-duplicate webhooks persist `pending` events and dispatch their IDs; the job records explicit `skipped` outcomes or a successful `completed` outcome with aggregate recipient counts. Focused tests cover persistence, correlation, guard outcomes, and full multi-recipient delivery. Exception-driven `failed` persistence remains next.
+- Redis remains deliberately deferred; PostgreSQL continues to support the current queue, cache, duplicate protection, and event journal volume.
 
 This section records progress only. Later phases remain direction, not requirements for the current branch.
 

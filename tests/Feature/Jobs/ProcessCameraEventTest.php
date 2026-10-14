@@ -32,6 +32,14 @@ class ProcessCameraEventTest extends TestCase
         $job->handle(new DahuaClient, new MaxClient);
 
         Http::assertNothingSent();
+
+        $cameraEvent->refresh();
+
+        $this->assertSame('skipped', $cameraEvent->status);
+        $this->assertSame('camera_missing', $cameraEvent->failure_type);
+        $this->assertNotNull($cameraEvent->processed_at);
+        $this->assertSame(0, $cameraEvent->recipients_total);
+        $this->assertSame(0, $cameraEvent->recipients_sent);
     }
 
     public function test_inactive_camera_does_not_make_http_requests(): void
@@ -49,6 +57,14 @@ class ProcessCameraEventTest extends TestCase
         $job->handle(new DahuaClient, new MaxClient);
 
         Http::assertNothingSent();
+
+        $cameraEvent->refresh();
+
+        $this->assertSame('skipped', $cameraEvent->status);
+        $this->assertSame('camera_inactive', $cameraEvent->failure_type);
+        $this->assertNotNull($cameraEvent->processed_at);
+        $this->assertSame(0, $cameraEvent->recipients_total);
+        $this->assertSame(0, $cameraEvent->recipients_sent);
     }
 
     public function test_active_camera_without_clients_does_not_make_http_requests(): void
@@ -63,6 +79,14 @@ class ProcessCameraEventTest extends TestCase
         $job->handle(new DahuaClient, new MaxClient);
 
         Http::assertNothingSent();
+
+        $cameraEvent->refresh();
+
+        $this->assertSame('skipped', $cameraEvent->status);
+        $this->assertSame('no_recipients', $cameraEvent->failure_type);
+        $this->assertNotNull($cameraEvent->processed_at);
+        $this->assertSame(0, $cameraEvent->recipients_total);
+        $this->assertSame(0, $cameraEvent->recipients_sent);
     }
 
     public function test_active_camera_sends_snapshot_to_all_clients(): void
@@ -157,5 +181,13 @@ class ProcessCameraEventTest extends TestCase
                     ],
                 ],
         );
+
+        $cameraEvent->refresh();
+
+        $this->assertSame('completed', $cameraEvent->status);
+        $this->assertNull($cameraEvent->failure_type);
+        $this->assertNotNull($cameraEvent->processed_at);
+        $this->assertSame(2, $cameraEvent->recipients_total);
+        $this->assertSame(2, $cameraEvent->recipients_sent);
     }
 }

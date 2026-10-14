@@ -25,7 +25,7 @@ It also provides an authenticated administrative UI.
 
 ## Currently implemented slice
 
-As of 2026-10-12, the application contains:
+As of 2026-10-14, the application contains:
 
 - the authentication and settings UI supplied by the Livewire Starter Kit;
 - a `cameras` table with identity/display fields plus nullable unique HTTP Basic username and nullable hashed webhook password;
@@ -52,7 +52,7 @@ As of 2026-10-12, the application contains:
 - Client Camera assignments edited through a separately paginated table in the existing modal; current IDs are loaded from the many-to-many relation, submitted IDs are validated individually, and `sync()` makes pivot rows match the selected set;
 - focused assignment tests cover replacing an existing Camera relation and rejecting a nonexistent Camera ID without changing Client or pivot data.
 
-A minimal webhook endpoint performs per-Camera HTTP Basic authentication, validates static IVS query metadata, applies the notification window, atomically suppresses identical Camera/channel/rule requests for five seconds through the database cache, dispatches `ProcessCameraEvent`, safely logs accepted context, and returns plain text. The duplicate claim occurs only after the request is otherwise eligible, so rejected and outside-window requests do not consume it. The job carries only the Camera ID and channel, receives integration clients from Laravel's container, and reloads the active Camera with current recipients when a worker handles it. Missing, inactive, and recipient-less Cameras finish without outgoing HTTP. For an active Camera with recipients, the handler retrieves one Dahua snapshot, requests one MAX upload URL, uploads the JPEG once, and reuses its media token to send one image message to every assigned Client. MAX requests are bounded to 3 seconds for connection establishment and 10 seconds overall; the job is bounded to 80 seconds before `retry_after=90`, fails on timeout, and explicitly permits one attempt. Successful and controlled failed worker lifecycles have both been observed. Whole-job retries/backoff are intentionally absent until partial-delivery duplicates can be addressed; Redis and an event journal remain incomplete.
+A minimal webhook endpoint performs per-Camera HTTP Basic authentication, validates static IVS query metadata, applies the notification window, and atomically suppresses identical Camera/channel/rule requests for five seconds through the database cache. After that claim it persists one `pending` `CameraEvent`, dispatches `ProcessCameraEvent` with the Camera ID, channel, and event ID, safely logs accepted context, and returns plain text. Rejected, outside-window, and immediate duplicate requests do not create journal rows. The worker reloads current Camera/Client state and records `skipped` outcomes for a missing Camera, inactive Camera, or no recipients. For an active Camera with recipients, it stores the recipient total before external I/O, retrieves one Dahua snapshot, requests one MAX upload URL, uploads the JPEG once, and reuses its media token to send one image message to every assigned Client. The sent count advances only after each successful message; complete delivery records `completed` and `processed_at`. Exception-driven journal failure persistence is not implemented yet. MAX requests are bounded to 3 seconds for connection establishment and 10 seconds overall; the job is bounded to 80 seconds before `retry_after=90`, fails on timeout, and explicitly permits one attempt. Whole-job retries/backoff are intentionally absent until partial-delivery duplicates can be addressed; Redis remains deferred.
 
 ## Likely mature flow
 
@@ -186,7 +186,7 @@ Current relationship decision:
 - deleting a Camera or Client cascades only to its pivot rows;
 - pivot timestamps record assignment creation and updates and are populated by Eloquent through `withTimestamps()` on both relationships.
 
-`CameraEvent` stores the Camera reference and name snapshot, channel, rule, lifecycle status, aggregate recipient totals, an optional failure type, and processing time. Its nullable Camera foreign key uses `nullOnDelete()`: deleting configuration must not erase operational history. This persistence layer is not yet connected to the webhook or queue job.
+`CameraEvent` stores the Camera reference and name snapshot, channel, rule, lifecycle status, aggregate recipient totals, an optional failure type, and processing time. Its nullable Camera foreign key uses `nullOnDelete()`: deleting configuration must not erase operational history. Accepted webhooks create `pending` rows, and the queue job currently terminates them as `skipped` or `completed`; `failed` exception persistence is the remaining lifecycle gap.
 
 ## Redis
 
