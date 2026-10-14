@@ -212,6 +212,10 @@ class ProcessCameraEventTest extends TestCase
         $this->assertSame(2, $cameraEvent->recipients_total);
         $this->assertSame(1, $cameraEvent->recipients_sent);
         $this->assertNotSame('Sensitive failure details', $cameraEvent->failure_type);
+        $this->assertStringNotContainsString(
+            'Sensitive failure details',
+            json_encode($cameraEvent->getAttributes(), JSON_THROW_ON_ERROR),
+        );
     }
 
     public function test_failed_callback_records_unknown_when_exception_is_missing(): void

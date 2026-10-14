@@ -7,6 +7,8 @@ use App\Models\Camera;
 use App\Models\CameraEvent;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -29,6 +31,7 @@ class DahuaWebhookTest extends TestCase
         ]);
 
         Queue::fake();
+        Log::spy();
 
         $response = $this->withBasicAuth($username, $password)->get($url);
 
@@ -62,6 +65,54 @@ class DahuaWebhookTest extends TestCase
                 && $job->channel === 13
                 && $job->cameraEventId === $cameraEvent->id,
         );
+
+        Log::shouldHaveReceived('info')
+            ->once()
+            ->with('Dahua IVS webhook accepted', [
+                'camera_id' => $camera->id,
+                'camera_name' => $camera->name,
+                'event' => 'ivs',
+                'channel' => 13,
+                'rule' => 'perimeter',
+            ]);
+    }
+
+    public function test_queued_job_payload_does_not_contain_integration_secrets(): void
+    {
+        $webhookUsername = 'sensitive-webhook-username';
+        $webhookPassword = 'sensitive-webhook-password';
+        $dahuaUsername = 'sensitive-dahua-username';
+        $dahuaPassword = 'sensitive-dahua-password';
+        $maxToken = 'sensitive-max-token';
+
+        Camera::factory()->create([
+            'webhook_username' => $webhookUsername,
+            'webhook_password' => $webhookPassword,
+            'is_active' => true,
+        ]);
+
+        config([
+            'queue.default' => 'database',
+            'services.dahua.username' => $dahuaUsername,
+            'services.dahua.password' => $dahuaPassword,
+            'services.max.token' => $maxToken,
+        ]);
+
+        $this->withBasicAuth($webhookUsername, $webhookPassword)
+            ->get('/webhooks/dahua?event=ivs&channel=13&rule=perimeter')
+            ->assertOk();
+
+        $payload = DB::table('jobs')->value('payload');
+
+        $this->assertIsString($payload);
+        $decodedPayload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame(ProcessCameraEvent::class, $decodedPayload['displayName']);
+        $this->assertStringNotContainsString($webhookUsername, $payload);
+        $this->assertStringNotContainsString($webhookPassword, $payload);
+        $this->assertStringNotContainsString($dahuaUsername, $payload);
+        $this->assertStringNotContainsString($dahuaPassword, $payload);
+        $this->assertStringNotContainsString($maxToken, $payload);
     }
 
     public function test_request_without_basic_credentials_is_rejected(): void

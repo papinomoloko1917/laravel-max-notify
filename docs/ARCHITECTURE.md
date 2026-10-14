@@ -245,6 +245,10 @@ Never commit MAX token, webhook secrets, camera passwords, or production credent
 
 If per-camera credentials live in PostgreSQL, use an encrypted-at-rest approach appropriate for Laravel.
 
+The accepted Dahua webhook log has an explicit context whitelist: Camera ID/name plus validated event, channel, and rule. Basic username/password and authorization headers are excluded. `ProcessCameraEvent` serializes only Camera ID, channel, and CameraEvent ID; Dahua Digest credentials and the MAX token are resolved from configuration when the worker handles the job and therefore are absent from the database queue payload. Regression tests protect both boundaries.
+
+Application-owned `camera_events.failure_type` stores only a controlled skip code, an exception class, or `unknown`, never an exception message. Laravel's framework-managed `failed_jobs` table intentionally retains full diagnostic exception data for trusted operators, but the administration UI shows only its row count and never renders its payload or exception text.
+
 ## Development environment
 
 Current Sail services:

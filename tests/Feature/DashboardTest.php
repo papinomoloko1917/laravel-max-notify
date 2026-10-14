@@ -50,7 +50,7 @@ test('dashboard shows current operational counts', function () {
     DB::table('jobs')->insert([
         [
             'queue' => 'default',
-            'payload' => '{}',
+            'payload' => 'sensitive queued payload',
             'attempts' => 0,
             'reserved_at' => null,
             'available_at' => now()->timestamp,
@@ -70,8 +70,8 @@ test('dashboard shows current operational counts', function () {
         'uuid' => fake()->uuid(),
         'connection' => 'database',
         'queue' => 'default',
-        'payload' => '{}',
-        'exception' => RuntimeException::class,
+        'payload' => 'sensitive failed payload',
+        'exception' => 'sensitive exception details',
         'failed_at' => now(),
     ]);
 
@@ -99,7 +99,10 @@ test('dashboard shows current operational counts', function () {
         ->assertSee(__('Failed events'))
         ->assertSee(__('Queue health'))
         ->assertSee(__('Queued jobs'))
-        ->assertSee(__('Failed queue jobs'));
+        ->assertSee(__('Failed queue jobs'))
+        ->assertDontSee('sensitive queued payload')
+        ->assertDontSee('sensitive failed payload')
+        ->assertDontSee('sensitive exception details');
 });
 
 test('dashboard shows only five newest events in order', function () {

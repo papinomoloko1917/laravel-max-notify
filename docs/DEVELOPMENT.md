@@ -38,20 +38,21 @@ Phase 22 — Complete for the current requirements. The read-only event-history 
 
 Phase 23 — Deferred because no new email workflow currently requires Mailpit.
 
-Phase 24 — In progress. Authorization now uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. A query/index audit added only three PostgreSQL indexes justified by existing access paths: `camera_events(status, id)` for status counts and filtered newest-first history, `camera_events(camera_id)` for the nullable foreign-key relationship and `nullOnDelete`, and `camera_client(client_id)` for reverse Client assignments and cascade deletion. Existing primary/unique/queue/cache indexes were retained; low-selectivity `is_active` and small administrative name lists were not indexed speculatively. Larastan is now a clean project gate. The authenticated Dashboard also exposes read-only totals from the configured database `jobs` and `failed_jobs` tables so queue failures are visible without introducing unsafe retry controls.
+Phase 24 — In progress. Authorization now uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. A query/index audit added only three PostgreSQL indexes justified by existing access paths: `camera_events(status, id)` for status counts and filtered newest-first history, `camera_events(camera_id)` for the nullable foreign-key relationship and `nullOnDelete`, and `camera_client(client_id)` for reverse Client assignments and cascade deletion. Existing primary/unique/queue/cache indexes were retained; low-selectivity `is_active` and small administrative name lists were not indexed speculatively. Larastan is now a clean project gate. The authenticated Dashboard exposes read-only queue totals without payloads, exception text, or retry controls. A sensitive-data audit now protects the accepted-webhook log whitelist, secret-free serialized job payload, safe CameraEvent failure metadata, and the Dashboard boundary with regression tests.
 
 ## Current repository state
 
 Checkpoint date: 2026-10-14.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `7705580` (`chore: restore clean static analysis`);
+- committed `main` matches `origin/main` at `45b1958` (`feat: show queue health on dashboard`);
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
 - commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
 - commit `148fe7a` adds configurable per-username and aggregate-IP webhook limits with focused coverage and no change to accepted-event behavior;
 - commit `0b243cc` adds one reversible migration and a PostgreSQL schema test for the three query/FK indexes justified by current application behavior;
 - commit `7705580` restores a clean Larastan gate with typed CameraEvent relationships, local profile validation, and removal of unsupported two-factor factory/component/test/provider remnants; password settings behavior is unchanged;
-- the current uncommitted hardening slice adds read-only queued/failed job totals to the Dashboard using the database queue table and connection names from Laravel configuration;
+- commit `45b1958` adds read-only queued/failed job totals to the Dashboard using the database queue table and connection names from Laravel configuration;
+- the current uncommitted hardening slice adds regression guarantees that explicit webhook logs contain only approved context, serialized jobs contain no integration credentials, `camera_events` retain only exception classes, and the Dashboard never renders queue payloads or exception text;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -236,8 +237,8 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraEventTest.php`: **3 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
-- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **17 passing tests and 64 assertions**, including authentication/validation, notification windows, duplicate suppression, journal/queue correlation, repeated-username limiting, independent username buckets, and aggregate IP limiting;
-- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **7 passing tests and 37 assertions**, covering all three persisted `skipped` outcomes, a two-recipient `completed` outcome, safe exception/unknown failure metadata, preserved partial counters, and a missing journal row;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **18 passing tests and 73 assertions**, including authentication/validation, notification windows, duplicate suppression, journal/queue correlation, rate limiting, exact safe logging context, and a real database-queue payload free of webhook/Dahua/MAX credentials;
+- current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **7 passing tests and 38 assertions**, covering all three persisted `skipped` outcomes, a two-recipient `completed` outcome, safe exception/unknown failure metadata without exception messages, preserved partial counters, and a missing journal row;
 - current related job/webhook/Dahua/MAX regression: **27 passing tests and 48 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
 - current `artisan test tests/Feature/CamerasTest.php`: **18 passing tests and 66 assertions**;
@@ -246,11 +247,12 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
 - focused `artisan test tests/Feature/CameraEventsTest.php`: **9 passing tests and 50 assertions**, covering access, newest-first rendering, empty state, lifecycle filters, pagination/reset, read-only processing details, pending/null presentation, and history after Camera deletion;
-- focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 19 assertions**, covering guest rejection, authenticated access, exact domain and queue counts, five-event newest-first limiting, and the empty state;
+- focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 22 assertions**, covering guest rejection, authenticated access, exact domain and queue counts, non-disclosure of queue payload/exception text, five-event newest-first limiting, and the empty state;
 - focused `artisan test tests/Feature/AdminAccessTest.php`: **3 passing tests and 13 assertions**, covering disabled public registration, guest rejection from all administration pages, and the intentional single-role access model without email verification;
 - focused `artisan test tests/Feature/DatabaseIndexesTest.php`: **1 passing test and 3 assertions**, verifying the exact PostgreSQL index column sequences;
 - related index/model/Client/event-history regression: **29 passing tests and 154 assertions**;
-- full `artisan test`: **133 passing tests and 452 assertions**, with no skipped or risky tests;
+- sensitive-data regression across webhook, Dashboard, and job tests: **30 passing tests and 133 assertions**;
+- full `artisan test`: **134 passing tests and 465 assertions**, with no skipped or risky tests;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
@@ -262,7 +264,7 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact development block
 
-Continue Phase 24 with a focused sensitive-data audit of application logging and persisted failure metadata. Verify with automated tests where practical that incoming Basic credentials, MAX/Dahua secrets, and exception messages are not written to application-owned logs or `camera_events`. Keep Laravel's framework-managed `failed_jobs.exception` diagnostic payload restricted to trusted operators; do not display it in the administration UI.
+Finish the current Phase 24 queue-hardening work by defining a minimal operator policy for `failed_jobs`: how long diagnostic records are retained, how an operator investigates and removes a resolved record, and why `queue:retry` remains prohibited for `ProcessCameraEvent` until per-recipient delivery becomes idempotent. Keep this as trusted operational documentation; do not add failed payloads, exception text, delete buttons, or retry controls to the web UI.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -282,7 +284,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-Static-analysis cleanup is committed and pushed through `7705580`. Current uncommitted changes add read-only database-queue health totals to the Dashboard with focused coverage and no retry controls. The next slice audits logs and persisted failure metadata for accidental secret or exception-message exposure.
+Queue-health visibility is committed and pushed through `45b1958`. Current uncommitted tests lock down the safe webhook-log context, secret-free queued-job serialization, class-only CameraEvent failure metadata, and non-disclosure of queue diagnostics on the Dashboard. The next slice defines trusted-operator failed-job retention and cleanup without enabling unsafe retries.
 
 On the other machine:
 
