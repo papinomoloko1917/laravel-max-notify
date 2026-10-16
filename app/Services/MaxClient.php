@@ -7,11 +7,53 @@ use UnexpectedValueException;
 
 class MaxClient
 {
+    public function __construct(private readonly MaxBotToken $botToken)
+    {
+        //
+    }
+
+    /**
+     * @return array{user_id: int, name: string, username: string|null}
+     */
+    public function inspectBot(string $token): array
+    {
+        $baseUrl = (string) config('services.max.base_url');
+        $connectTimeout = (int) config('services.max.connect_timeout');
+        $timeout = (int) config('services.max.timeout');
+
+        $response = Http::acceptJson()
+            ->withHeaders(['Authorization' => $token])
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout)
+            ->get(rtrim($baseUrl, '/') . '/me');
+
+        $response->throw();
+
+        $userId = $response->json('user_id');
+        $name = $response->json('name');
+        $username = $response->json('username');
+        $isBot = $response->json('is_bot');
+
+        if (! is_int($userId) || $userId < 1 || ! is_string($name) || $name === '' || $isBot !== true) {
+            throw new UnexpectedValueException('MAX did not return valid bot information');
+        }
+
+        if ($username !== null && ! is_string($username)) {
+            throw new UnexpectedValueException('MAX did not return a valid bot username');
+        }
+
+        return [
+            'user_id' => $userId,
+            'name' => $name,
+            'username' => $username,
+        ];
+    }
+
     public function createImageUploadUrl(): string
     {
         $baseUrl = (string) config('services.max.base_url');
 
-        $token = (string) config('services.max.token');
+        $token = $this->botToken->get();
 
         $connectTimeout = (int) config('services.max.connect_timeout');
 
@@ -41,7 +83,7 @@ class MaxClient
 
     public function uploadImage(string $uploadUrl, string $imageContents): string
     {
-        $token = (string) config('services.max.token');
+        $token = $this->botToken->get();
 
         $connectTimeout = (int) config('services.max.connect_timeout');
 
@@ -76,7 +118,7 @@ class MaxClient
     ): string {
         $baseUrl = (string) config('services.max.base_url');
 
-        $token = (string) config('services.max.token');
+        $token = $this->botToken->get();
 
         $connectTimeout = (int) config('services.max.connect_timeout');
 

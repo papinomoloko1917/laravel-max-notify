@@ -59,10 +59,11 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('dahua-webhook', function (Request $request): array {
             $username = $request->getUser();
+            $cameraId = $request->query('camera');
 
             $usernameKey = is_string($username) && $username !== ''
                 ? hash('sha256', $username)
-                : 'missing';
+                : (is_string($cameraId) && ctype_digit($cameraId) ? 'camera:' . $cameraId : 'missing');
 
             return [
                 Limit::perMinute((int) config('services.dahua.webhook_ip_limit_per_minute'))

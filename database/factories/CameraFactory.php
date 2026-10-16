@@ -19,6 +19,9 @@ class CameraFactory extends Factory
     {
         return [
             'name' => fake()->word(),
+            'snapshot_base_url' => 'http://camera.test',
+            'snapshot_username' => 'snapshot-user',
+            'snapshot_password' => 'snapshot-password',
             'is_active' => fake()->boolean(50),
         ];
     }

@@ -23,6 +23,7 @@ class CameraEventFactory extends Factory
             'camera_name' => fake()->name(),
             'channel' => fake()->numberBetween(1, 64),
             'rule' => fake()->text(100),
+            'rule_title' => fake()->sentence(3),
             'status' => 'pending',
             'recipients_total' => 0,
             'recipients_sent' => 0,

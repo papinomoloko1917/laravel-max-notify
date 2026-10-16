@@ -1,0 +1,49 @@
+{
+	admin off
+	auto_https disable_redirects
+}
+
+(laravel) {
+	root * /var/www/html/public
+	encode zstd gzip
+	php_fastcgi app:9000
+	file_server
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+https://{$SERVER_IP} {
+	tls internal
+	import laravel
+
+	@webhook path /webhooks/dahua
+	log_skip @webhook
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+http://{$SERVER_IP} {
+	@webhook path /webhooks/dahua
+
+	handle @webhook {
+		import laravel
+	}
+
+	handle {
+		respond "Not Found" 404
+	}
+
+	# The webhook token is part of the query string, so this listener must not
+	# write request URLs to an access log.
+	log {
+		output discard
+	}
+}

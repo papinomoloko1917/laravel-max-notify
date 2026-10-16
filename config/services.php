@@ -36,9 +36,7 @@ return [
     ],
 
     'dahua' => [
-        'base_url' => env('DAHUA_BASE_URL'),
-        'username' => env('DAHUA_USERNAME'),
-        'password' => env('DAHUA_PASSWORD'),
+        'webhook_base_url' => env('DAHUA_WEBHOOK_BASE_URL', env('APP_URL')),
         'connect_timeout' => env('DAHUA_CONNECT_TIMEOUT', 3),
         'timeout' => env('DAHUA_TIMEOUT', 10),
         'webhook_username_limit_per_minute' => (int) env('DAHUA_WEBHOOK_USERNAME_LIMIT_PER_MINUTE', 60),

@@ -24,37 +24,98 @@ class DahuaWebhookController extends Controller
 
         $password = $request->getPassword();
 
+        $authorization = $request->header('Authorization');
+        $authorizationScheme = is_string($authorization)
+            ? strtolower(strtok($authorization, ' ') ?: 'unknown')
+            : 'none';
+
         $rules = [
             'event' => ['required', 'in:ivs'],
             'channel' => ['required', 'integer', 'min:1'],
             'rule' => ['required', 'string', 'max:100'],
         ];
 
-        if (! is_string($username) || ! is_string($password)) {
-            return response('Unauthorized', 401)
-                ->header('Content-Type', 'text/plain');
-        }
+        $camera = null;
 
-        $camera = Camera::query()
-            ->where('webhook_username', $username)
-            ->where('is_active', true)
-            ->first();
+        if (is_string($authorization)) {
+            if (! is_string($username) || ! is_string($password)) {
+                Log::warning('Dahua webhook rejected', [
+                    'reason' => 'credentials_missing_or_unsupported',
+                    'authorization_scheme' => $authorizationScheme,
+                ]);
 
-        $storedPassword = $camera?->webhook_password;
+                return $this->unauthorizedResponse();
+            }
 
-        if (! is_string($storedPassword) || ! Hash::check($password, $storedPassword)) {
-            return response('Unauthorized', 401)
-                ->header('Content-Type', 'text/plain');
+            $camera = Camera::query()
+                ->where('webhook_username', $username)
+                ->where('is_active', true)
+                ->first();
+
+            $storedPassword = $camera?->webhook_password;
+
+            if (! is_string($storedPassword) || ! Hash::check($password, $storedPassword)) {
+                Log::warning('Dahua webhook rejected', [
+                    'reason' => 'credentials_invalid',
+                    'authorization_scheme' => $authorizationScheme,
+                ]);
+
+                return $this->unauthorizedResponse();
+            }
+        } else {
+            $cameraId = filter_var(
+                $request->query('camera'),
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]],
+            );
+            $token = $request->query('token');
+
+            if ($cameraId !== false && is_string($token)) {
+                $camera = Camera::query()
+                    ->whereKey($cameraId)
+                    ->where('is_active', true)
+                    ->first();
+            }
+
+            $storedToken = $camera?->webhook_token;
+
+            if (! is_string($token) || ! is_string($storedToken) || ! hash_equals($storedToken, $token)) {
+                $hasTokenCredentials = $cameraId !== false || is_string($token);
+
+                Log::warning('Dahua webhook rejected', [
+                    'reason' => $hasTokenCredentials ? 'credentials_invalid' : 'credentials_missing_or_unsupported',
+                    'authorization_scheme' => $hasTokenCredentials ? 'token' : 'none',
+                ]);
+
+                return $this->unauthorizedResponse();
+            }
         }
 
         $validator = Validator::make($request->query(), $rules);
 
         if ($validator->fails()) {
+            Log::warning('Dahua webhook rejected', [
+                'reason' => 'query_invalid',
+                'invalid_fields' => array_keys($validator->errors()->messages()),
+            ]);
+
             return response('Invalid webhook request', 400)
                 ->header('Content-Type', 'text/plain');
         }
 
         $validated = $validator->validated();
+
+        if ($camera->channel !== null && $camera->channel !== (int) $validated['channel']) {
+            Log::warning('Dahua webhook rejected', [
+                'reason' => 'channel_mismatch',
+                'camera_id' => $camera->id,
+                'configured_channel' => $camera->channel,
+                'received_channel' => (int) $validated['channel'],
+            ]);
+
+            return response('Invalid webhook request', 400)
+                ->header('Content-Type', 'text/plain');
+        }
 
         $window = new NotificationWindow($camera->notify_from, $camera->notify_until);
 
@@ -84,11 +145,16 @@ class DahuaWebhookController extends Controller
                 ->header('Content-Type', 'text/plain');
         }
 
+        $ruleTitle = $camera->rules()
+            ->where('code', $validated['rule'])
+            ->value('title');
+
         $cameraEvent = CameraEvent::create([
             'camera_id' => $camera->id,
             'camera_name' => $camera->name,
             'channel' => (int) $validated['channel'],
             'rule' => $validated['rule'],
+            'rule_title' => is_string($ruleTitle) ? $ruleTitle : $validated['rule'],
         ]);
 
         ProcessCameraEvent::dispatch($camera->id, (int) $validated['channel'], $cameraEvent->id);
@@ -103,5 +169,12 @@ class DahuaWebhookController extends Controller
 
         return response('OK', 200)
             ->header('Content-Type', 'text/plain');
+    }
+
+    private function unauthorizedResponse(): Response
+    {
+        return response('Unauthorized', 401)
+            ->header('Content-Type', 'text/plain')
+            ->header('WWW-Authenticate', 'Basic realm="max-notify"');
     }
 }

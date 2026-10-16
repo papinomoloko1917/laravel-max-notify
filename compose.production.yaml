@@ -1,0 +1,95 @@
+name: ${COMPOSE_PROJECT_NAME:-max-notify}
+
+x-app: &app
+  image: max-notify-app:${APP_IMAGE_TAG:-local}
+  env_file:
+    - ${APP_ENV_FILE:-.env.production}
+  restart: unless-stopped
+  init: true
+  networks:
+    - backend
+  volumes:
+    - app-storage:/var/www/html/storage
+  depends_on:
+    pgsql:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
+      target: app
+    expose:
+      - "9000"
+
+  queue:
+    <<: *app
+    command:
+      - php
+      - artisan
+      - queue:work
+      - database
+      - --queue=default
+      - --sleep=3
+      - --tries=1
+      - --timeout=80
+      - --max-time=3600
+    stop_grace_period: 90s
+
+  scheduler:
+    <<: *app
+    command: ["php", "artisan", "schedule:work"]
+    stop_grace_period: 15s
+
+  web:
+    image: max-notify-web:${APP_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: docker/production/Dockerfile
+      target: web
+    environment:
+      SERVER_IP: ${SERVER_IP}
+    restart: unless-stopped
+    ports:
+      - "${SERVER_IP}:80:80"
+      - "${SERVER_IP}:443:443"
+    networks:
+      - backend
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+  pgsql:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: --data-checksums
+    restart: unless-stopped
+    stop_grace_period: 60s
+    networks:
+      - backend
+    volumes:
+      - pgsql-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -d \"$${POSTGRES_DB}\" -U \"$${POSTGRES_USER}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  app-storage:
+  caddy-data:
+  caddy-config:
+  pgsql-data:
+

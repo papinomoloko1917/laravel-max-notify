@@ -12,10 +12,13 @@ class CameraEvent extends Model
     /** @use HasFactory<CameraEventFactory> */
     use HasFactory;
 
+    /** @var list<string> */
+    public const TERMINAL_STATUSES = ['skipped', 'completed', 'failed'];
+
     protected $fillable = [
         'camera_id',
         'camera_name',
-        'channel', 'rule',
+        'channel', 'rule', 'rule_title',
         'status',
         'recipients_total',
         'recipients_sent',

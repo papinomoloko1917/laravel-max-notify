@@ -16,4 +16,10 @@ Route::middleware(['auth'])->group(function () {
             'password.confirm',
         ])
         ->name('security.edit');
+
+    Route::livewire('settings/max-bot', 'pages::settings.max-bot')
+        ->middleware([
+            'password.confirm',
+        ])
+        ->name('max-bot.edit');
 });

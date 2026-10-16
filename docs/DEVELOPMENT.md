@@ -18,7 +18,7 @@ Phase 12 — Per-Camera notification-window storage, timezone configuration, the
 
 Phase 13 — Dahua snapshot HTTP exploration is complete. Successful browser/Postman image retrieval and representative authentication and invalid-channel failures are confirmed against the real NVR, and the credential disclosed during exploration has been rotated.
 
-Phase 14 — The Dahua snapshot client is complete for the currently understood contract. Automated tests cover success and representative failures, explicit request limits are configured, and a real-device smoke check confirmed Laravel/Guzzle Digest negotiation and JPEG retrieval.
+Phase 14 — The Dahua snapshot client is complete for the currently understood contract and has been generalized beyond its original single-NVR configuration. It now receives the selected Camera's base URL, Digest credentials, and channel. Automated tests cover success and representative failures, explicit request limits are configured, and real-device smoke checks confirmed Laravel/Guzzle Digest negotiation and JPEG retrieval.
 
 Phase 15 — MAX Messenger HTTP exploration is complete. Postman confirmed token authentication, image-upload URL creation, multipart JPEG upload, media-token extraction, chat-ID discovery through updates, and successful delivery of an image message to a real dialog.
 
@@ -34,20 +34,23 @@ Phase 20 — Complete. After authentication, metadata validation, and notificati
 
 Phase 21 — Complete for the current server-side journal design. The minimal `camera_events` persistence layer retains the Camera name, channel, rule, processing status, aggregate recipient counters, optional failure type, and completion time. Accepted non-duplicate webhooks create `pending` rows and dispatch their IDs. The job records explicit `skipped` outcomes, successful `completed` delivery with recipient totals, and a terminal `failed` callback that stores only the safe exception class while preserving partial progress. Deleting a Camera nulls its foreign key without erasing history.
 
-Phase 22 — Complete for the current requirements. The read-only event-history page provides newest-first pagination, lifecycle filtering with page reset, context-sensitive empty states, and safe details that survive Camera deletion. The Starter Kit dashboard placeholder is replaced by an authenticated Livewire operational summary with Camera, active-Camera, Client, and per-status event counts, the five newest events, and a link to the full journal. No charts, caching, mutation, or retry controls were introduced.
+Phase 22 — Complete for the current requirements. Event history provides newest-first pagination, lifecycle filtering with page reset, context-sensitive empty states, safe details that survive Camera deletion, and a confirmed action that removes terminal history without touching pending work. Laravel Scheduler runs `camera-events:prune` daily at 03:00 and retains processed events for 30 days by default. The Dashboard provides Camera, active-Camera, Client, per-status event, and queue counts plus the five newest events. No charts, caching, or retry controls were introduced.
 
 Phase 23 — Deferred because no new email workflow currently requires Mailpit.
 
 Phase 24 — Complete for the current application. Authorization uses a closed-registration, single-role administration model. The Dahua webhook has a configurable two-dimensional abuse limiter separate from business duplicate suppression. Three PostgreSQL indexes cover only demonstrated status/FK/reverse-pivot paths, and Larastan is a clean project gate. The authenticated Dashboard exposes read-only queue totals without payloads, exception text, or retry controls. Regression tests protect the accepted-webhook log whitelist, secret-free serialized job payload, safe CameraEvent failure metadata, and Dashboard boundary. The operator runbook defines protected investigation, 30-day failed-job retention, individual cleanup, and the prohibition on unsafe whole-job retry. Deployment-specific workers, scheduled pruning, backups, and restore belong to Phase 25.
 
-Phase 25 — In progress. The deployment target is a dedicated MiniPC MA01 with Intel N150, 16 GB RAM, 512 GB storage, Ubuntu Server 26.04.1 LTS, and a LAN connection to the NVR without a public domain. Docker Engine plus Compose is selected, but the Sail development topology will not be reused as production. The proposed production boundary is reverse proxy + PHP-FPM app + one database queue worker + one scheduler + internal PostgreSQL, with no production Adminer/Vite/Xdebug, source bind mount, development server, or published database port. Network addressing, private-CA capability, administrator access scope, off-device backup destination, and UPS availability remain open before implementation.
+Phase 25 — Production baseline implemented and locally verified. The deployment target remains the dedicated MiniPC MA01 with Intel N150, 16 GB RAM, 512 GB storage, Ubuntu Server 26.04.1 LTS, and a LAN connection to Dahua without a public domain. The dedicated production topology uses Caddy + immutable PHP-FPM app + one database queue worker + one scheduler + internal PostgreSQL. Caddy provides private-CA HTTPS for administration and an HTTP listener restricted at the application-proxy boundary to the log-suppressed webhook path. The repository now includes a production environment template, separate Compose/Docker files, an interactive administrator-creation command, and a detailed Russian installation runbook. Real MiniPC installation, fixed-address firewall rules, off-device backup automation/restore rehearsal, UPS behavior, and monitoring remain open site-specific work.
+
+Phase 26 — Implemented in the current working tree. One password-confirmed settings page validates a replacement MAX token through `GET /me`, stores it encrypted in the singleton bot record, and exposes only safe bot identity. Each Camera owns a snapshot device origin, Digest login/encrypted password, channel, multiple exact rule-code/title mappings, an encrypted/rotatable URL webhook token, and optional Basic webhook credentials. Common event types are selected from a prepared catalog, while custom identifiers remain available under a URL-safe validation rule. Each saved rule renders a complete copyable token URL. Stored secrets are hidden from serialization; authentication failures advertise a standards-compliant Basic challenge and emit safe reason/scheme diagnostics without credential values. The webhook validates configured channel ownership and snapshots the resolved title into `CameraEvent` with a raw-code fallback; the worker resolves the selected Camera's snapshot connection and sends a deterministic title, Camera location/name, and accepted-event time together with the image.
 
 ## Current repository state
 
-Checkpoint date: 2026-10-14.
+Checkpoint date: 2026-10-16.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `aa9f8ca` (`docs: add failed job operations runbook`);
+- committed `main` matches `origin/main` at `4afd010` (`docs: define production deployment target`);
+- the current uncommitted working tree combines the complete Phase 26 MAX-bot/rule/message/webhook-token slice with the production deployment baseline, the Russian README, and the aligned `vite-plus`/Vite core `0.3.3` dependency update;
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
 - commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
 - commit `148fe7a` adds configurable per-username and aggregate-IP webhook limits with focused coverage and no change to accepted-event behavior;
@@ -56,7 +59,7 @@ Checkpoint date: 2026-10-14.
 - commit `45b1958` adds read-only queued/failed job totals to the Dashboard using the database queue table and connection names from Laravel configuration;
 - commit `bb1bc2d` adds regression guarantees that explicit webhook logs contain only approved context, serialized jobs contain no integration credentials, `camera_events` retain only exception classes, and the Dashboard never renders queue payloads or exception text;
 - commit `aa9f8ca` adds the trusted-operator runbook, selects 30-day failed-job retention, documents investigation/individual cleanup, explicitly prohibits unsafe retry and closes Phase 24 for the current application;
-- the current uncommitted deployment-discovery slice records the confirmed MiniPC/Ubuntu/LAN target, selects a production Docker topology distinct from Sail, identifies the HTTPS/webhook split and off-device backup boundary, and lists the network/backup inputs still required before configuration files are created;
+- commit `4afd010` records the confirmed MiniPC/Ubuntu/LAN target, selects a production Docker topology distinct from Sail, identifies the HTTPS/webhook split and off-device backup boundary, and lists the network/backup inputs still required before configuration files are created;
 - commit `d6a1511` adds the `CameraEvent` model/factory/migration, the Camera relationship, focused model tests, and synchronized Phase 21 documentation; it does not change webhook or job behavior;
 - the current reviewed controller change persists Camera ID/name and validated channel/rule after duplicate suppression, then dispatches the job with the saved event ID;
 - the current test change creates a related `CameraEvent` for each direct `ProcessCameraEvent` scenario and supplies its ID through the new constructor argument;
@@ -156,7 +159,7 @@ Checkpoint date: 2026-10-14.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis and Mailpit remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. After authentication, metadata validation, notification-window acceptance, and a five-second atomic duplicate claim, `ProcessCameraEvent` is dispatched. Its handler receives `DahuaClient`/`MaxClient` from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one image message to each currently assigned Client using the shared media token. The resulting operational history is now visible through the authenticated read-only event page.
+Redis and Mailpit remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. After authentication, metadata validation, notification-window acceptance, and a five-second atomic duplicate claim, the webhook snapshots the configured per-Camera rule title and dispatches `ProcessCameraEvent`. Its handler receives the integration clients and message formatter from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one formatted text-and-image message to each currently assigned Client using the shared media token. The event acceptance time, not worker execution time, appears in that message. The resulting operational history is visible through the authenticated read-only event page.
 
 ## Confirmed MAX Messenger behavior
 
@@ -174,7 +177,9 @@ Observed on 2026-10-10 through Postman against the real MAX API:
 
 ## Current MAX client slice
 
-- environment-backed `services.max` configuration provides the MAX base URL and bot token without committing the real token;
+- environment-backed `services.max` configuration provides the MAX base URL and initial/fallback token without committing the real token;
+- `App\Models\MaxBotSetting` holds exactly one active bot record; its token uses Laravel's encrypted cast, is hidden from serialization, and takes precedence over `MAX_TOKEN`;
+- the password-confirmed Livewire settings page validates candidate tokens with `App\Services\MaxClient::inspectBot()` before replacing the current bot and never hydrates the stored token into the form;
 - `App\Services\MaxClient::createImageUploadUrl()` sends authenticated `POST /uploads?type=image` requests and returns the validated response `url`;
 - the client passes the raw access token in `Authorization` without a `Bearer` prefix and converts `4xx/5xx` responses through `Response::throw()`;
 - a successful response with a missing or empty upload URL is rejected with `UnexpectedValueException`;
@@ -183,8 +188,8 @@ Observed on 2026-10-10 through Postman against the real MAX API:
 - focused multipart tests verify the exact upload URL, raw authorization header, file field/content/name, returned media token, HTTP failure propagation, and rejection of a successful response without the token;
 - `App\Services\MaxClient::sendImageMessage()` sends JSON text plus an image media token to a supplied `chat_id` and returns the validated `message.body.mid` message ID;
 - focused message tests verify the exact query parameter, raw authorization, JSON body, returned message ID, HTTP failure propagation, and rejection of a successful response without `mid`;
-- all three MAX methods use environment-backed 3-second connection and 10-second overall request limits;
-- the three MAX methods remain separate service boundaries and are composed with `DahuaClient` inside the queued job for all assigned Clients.
+- all MAX methods use environment-backed 3-second connection and 10-second overall request limits;
+- the MAX HTTP methods remain separate service boundaries and are composed with `DahuaClient` inside the queued job for all assigned Clients.
 
 ## Confirmed Dahua snapshot behavior
 
@@ -203,8 +208,10 @@ The representative success and failure contract is implemented in the minimal cl
 
 ## Current Dahua client slice
 
-- environment-backed `services.dahua` configuration supplies the single current NVR base URL, username, and password without committing real credentials;
-- `App\Services\DahuaClient::snapshot(int $channel)` performs a Digest-configured GET to `/cgi-bin/snapshot.cgi` and passes the channel as a query parameter;
+- each Camera stores its own HTTP(S) device origin, Digest username, encrypted/hidden Digest password, and channel; global Dahua configuration now contains request limits only;
+- `App\Services\DahuaClient::snapshot(string $baseUrl, string $username, string $password, int $channel)` performs a Digest-configured GET to `/cgi-bin/snapshot.cgi` and passes the channel as a query parameter;
+- the administration form requires an origin without path/query, never renders the stored password, and preserves it when the replacement field is empty;
+- `(snapshot_base_url, channel)` is unique, allowing different devices to reuse channel numbers;
 - the successful response body is returned as raw string bytes;
 - a focused HTTP-fake test prevents stray network requests, verifies the returned JPEG bytes, and verifies the exact GET URL for channel 13;
 - `4xx/5xx` responses are converted to Laravel `RequestException` through `Response::throw()` before content validation;
@@ -213,7 +220,7 @@ The representative success and failure contract is implemented in the minimal cl
 - a focused failed-connection fake verifies that Laravel `ConnectionException` propagates from the client;
 - focused verification: **4 passing tests and 5 assertions**, with Pint passing for the client, test, and service configuration;
 - full verification after this slice: **93 tests, 266 assertions, 1 skipped and the same 1 known risky Starter Kit test**; full Pint passes;
-- a real-device Tinker smoke check on 2026-10-10 successfully retrieved channel 13 through this client; the returned binary began with the JPEG `FF D8` signature, proving real Laravel/Guzzle Digest negotiation;
+- real-device Tinker smoke checks on 2026-10-10 and after the per-Camera migration on 2026-10-15 successfully retrieved a JPEG through this client; the latest response was 233,246 bytes and began with the JPEG `FF D8` signature;
 - webhook integration remains intentionally unimplemented; the client was verified independently first.
 
 ## Confirmed Dahua probe behavior
@@ -241,7 +248,7 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Models/CameraEventTest.php`: **3 passing tests and 13 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding webhook credentials: **5 passing tests and 10 assertions**;
 - current focused `artisan test tests/Feature/Models/CameraTest.php` after adding notification-window storage: **6 passing tests and 13 assertions**;
-- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **18 passing tests and 73 assertions**, including authentication/validation, notification windows, duplicate suppression, journal/queue correlation, rate limiting, exact safe logging context, and a real database-queue payload free of webhook/Dahua/MAX credentials;
+- current focused `artisan test tests/Feature/DahuaWebhookTest.php`: **19 passing tests and 85 assertions**, including authentication/validation, safe rejection diagnostics, notification windows, duplicate suppression, journal/queue correlation, rate limiting, exact safe logging context, and a real database-queue payload free of webhook/Dahua/MAX credentials;
 - current focused `artisan test tests/Feature/Jobs/ProcessCameraEventTest.php`: **7 passing tests and 38 assertions**, covering all three persisted `skipped` outcomes, a two-recipient `completed` outcome, safe exception/unknown failure metadata without exception messages, preserved partial counters, and a missing journal row;
 - current related job/webhook/Dahua/MAX regression: **27 passing tests and 48 assertions**;
 - current focused `artisan test tests/Unit/NotificationWindowTest.php`: **10 passing tests and 10 assertions**;
@@ -250,31 +257,54 @@ The temporary probe logged only request metadata and header names, not header va
 - current focused `artisan test tests/Feature/Services/DahuaClientTest.php`: **4 passing tests and 5 assertions**;
 - current focused `artisan test tests/Feature/Services/MaxClientTest.php`: **9 passing tests and 12 assertions**;
 - current `artisan test tests/Feature/Services`: **13 passing tests and 17 assertions**;
-- focused `artisan test tests/Feature/CameraEventsTest.php`: **9 passing tests and 50 assertions**, covering access, newest-first rendering, empty state, lifecycle filters, pagination/reset, read-only processing details, pending/null presentation, and history after Camera deletion;
+- focused event-history/retention/index regression: **13 passing tests and 70 assertions**, covering access, rendering/filtering, safe details, confirmed terminal-history cleanup, pending preservation, 30-day pruning, invalid retention protection, and the retention index;
 - focused `artisan test tests/Feature/DashboardTest.php`: **5 passing tests and 22 assertions**, covering guest rejection, authenticated access, exact domain and queue counts, non-disclosure of queue payload/exception text, five-event newest-first limiting, and the empty state;
 - focused `artisan test tests/Feature/AdminAccessTest.php`: **3 passing tests and 13 assertions**, covering disabled public registration, guest rejection from all administration pages, and the intentional single-role access model without email verification;
 - focused `artisan test tests/Feature/DatabaseIndexesTest.php`: **1 passing test and 3 assertions**, verifying the exact PostgreSQL index column sequences;
 - related index/model/Client/event-history regression: **29 passing tests and 154 assertions**;
 - sensitive-data regression across webhook, Dashboard, and job tests: **30 passing tests and 133 assertions**;
-- full `artisan test`: **134 passing tests and 465 assertions**, with no skipped or risky tests;
+- Phase 26 focused bot settings/token/client/job set: **26 passing tests and 85 assertions**;
+- Phase 26 focused Camera-rule/webhook/job/event/message set: **40 passing tests and 179 assertions**;
+- prepared-event/channel focused regression: **51 passing tests and 188 assertions**;
+- current Camera UI regression: **22 passing tests and 96 assertions**, including localized webhook credential labels and validation;
+- current Camera/webhook authentication regression: **41 passing tests and 179 assertions**;
+- per-Camera snapshot connection regression across Camera UI/model, Dahua client, webhook, and job tests: **62 passing tests and 262 assertions**;
+- Camera-rule coverage verifies that generated webhook URLs use configured `DAHUA_WEBHOOK_BASE_URL` rather than `APP_URL` or the current browser host, contain the selected Camera's encrypted-at-rest token, support explicit rotation, and present optional Basic Username separately without disclosing the password;
+- full Sail `composer test`: Pint passes, Larastan reports **0 errors**, and Pest reports **170 passing tests and 647 assertions**, with no skipped or risky tests;
+- `schedule:list` registers `camera-events:prune` daily at **03:00**, and both development `queue` and `scheduler` Compose services are running;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
 - targeted Pint for the controller and job test: **passes**;
 - full Pint with the intentional one-space concatenation configuration: **passes**;
-- frontend production build: **passes**; Vite reports only the optional `fontaine` optimized-fallback notice;
+- frontend production build: **passes** after aligning `vite-plus` and its Vite core alias at `0.3.3`; `npm audit` reports **0 vulnerabilities**, and the only build notice concerns optional `fontaine` optimized fallbacks;
+- production Compose interpolation: **passes** against `.env.production.example`;
+- production PHP 8.5 and Caddy images: **build successfully** from a clean multi-stage path; compiled Flux/Tailwind assets and required PHP extensions are present;
+- Caddy production configuration: **valid** for a representative LAN IP, including private-CA HTTPS, HTTP webhook-only routing, and webhook access-log suppression;
+- disposable production runtime smoke check: PostgreSQL became healthy, all **17 migrations** applied to a fresh volume, `artisan optimize` completed, the queue worker remained running after schema creation, and Scheduler registered `camera-events:prune`; the isolated test containers and volumes were then removed;
+- PHP-FPM configuration check: **passes**, with its request access log explicitly disabled so webhook query tokens cannot bypass the Caddy logging boundary;
+- production image command discovery exposes `admin:create`; its focused tests cover verified-user creation, hashed secret input, duplicate email, and weak-password rejection;
 - `git diff --check`: **passes**;
 - `composer types:check`: **passes with 0 errors**;
 - previously known generated `lang/ru/*.php` formatting differences remain outside this block.
 
 ## Next exact development block
 
-Complete the Phase 25 network and recovery inventory before writing production files: record the reserved/static MiniPC and NVR IPs, administrator devices or subnet, private-CA availability for those devices, NVR HTTPS/private-CA support, off-device PostgreSQL backup destination, and UPS availability. Then implement the production image/Compose boundary against those decisions rather than exposing development Sail services.
+The newest Camera-channel migration is applied on this machine, and local `APP_URL` uses the confirmed Camera-reachable address `http://10.10.0.141`. The local `laravel.test` image was rebuilt on 2026-10-15 after the MAX-token check exposed a stale container without the committed Russian Trusted Root/Sub certificates. A verified HTTPS request from the rebuilt container reaches `GET https://platform-api2.max.ru/me`, and the real MAX bot is now stored in the singleton settings record.
+
+Real authenticated webhook requests are accepted and create event-history rows. Development Compose keeps both the database worker and Laravel Scheduler running. The current Camera `#3` retrieves channel `1` directly from `http://10.10.0.181`; a post-credential-update smoke request returned a valid 327,567-byte JPEG. Two earlier jobs failed with Dahua `401 Invalid Authority` before those Digest credentials were corrected and must not be retried. A real request observation on 2026-10-15 proved that the tested direct Camera stored its HTTP-action username/password but sent four webhook attempts with no Authorization header. The token migration is applied locally, Camera `#3` has an encrypted/hidden 64-character token, and its generated rule URL is ready to be copied into the device with device-side Authentication disabled.
+
+The production baseline is now ready for a controlled installation rehearsal. Before installing on the MiniPC, commit and push the complete Phase 26/deployment working tree, choose its fixed LAN IP, and fill `.env.production` from the committed example. During the rehearsal follow `docs/DEPLOYMENT.md`, import the Caddy root certificate on an administrator device, run one controlled token-authenticated event, and record the real firewall source addresses. Do not treat the installation as recoverable until an off-device PostgreSQL dump and `.env.production`/`APP_KEY` recovery copy have been created and restored in a test environment.
+
+The clean-server runbook was rechecked on 2026-10-16 against the current official Docker Engine Ubuntu instructions. It now uses Docker's deb822 `docker.sources` repository format, exports Caddy's public local CA outside the Git checkout, and includes a queue-container MAX TLS probe. The latter explicitly guards against the stale-image failure observed in development, where accepted events reached the worker but every MAX upload request failed with `cURL error 60` until the Sail image and containers were rebuilt.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
 ## Decisions to preserve
 
 - Camera ↔ Client is many-to-many through `camera_client`; duplicate pairs are forbidden and deleting either model removes only its pivot rows.
+- one installation uses exactly one active MAX bot; its encrypted database token takes precedence over the environment fallback, and `APP_KEY` is part of recoverable production state;
+- rule codes are exact and unique per Camera; unknown codes remain deliverable through a raw-code title fallback, while accepted events retain the resolved title snapshot;
+- a Camera owns its snapshot device connection; channel uniqueness is scoped to the device origin, and application-generated webhook URLs still must be copied into the device's event action;
 - `max_chat_id` currently uses PostgreSQL `bigint` and a PHP integer cast; this remains provisional until the MAX API contract is confirmed.
 - Client list Camera totals are calculated by PostgreSQL through `withCount('cameras')`.
 - successful Client creation resets its fields but intentionally leaves the creation modal open.
@@ -288,7 +318,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-The failed-job operations runbook and Phase 24 closure are committed and pushed through `aa9f8ca`. Current uncommitted documentation records the confirmed on-premises MiniPC target and the production topology decision in `docs/DEPLOYMENT.md`. Production files remain intentionally absent until static addressing, administration/TLS scope, NVR HTTPS capability, off-device backup destination, and UPS availability are known.
+Committed `main` still ends at `4afd010`. The current working tree combines the complete Phase 26 bot/rule/message/webhook-token work with the production deployment baseline; it must be reviewed, committed, and pushed before another machine or the clean server can receive it. The site-specific IPs, firewall scope, off-device backup destination, and UPS decision intentionally remain outside committed secrets/configuration.
 
 On the other machine:
 
@@ -308,18 +338,19 @@ composer install
 ./vendor/bin/sail artisan test tests/Feature/Jobs/ProcessCameraEventTest.php
 ./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
 ./vendor/bin/sail artisan test tests/Feature/Services/MaxClientTest.php
+./vendor/bin/sail artisan test tests/Feature/Settings/MaxBotSettingsTest.php
+./vendor/bin/sail artisan test tests/Feature/CameraRulesTest.php
 ```
 
 Because `.env` is intentionally not committed, configure these values locally before clearing configuration:
 
 - `APP_TIMEZONE=Europe/Moscow`;
-- `DAHUA_BASE_URL`;
-- `DAHUA_USERNAME`;
-- `DAHUA_PASSWORD`;
+- `DAHUA_WEBHOOK_BASE_URL` as the device-reachable webhook origin (it may differ from the HTTPS `APP_URL` in production);
 - optionally override `DAHUA_CONNECT_TIMEOUT=3` and `DAHUA_TIMEOUT=10`;
 - optionally override `DAHUA_WEBHOOK_USERNAME_LIMIT_PER_MINUTE=60` and `DAHUA_WEBHOOK_IP_LIMIT_PER_MINUTE=300`;
+- optionally override `CAMERA_EVENT_RETENTION_DAYS=30` with a positive integer;
 - `MAX_BASE_URL=https://platform-api2.max.ru`;
-- `MAX_TOKEN`;
+- `MAX_TOKEN` as the initial/fallback value until a validated database token is saved;
 - optionally override `MAX_CONNECT_TIMEOUT=3` and `MAX_TIMEOUT=10`.
 
-`DAHUA_BASE_URL` must be only the recorder origin and must not include `/cgi-bin` or the snapshot path. Transfer real credentials through a secure channel, never Git or chat. Automated tests use HTTP fakes and do not require LAN access to the NVR or MAX; repeat the real smoke test only when the other machine can safely reach the device and there is a reason to revalidate it.
+Configure each Camera's snapshot origin and Digest credentials through the authenticated administration page. The origin must not include `/cgi-bin`, the snapshot path, or query parameters. Transfer real credentials through a secure channel, never Git or chat, and preserve the same `APP_KEY` when moving/restoring the database because encrypted snapshot passwords depend on it. Automated tests use HTTP fakes and do not require LAN access to the NVR or MAX; repeat the real smoke test only when the other machine can safely reach the device and there is a reason to revalidate it.

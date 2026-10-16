@@ -6,9 +6,11 @@ use App\Models\Camera;
 use App\Models\CameraEvent;
 use App\Services\DahuaClient;
 use App\Services\MaxClient;
+use App\Services\MaxNotificationMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
+use UnexpectedValueException;
 
 class ProcessCameraEvent implements ShouldQueue
 {
@@ -34,8 +36,11 @@ class ProcessCameraEvent implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(DahuaClient $dahuaClient, MaxClient $maxClient): void
-    {
+    public function handle(
+        DahuaClient $dahuaClient,
+        MaxClient $maxClient,
+        MaxNotificationMessage $notificationMessage,
+    ): void {
         $cameraEvent = CameraEvent::findOrFail($this->cameraEventId);
 
         $camera = Camera::query()
@@ -79,13 +84,29 @@ class ProcessCameraEvent implements ShouldQueue
             'recipients_total' => $clients->count(),
         ]);
 
-        $jpeg = $dahuaClient->snapshot($this->channel);
+        if (
+            ! is_string($camera->snapshot_base_url)
+            || $camera->snapshot_base_url === ''
+            || ! is_string($camera->snapshot_username)
+            || $camera->snapshot_username === ''
+            || ! is_string($camera->snapshot_password)
+            || $camera->snapshot_password === ''
+        ) {
+            throw new UnexpectedValueException('Camera snapshot connection is not configured.');
+        }
+
+        $jpeg = $dahuaClient->snapshot(
+            $camera->snapshot_base_url,
+            $camera->snapshot_username,
+            $camera->snapshot_password,
+            $this->channel,
+        );
 
         $uploadUrl = $maxClient->createImageUploadUrl();
 
         $mediaToken = $maxClient->uploadImage($uploadUrl, $jpeg);
 
-        $notificationText = "Событие камеры: {$camera->name}";
+        $notificationText = $notificationMessage->format($cameraEvent);
 
         $i = 0;
 

@@ -8,6 +8,8 @@ use App\Models\CameraEvent;
 use App\Models\Client;
 use App\Services\DahuaClient;
 use App\Services\MaxClient;
+use App\Services\MaxNotificationMessage;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -30,7 +32,7 @@ class ProcessCameraEventTest extends TestCase
 
         $job = new ProcessCameraEvent($cameraId, 13, (int) $cameraEvent->id);
 
-        $job->handle(new DahuaClient, new MaxClient);
+        $job->handle(new DahuaClient, app(MaxClient::class), new MaxNotificationMessage);
 
         Http::assertNothingSent();
 
@@ -55,7 +57,7 @@ class ProcessCameraEventTest extends TestCase
 
         $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
 
-        $job->handle(new DahuaClient, new MaxClient);
+        $job->handle(new DahuaClient, app(MaxClient::class), new MaxNotificationMessage);
 
         Http::assertNothingSent();
 
@@ -77,7 +79,7 @@ class ProcessCameraEventTest extends TestCase
 
         $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
 
-        $job->handle(new DahuaClient, new MaxClient);
+        $job->handle(new DahuaClient, app(MaxClient::class), new MaxNotificationMessage);
 
         Http::assertNothingSent();
 
@@ -92,17 +94,25 @@ class ProcessCameraEventTest extends TestCase
 
     public function test_active_camera_sends_snapshot_to_all_clients(): void
     {
-        $camera = Camera::factory()->create(['is_active' => true]);
-        $cameraEvent = CameraEvent::factory()->for($camera)->create();
+        $camera = Camera::factory()->create([
+            'name' => 'Въезд центральный',
+            'is_active' => true,
+            'snapshot_base_url' => 'http://nvr.test',
+            'snapshot_username' => 'camera-user',
+            'snapshot_password' => 'camera-password',
+        ]);
+        $cameraEvent = CameraEvent::factory()->for($camera)->create([
+            'camera_name' => $camera->name,
+            'rule' => 'VehicleDetection',
+            'rule_title' => 'Обнаружен транспорт',
+            'created_at' => CarbonImmutable::parse('2026-10-12 19:37:00', 'Europe/Moscow'),
+        ]);
         $firstClient = Client::factory()->create(['max_chat_id' => 12345]);
         $secondClient = Client::factory()->create(['max_chat_id' => 67890]);
 
         $camera->clients()->attach([$firstClient->id, $secondClient->id]);
 
         config([
-            'services.dahua.base_url' => 'http://nvr.test',
-            'services.dahua.username' => 'test-user',
-            'services.dahua.password' => 'test-password',
             'services.max.base_url' => 'https://max.test',
             'services.max.token' => 'test-token',
         ]);
@@ -112,7 +122,7 @@ class ProcessCameraEventTest extends TestCase
         $jpeg = 'fake-jpeg-content';
         $uploadUrl = 'https://upload.test/image?key=test';
         $mediaToken = 'test-media-token';
-        $notificationText = "Событие камеры: {$camera->name}";
+        $notificationText = "🚨 Обнаружен транспорт\n\n📍 Въезд центральный\n🕒 12.10 19:37 МСК";
 
         Http::fake([
             'http://nvr.test/cgi-bin/snapshot.cgi*' => Http::response(
@@ -139,9 +149,14 @@ class ProcessCameraEventTest extends TestCase
 
         $job = new ProcessCameraEvent((int) $camera->id, 13, (int) $cameraEvent->id);
 
-        $job->handle(new DahuaClient, new MaxClient);
+        $job->handle(new DahuaClient, app(MaxClient::class), new MaxNotificationMessage);
 
         Http::assertSentCount(5);
+
+        Http::assertSent(
+            fn (Request $request): bool => $request->method() === 'GET'
+                && $request->url() === 'http://nvr.test/cgi-bin/snapshot.cgi?channel=13',
+        );
 
         Http::assertSent(
             fn (Request $request): bool => $request->method() === 'POST'

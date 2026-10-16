@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Camera;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -30,6 +31,13 @@ class CamerasTest extends TestCase
         $response->assertOk();
 
         $response->assertSee(__('Cameras'));
+        $response->assertSee('Логин webhook');
+        $response->assertSee('Пароль webhook');
+        $response->assertSee('Новый пароль webhook');
+        $response->assertSee('Базовый URL устройства');
+        $response->assertSee('Логин устройства для снимка');
+        $response->assertSee('Пароль устройства для снимка');
+        $response->assertSee('Новый пароль устройства для снимка');
     }
 
     public function test_authenticated_user_sees_cameras_ordered_by_name_with_statuses(): void
@@ -76,17 +84,43 @@ class CamerasTest extends TestCase
 
         $component = Livewire::test('pages::cameras.index')
             ->set('name', 'Камера №1')
+            ->set('channel', '13')
+            ->set('snapshotBaseUrl', 'http://10.10.0.117/')
+            ->set('snapshotUsername', 'snapshot-user')
+            ->set('snapshotPassword', 'snapshot-secret')
+            ->set('webhookUsername', 'camera-13-events')
+            ->set('webhookPassword', 'webhook-secret-13')
             ->set('is_active', true)
             ->call('createCamera');
 
         $component->assertHasNoErrors();
         $component->assertSet('name', '');
+        $component->assertSet('channel', '');
+        $component->assertSet('snapshotBaseUrl', '');
+        $component->assertSet('snapshotUsername', '');
+        $component->assertSet('snapshotPassword', '');
+        $component->assertSet('webhookUsername', '');
+        $component->assertSet('webhookPassword', '');
         $component->assertSee('Камера №1');
 
         $this->assertDatabaseHas('cameras', [
             'name' => 'Камера №1',
+            'channel' => 13,
+            'snapshot_base_url' => 'http://10.10.0.117',
+            'snapshot_username' => 'snapshot-user',
+            'webhook_username' => 'camera-13-events',
             'is_active' => true,
         ]);
+
+        $camera = Camera::query()->where('webhook_username', 'camera-13-events')->firstOrFail();
+
+        $this->assertTrue(Hash::check('webhook-secret-13', $camera->webhook_password));
+        $this->assertSame('snapshot-secret', $camera->snapshot_password);
+        $this->assertNotSame('snapshot-secret', $camera->getRawOriginal('snapshot_password'));
+        $this->assertIsString($camera->webhook_token);
+        $this->assertSame(64, strlen($camera->webhook_token));
+        $this->assertNotSame($camera->webhook_token, $camera->getRawOriginal('webhook_token'));
+        $this->assertArrayNotHasKey('webhook_token', $camera->toArray());
     }
 
     public function test_camera_name_is_required(): void
@@ -165,6 +199,12 @@ class CamerasTest extends TestCase
     {
         $camera = Camera::factory()->create([
             'name' => 'Тестовая камера',
+            'channel' => 13,
+            'snapshot_base_url' => 'http://nvr.test',
+            'snapshot_username' => 'snapshot-user',
+            'snapshot_password' => 'existing-snapshot-secret',
+            'webhook_username' => 'camera-13-events',
+            'webhook_password' => 'existing-webhook-secret',
             'is_active' => true,
             'notify_from' => '21:00',
             'notify_until' => '06:00',
@@ -174,6 +214,14 @@ class CamerasTest extends TestCase
             ->call('startEditing', $camera->id)
             ->assertSet('editingCameraId', $camera->id)
             ->assertSet('editName', $camera->name)
+            ->assertSet('editChannel', '13')
+            ->assertSet('editSnapshotBaseUrl', 'http://nvr.test')
+            ->assertSet('editSnapshotUsername', 'snapshot-user')
+            ->assertSet('editSnapshotPassword', '')
+            ->assertSet('editingCameraHasSnapshotPassword', true)
+            ->assertSet('editWebhookUsername', 'camera-13-events')
+            ->assertSet('editWebhookPassword', '')
+            ->assertSet('editingCameraHasWebhookPassword', true)
             ->assertSet('editIsActive', $camera->is_active)
             ->assertSet('editNotifyFrom', '21:00')
             ->assertSet('editNotifyUntil', '06:00');
@@ -183,12 +231,20 @@ class CamerasTest extends TestCase
     {
         $camera = Camera::factory()->create([
             'name' => 'Тестовая камера',
+            'channel' => 5,
+            'webhook_username' => 'old-camera-events',
+            'webhook_password' => 'existing-webhook-secret',
             'is_active' => true,
         ]);
+
+        $originalPasswordHash = $camera->webhook_password;
+        $originalSnapshotCiphertext = $camera->getRawOriginal('snapshot_password');
 
         $component = Livewire::test('pages::cameras.index')
             ->call('startEditing', $camera->id)
             ->set('editName', 'TEST')
+            ->set('editChannel', '7')
+            ->set('editWebhookUsername', 'new-camera-events')
             ->set('editIsActive', false)
             ->call('updateCamera');
 
@@ -197,14 +253,128 @@ class CamerasTest extends TestCase
         $this->assertDatabaseHas('cameras', [
             'id' => $camera->id,
             'name' => 'TEST',
+            'channel' => 7,
+            'webhook_username' => 'new-camera-events',
+            'webhook_password' => $originalPasswordHash,
             'is_active' => false,
         ]);
+
+        $component->assertSet('editWebhookPassword', '');
+        $component->assertSet('editSnapshotPassword', '');
+
+        $this->assertSame(
+            $originalSnapshotCiphertext,
+            $camera->fresh()->getRawOriginal('snapshot_password'),
+        );
 
         $this->assertDatabaseMissing('cameras', [
             'id' => $camera->id,
             'name' => 'Тестовая камера',
             'is_active' => true,
         ]);
+    }
+
+    public function test_webhook_credentials_can_be_added_to_an_existing_camera(): void
+    {
+        $camera = Camera::factory()->create([
+            'webhook_username' => null,
+            'webhook_password' => null,
+        ]);
+
+        Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editWebhookUsername', 'direct-camera-events')
+            ->set('editWebhookPassword', 'new-webhook-secret')
+            ->call('updateCamera')
+            ->assertHasNoErrors()
+            ->assertSet('editWebhookPassword', '');
+
+        $camera->refresh();
+
+        $this->assertSame('direct-camera-events', $camera->webhook_username);
+        $this->assertTrue(Hash::check('new-webhook-secret', $camera->webhook_password));
+    }
+
+    public function test_webhook_username_and_password_must_be_configured_together(): void
+    {
+        Livewire::test('pages::cameras.index')
+            ->set('name', 'Камера без полного доступа')
+            ->set('channel', '15')
+            ->set('webhookUsername', 'incomplete-camera-events')
+            ->call('createCamera')
+            ->assertHasErrors(['webhookPassword' => 'required_with']);
+
+        $this->assertDatabaseEmpty('cameras');
+    }
+
+    public function test_webhook_password_must_contain_at_least_twelve_characters(): void
+    {
+        $camera = Camera::factory()->create();
+
+        Livewire::test('pages::cameras.index')
+            ->call('startEditing', $camera->id)
+            ->set('editWebhookUsername', 'camera-events')
+            ->set('editWebhookPassword', 'short')
+            ->call('updateCamera')
+            ->assertHasErrors(['editWebhookPassword' => 'min'])
+            ->assertSee('новый пароль webhook');
+
+        $camera->refresh();
+
+        $this->assertNull($camera->webhook_username);
+        $this->assertNull($camera->webhook_password);
+    }
+
+    public function test_camera_channel_must_be_unique_for_the_same_snapshot_device(): void
+    {
+        Camera::factory()->create([
+            'channel' => 13,
+            'snapshot_base_url' => 'http://nvr.test',
+        ]);
+
+        Livewire::test('pages::cameras.index')
+            ->set('name', 'Другая камера')
+            ->set('channel', '13')
+            ->set('snapshotBaseUrl', 'http://nvr.test')
+            ->set('snapshotUsername', 'snapshot-user')
+            ->set('snapshotPassword', 'snapshot-password')
+            ->call('createCamera')
+            ->assertHasErrors(['channel' => 'unique']);
+
+        $this->assertDatabaseCount('cameras', 1);
+    }
+
+    public function test_same_channel_can_be_used_by_different_snapshot_devices(): void
+    {
+        Camera::factory()->create([
+            'channel' => 1,
+            'snapshot_base_url' => 'http://first-camera.test',
+        ]);
+
+        Livewire::test('pages::cameras.index')
+            ->set('name', 'Вторая камера')
+            ->set('channel', '1')
+            ->set('snapshotBaseUrl', 'http://second-camera.test')
+            ->set('snapshotUsername', 'snapshot-user')
+            ->set('snapshotPassword', 'snapshot-password')
+            ->call('createCamera')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('cameras', 2);
+    }
+
+    public function test_snapshot_base_url_must_not_contain_a_path_or_query(): void
+    {
+        Livewire::test('pages::cameras.index')
+            ->set('name', 'Камера с полным URL')
+            ->set('channel', '1')
+            ->set('snapshotBaseUrl', 'http://camera.test/cgi-bin/snapshot.cgi?channel=1')
+            ->set('snapshotUsername', 'snapshot-user')
+            ->set('snapshotPassword', 'snapshot-password')
+            ->call('createCamera')
+            ->assertHasErrors(['snapshotBaseUrl' => 'regex']);
+
+        $this->assertDatabaseEmpty('cameras');
     }
 
     public function test_camera_name_is_required_when_updating(): void

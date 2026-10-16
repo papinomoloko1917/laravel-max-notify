@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CameraEvent;
+use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -49,6 +50,18 @@ new #[Title('История событий')] class extends Component
         $this->selectedEventId = $event->id;
     }
 
+    public function clearProcessedHistory(): void
+    {
+        CameraEvent::query()
+            ->whereIn('status', CameraEvent::TERMINAL_STATUSES)
+            ->delete();
+
+        $this->selectedEventId = null;
+        $this->resetPage();
+
+        Flux::modal('clear-event-history')->close();
+    }
+
     public function updatedFilter(): void
     {
         $this->resetPage();
@@ -57,7 +70,23 @@ new #[Title('История событий')] class extends Component
 ?>
 
 <div>
-    <flux:heading level="1" size="xl">{{ __('The history of events') }}</flux:heading>
+    <div class="flex items-start gap-4">
+        <div>
+            <flux:heading level="1" size="xl">{{ __('The history of events') }}</flux:heading>
+            <flux:text class="mt-1">
+                Обработанные события хранятся {{ config('camera_events.retention_days') }} дней.
+                Ожидающие события автоматически не удаляются.
+            </flux:text>
+        </div>
+
+        <flux:spacer />
+
+        <flux:modal.trigger name="clear-event-history">
+            <flux:button variant="danger" size="sm" icon="trash" class="cursor-pointer">
+                Очистить обработанную историю
+            </flux:button>
+        </flux:modal.trigger>
+    </div>
 
     <flux:label class="mt-5">{{ __('Filter') }}:</flux:label>
     <flux:dropdown>
@@ -95,7 +124,12 @@ new #[Title('История событий')] class extends Component
                             <flux:table.cell>{{ $event->created_at->format('d.m.Y H:i:s') }}</flux:table.cell>
                             <flux:table.cell>{{ $event->camera_name }}</flux:table.cell>
                             <flux:table.cell>{{ $event->channel }}</flux:table.cell>
-                            <flux:table.cell>{{ $event->rule }}</flux:table.cell>
+                            <flux:table.cell>
+                                <div>{{ $event->rule_title ?? $event->rule }}</div>
+                                @if ($event->rule_title !== null && $event->rule_title !== $event->rule)
+                                    <flux:text class="text-xs">{{ $event->rule }}</flux:text>
+                                @endif
+                            </flux:table.cell>
                             <flux:table.cell>
                                 <flux:badge
                                     color="{{ match ($event->status) {
@@ -185,6 +219,13 @@ new #[Title('История событий')] class extends Component
                     </div>
 
                     <div>
+                        <flux:text>Заголовок уведомления</flux:text>
+                        <flux:heading size="sm">
+                            {{ $this->selectedEvent->rule_title ?? $this->selectedEvent->rule }}
+                        </flux:heading>
+                    </div>
+
+                    <div>
                         <flux:text>{{ __('Status') }}</flux:text>
                         <flux:heading size="sm">{{ __(ucfirst($this->selectedEvent->status)) }}</flux:heading>
                     </div>
@@ -213,5 +254,27 @@ new #[Title('История событий')] class extends Component
                 </div>
             </div>
         @endif
+    </flux:modal>
+
+    <flux:modal name="clear-event-history" class="max-w-lg">
+        <form wire:submit="clearProcessedHistory" class="space-y-6">
+            <div>
+                <flux:heading size="lg">Очистить обработанную историю?</flux:heading>
+                <flux:text class="mt-2">
+                    Будут безвозвратно удалены завершённые, пропущенные и неуспешные события.
+                    События со статусом «Ожидает» останутся в истории и очереди.
+                </flux:text>
+            </div>
+
+            <div class="flex gap-3">
+                <flux:spacer />
+                <flux:modal.close>
+                    <flux:button class="cursor-pointer">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="danger" class="cursor-pointer">
+                    Очистить
+                </flux:button>
+            </div>
+        </form>
     </flux:modal>
 </div>

@@ -3,6 +3,7 @@
 use App\Models\Camera;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -20,6 +21,18 @@ new #[Title('Камеры')] class extends Component
 
     public string $name = '';
 
+    public string $channel = '';
+
+    public string $snapshotBaseUrl = '';
+
+    public string $snapshotUsername = '';
+
+    public string $snapshotPassword = '';
+
+    public string $webhookUsername = '';
+
+    public string $webhookPassword = '';
+
     public bool $is_active = true;
 
     public string $filter = 'all';
@@ -27,6 +40,22 @@ new #[Title('Камеры')] class extends Component
     public ?int $editingCameraId = null;
 
     public string $editName = '';
+
+    public string $editChannel = '';
+
+    public string $editSnapshotBaseUrl = '';
+
+    public string $editSnapshotUsername = '';
+
+    public string $editSnapshotPassword = '';
+
+    public bool $editingCameraHasSnapshotPassword = false;
+
+    public string $editWebhookUsername = '';
+
+    public string $editWebhookPassword = '';
+
+    public bool $editingCameraHasWebhookPassword = false;
 
     public bool $editIsActive = true;
 
@@ -38,6 +67,29 @@ new #[Title('Камеры')] class extends Component
 
     public string $deletingCameraName = '';
 
+    /** @return array<string, string> */
+    protected function validationAttributes(): array
+    {
+        return [
+            'name' => 'название камеры',
+            'channel' => 'канал регистратора',
+            'snapshotBaseUrl' => 'базовый URL устройства',
+            'snapshotUsername' => 'логин устройства для снимка',
+            'snapshotPassword' => 'пароль устройства для снимка',
+            'webhookUsername' => 'логин webhook',
+            'webhookPassword' => 'пароль webhook',
+            'editName' => 'название камеры',
+            'editChannel' => 'канал регистратора',
+            'editSnapshotBaseUrl' => 'базовый URL устройства',
+            'editSnapshotUsername' => 'логин устройства для снимка',
+            'editSnapshotPassword' => 'новый пароль устройства для снимка',
+            'editWebhookUsername' => 'логин webhook',
+            'editWebhookPassword' => 'новый пароль webhook',
+            'editNotifyFrom' => 'начало интервала',
+            'editNotifyUntil' => 'конец интервала',
+        ];
+    }
+
     public function startEditing(int $cameraId): void
     {
         $camera = Camera::findOrFail($cameraId);
@@ -45,6 +97,22 @@ new #[Title('Камеры')] class extends Component
         $this->editingCameraId = $camera->id;
 
         $this->editName = $camera->name;
+
+        $this->editChannel = $camera->channel === null ? '' : (string) $camera->channel;
+
+        $this->editSnapshotBaseUrl = $camera->snapshot_base_url ?? '';
+
+        $this->editSnapshotUsername = $camera->snapshot_username ?? '';
+
+        $this->editSnapshotPassword = '';
+
+        $this->editingCameraHasSnapshotPassword = is_string($camera->snapshot_password);
+
+        $this->editWebhookUsername = $camera->webhook_username ?? '';
+
+        $this->editWebhookPassword = '';
+
+        $this->editingCameraHasWebhookPassword = is_string($camera->webhook_password);
 
         $this->editIsActive = $camera->is_active;
 
@@ -55,23 +123,83 @@ new #[Title('Камеры')] class extends Component
 
     public function createCamera(): void
     {
+        $this->snapshotBaseUrl = rtrim($this->snapshotBaseUrl, '/');
+
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
+            'channel' => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::unique('cameras', 'channel')
+                    ->where(fn ($query) => $query->where('snapshot_base_url', $this->snapshotBaseUrl)),
+            ],
+            'snapshotBaseUrl' => ['required', 'url:http,https', 'max:2048', 'regex:/\Ahttps?:\/\/[^\/?#]+\z/i', 'not_regex:/@/'],
+            'snapshotUsername' => ['required', 'string', 'max:255'],
+            'snapshotPassword' => ['required', 'string', 'max:255'],
+            'webhookUsername' => ['nullable', 'required_with:webhookPassword', 'string', 'max:255', 'unique:cameras,webhook_username'],
+            'webhookPassword' => ['nullable', 'required_with:webhookUsername', 'string', 'min:12', 'max:72'],
             'is_active' => ['boolean'],
         ]);
 
         Camera::create([
             'name' => $this->name,
+            'channel' => (int) $this->channel,
+            'snapshot_base_url' => $this->snapshotBaseUrl,
+            'snapshot_username' => $this->snapshotUsername,
+            'snapshot_password' => $this->snapshotPassword,
+            'webhook_username' => $this->webhookUsername === '' ? null : $this->webhookUsername,
+            'webhook_password' => $this->webhookPassword === '' ? null : $this->webhookPassword,
             'is_active' => $this->is_active,
         ]);
 
-        $this->reset('name');
+        $this->reset(
+            'name',
+            'channel',
+            'snapshotBaseUrl',
+            'snapshotUsername',
+            'snapshotPassword',
+            'webhookUsername',
+            'webhookPassword',
+        );
     }
 
     public function updateCamera(): void
     {
+        $this->editSnapshotBaseUrl = rtrim($this->editSnapshotBaseUrl, '/');
+
         $this->validate([
             'editName' => ['required', 'string', 'max:255'],
+            'editChannel' => [
+                'nullable',
+                'integer',
+                'min:1',
+                Rule::unique('cameras', 'channel')
+                    ->where(fn ($query) => $query->where('snapshot_base_url', $this->editSnapshotBaseUrl))
+                    ->ignore($this->editingCameraId),
+            ],
+            'editSnapshotBaseUrl' => ['required', 'url:http,https', 'max:2048', 'regex:/\Ahttps?:\/\/[^\/?#]+\z/i', 'not_regex:/@/'],
+            'editSnapshotUsername' => ['required', 'string', 'max:255'],
+            'editSnapshotPassword' => [
+                Rule::requiredIf(! $this->editingCameraHasSnapshotPassword),
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'editWebhookUsername' => [
+                Rule::requiredIf($this->editingCameraHasWebhookPassword || $this->editWebhookPassword !== ''),
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('cameras', 'webhook_username')->ignore($this->editingCameraId),
+            ],
+            'editWebhookPassword' => [
+                Rule::requiredIf(! $this->editingCameraHasWebhookPassword && $this->editWebhookUsername !== ''),
+                'nullable',
+                'string',
+                'min:12',
+                'max:72',
+            ],
             'editIsActive' => ['boolean'],
             'editNotifyFrom' => ['nullable', 'date_format:H:i', 'required_with:editNotifyUntil', 'different:editNotifyUntil'],
             'editNotifyUntil' => ['nullable', 'date_format:H:i', 'required_with:editNotifyFrom'],
@@ -79,12 +207,28 @@ new #[Title('Камеры')] class extends Component
 
         $camera = Camera::findOrFail($this->editingCameraId);
 
-        $camera->update([
+        $attributes = [
             'name' => $this->editName,
+            'channel' => $this->editChannel === '' ? null : (int) $this->editChannel,
+            'snapshot_base_url' => $this->editSnapshotBaseUrl,
+            'snapshot_username' => $this->editSnapshotUsername,
+            'webhook_username' => $this->editWebhookUsername === '' ? null : $this->editWebhookUsername,
             'is_active' => $this->editIsActive,
             'notify_from' => $this->editNotifyFrom === '' ? null : $this->editNotifyFrom,
             'notify_until' => $this->editNotifyUntil === '' ? null : $this->editNotifyUntil,
-        ]);
+        ];
+
+        if ($this->editWebhookPassword !== '') {
+            $attributes['webhook_password'] = $this->editWebhookPassword;
+        }
+
+        if ($this->editSnapshotPassword !== '') {
+            $attributes['snapshot_password'] = $this->editSnapshotPassword;
+        }
+
+        $camera->update($attributes);
+
+        $this->reset('editSnapshotPassword', 'editWebhookPassword');
 
         Flux::modal('edit-camera')->close();
     }
@@ -154,6 +298,8 @@ new #[Title('Камеры')] class extends Component
                 <flux:table.columns>
                     <flux:table.column>{{ __('Position') }}</flux:table.column>
                     <flux:table.column>{{ __('Camera name') }}</flux:table.column>
+                    <flux:table.column>Источник снимка</flux:table.column>
+                    <flux:table.column>Канал</flux:table.column>
                     <flux:table.column>{{ __('Status') }}</flux:table.column>
                     <flux:table.column>{{ __('Actions') }}</flux:table.column>
                 </flux:table.columns>
@@ -163,11 +309,22 @@ new #[Title('Камеры')] class extends Component
                         <flux:table.row>
                             <flux:table.cell>{{ $loop->iteration }}</flux:table.cell>
                             <flux:table.cell>{{ $camera->name }}</flux:table.cell>
+                            <flux:table.cell>{{ $camera->snapshot_base_url ?? '—' }}</flux:table.cell>
+                            <flux:table.cell>{{ $camera->channel ?? '—' }}</flux:table.cell>
                             <flux:table.cell class="py-0">
                                 <flux:badge color="{{ $camera->is_active === true ? 'green' : 'red' }}" size="sm">
                                     {{ $camera->is_active === true ? __('Active') : __('Inactive') }}</flux:badge>
                             </flux:table.cell>
                             <flux:table.cell>
+                                <flux:button
+                                    :href="route('cameras.rules', $camera)"
+                                    wire:navigate
+                                    tooltip="Правила событий"
+                                    variant="subtle"
+                                    class="cursor-pointer"
+                                    icon="list-bullet"
+                                    size="sm"
+                                />
                                 {{-- триггер редактирования камеры --}}
                                 <flux:modal.trigger name="edit-camera">
                                     <flux:button
@@ -227,6 +384,55 @@ new #[Title('Камеры')] class extends Component
                         placeholder="{{ __('Camera name') }}"
                     />
 
+                    <flux:input
+                        wire:model="channel"
+                        label="Канал устройства"
+                        type="number"
+                        min="1"
+                        placeholder="1"
+                    />
+
+                    <flux:separator text="Получение снимка" />
+
+                    <flux:input
+                        wire:model="snapshotBaseUrl"
+                        label="Базовый URL устройства"
+                        placeholder="http://10.10.0.117"
+                        description="Только адрес и порт, без /cgi-bin/snapshot.cgi и channel"
+                    />
+
+                    <flux:input
+                        wire:model="snapshotUsername"
+                        label="Логин устройства для снимка"
+                        autocomplete="off"
+                        description="Учётная запись на камере или регистраторе; используется Digest-аутентификация"
+                    />
+
+                    <flux:input
+                        wire:model="snapshotPassword"
+                        label="Пароль устройства для снимка"
+                        type="password"
+                        autocomplete="new-password"
+                        description="Хранится в базе в зашифрованном виде и не отображается"
+                    />
+
+                    <flux:separator text="Необязательный Basic Auth для webhook" />
+
+                    <flux:input
+                        wire:model="webhookUsername"
+                        label="Логин webhook"
+                        autocomplete="off"
+                        description="Только для устройств, которые отправляют HTTP Basic; для URL-токена оставьте пустым"
+                    />
+
+                    <flux:input
+                        wire:model="webhookPassword"
+                        label="Пароль webhook"
+                        type="password"
+                        autocomplete="new-password"
+                        description="Не менее 12 символов; заполняется только вместе с логином Basic Auth"
+                    />
+
                     {{-- чекбокс --}}
                     <flux:field variant="inline">
                         <flux:checkbox wire:model="is_active" />
@@ -253,6 +459,55 @@ new #[Title('Камеры')] class extends Component
                     <flux:heading size="lg"> {{ __('Edit the camera') }} </flux:heading>
 
                     <flux:input wire:model="editName" label="{{ __('Camera name') }}" />
+
+                    <flux:input
+                        wire:model="editChannel"
+                        label="Канал устройства"
+                        type="number"
+                        min="1"
+                        description="Нужен для генерации webhook URL и получения снимка"
+                    />
+
+                    <flux:separator text="Получение снимка" />
+
+                    <flux:input
+                        wire:model="editSnapshotBaseUrl"
+                        label="Базовый URL устройства"
+                        placeholder="http://10.10.0.117"
+                        description="Только адрес и порт, без /cgi-bin/snapshot.cgi и channel"
+                    />
+
+                    <flux:input
+                        wire:model="editSnapshotUsername"
+                        label="Логин устройства для снимка"
+                        autocomplete="off"
+                        description="Учётная запись на камере или регистраторе; используется Digest-аутентификация"
+                    />
+
+                    <flux:input
+                        wire:model="editSnapshotPassword"
+                        label="Новый пароль устройства для снимка"
+                        type="password"
+                        autocomplete="new-password"
+                        description="Оставьте пустым, чтобы сохранить действующий пароль"
+                    />
+
+                    <flux:separator text="Необязательный Basic Auth для webhook" />
+
+                    <flux:input
+                        wire:model="editWebhookUsername"
+                        label="Логин webhook"
+                        autocomplete="off"
+                        description="Только для устройств, которые отправляют HTTP Basic; для URL-токена оставьте пустым"
+                    />
+
+                    <flux:input
+                        wire:model="editWebhookPassword"
+                        label="Новый пароль webhook"
+                        type="password"
+                        autocomplete="new-password"
+                        description="Оставьте пустым, чтобы сохранить действующий пароль Basic Auth"
+                    />
 
                     <div class="grid grid-cols-2 gap-4">
                         <flux:label class="col-span-2">{{ __('Time interval') }}</flux:label>

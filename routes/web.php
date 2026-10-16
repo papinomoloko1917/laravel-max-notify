@@ -10,12 +10,15 @@ Route::middleware(['auth'])->group(function () {
 
     Route::livewire('/cameras', 'pages::cameras.index')->name('cameras.index');
 
+    Route::livewire('/cameras/{camera}/rules', 'pages::cameras.rules')->name('cameras.rules');
+
     Route::livewire('/clients', 'pages::clients.index')->name('clients.index');
 
     Route::livewire('/events', 'pages::events.index')->name('events.index');
 });
 
 Route::get('/webhooks/dahua', DahuaWebhookController::class)
-    ->middleware('throttle:dahua-webhook');
+    ->middleware('throttle:dahua-webhook')
+    ->name('dahua.webhook');
 
 require __DIR__ . '/settings.php';

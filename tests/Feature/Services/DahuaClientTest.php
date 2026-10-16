@@ -16,12 +16,6 @@ class DahuaClientTest extends TestCase
     {
         Http::preventStrayRequests();
 
-        config([
-            'services.dahua.base_url' => 'http://nvr.test',
-            'services.dahua.username' => 'test-user',
-            'services.dahua.password' => 'test-password',
-        ]);
-
         Http::fake([
             'http://nvr.test/cgi-bin/snapshot.cgi*' => Http::response(
                 'fake-jpeg-content',
@@ -32,7 +26,12 @@ class DahuaClientTest extends TestCase
 
         $client = new DahuaClient;
 
-        $snapshot = $client->snapshot(13);
+        $snapshot = $client->snapshot(
+            'http://nvr.test',
+            'test-user',
+            'test-password',
+            13,
+        );
 
         $this->assertSame(
             'fake-jpeg-content',
@@ -49,12 +48,6 @@ class DahuaClientTest extends TestCase
     {
         Http::preventStrayRequests();
 
-        config([
-            'services.dahua.base_url' => 'http://nvr.test',
-            'services.dahua.username' => 'test-user',
-            'services.dahua.password' => 'test-password',
-        ]);
-
         Http::fake([
             'http://nvr.test/cgi-bin/snapshot.cgi*' => Http::response(
                 'fake-jpeg-content',
@@ -67,18 +60,12 @@ class DahuaClientTest extends TestCase
 
         $this->expectException(RequestException::class);
 
-        $client->snapshot(13);
+        $client->snapshot('http://nvr.test', 'test-user', 'test-password', 13);
     }
 
     public function test_it_rejects_a_successful_response_that_is_not_a_jpeg(): void
     {
         Http::preventStrayRequests();
-
-        config([
-            'services.dahua.base_url' => 'http://nvr.test',
-            'services.dahua.username' => 'test-user',
-            'services.dahua.password' => 'test-password',
-        ]);
 
         Http::fake([
             'http://nvr.test/cgi-bin/snapshot.cgi*' => Http::response(
@@ -92,7 +79,7 @@ class DahuaClientTest extends TestCase
 
         $this->expectException(UnexpectedValueException::class);
 
-        $client->snapshot(13);
+        $client->snapshot('http://nvr.test', 'test-user', 'test-password', 13);
 
     }
 
@@ -101,9 +88,6 @@ class DahuaClientTest extends TestCase
         Http::preventStrayRequests();
 
         config([
-            'services.dahua.base_url' => 'http://nvr.test',
-            'services.dahua.username' => 'test-user',
-            'services.dahua.password' => 'test-password',
             'services.dahua.connect_timeout' => 3,
             'services.dahua.timeout' => 10,
         ]);
@@ -116,6 +100,6 @@ class DahuaClientTest extends TestCase
 
         $this->expectException(ConnectionException::class);
 
-        $client->snapshot(13);
+        $client->snapshot('http://nvr.test', 'test-user', 'test-password', 13);
     }
 }

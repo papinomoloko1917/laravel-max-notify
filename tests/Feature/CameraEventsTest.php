@@ -31,6 +31,8 @@ class CameraEventsTest extends TestCase
 
         $response->assertOk();
         $response->assertSee(__('The history of events'));
+        $response->assertSee('Обработанные события хранятся 30 дней.');
+        $response->assertSee('Очистить обработанную историю');
     }
 
     public function test_authenticated_user_sees_camera_events_newest_first_with_processing_details(): void
@@ -202,5 +204,25 @@ class CameraEventsTest extends TestCase
             ->call('showDetails', $event->id)
             ->assertSee('Historical camera name')
             ->assertSee(__('Deleted camera'));
+    }
+
+    public function test_clearing_history_deletes_only_processed_events(): void
+    {
+        foreach (CameraEvent::TERMINAL_STATUSES as $status) {
+            CameraEvent::factory()->create(['status' => $status]);
+        }
+
+        $pendingEvent = CameraEvent::factory()->create(['status' => 'pending']);
+
+        Livewire::test('pages::events.index')
+            ->call('clearProcessedHistory')
+            ->assertHasNoErrors()
+            ->assertDispatched('modal-close', name: 'clear-event-history');
+
+        $this->assertDatabaseCount('camera_events', 1);
+        $this->assertDatabaseHas('camera_events', [
+            'id' => $pendingEvent->id,
+            'status' => 'pending',
+        ]);
     }
 }

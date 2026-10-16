@@ -30,6 +30,11 @@ class DahuaWebhookTest extends TestCase
             'is_active' => true,
         ]);
 
+        $camera->rules()->create([
+            'code' => 'perimeter',
+            'title' => 'Пересечение линии',
+        ]);
+
         Queue::fake();
         Log::spy();
 
@@ -52,6 +57,7 @@ class DahuaWebhookTest extends TestCase
             'camera_name' => $camera->name,
             'channel' => 13,
             'rule' => 'perimeter',
+            'rule_title' => 'Пересечение линии',
             'status' => 'pending',
             'recipients_total' => 0,
             'recipients_sent' => 0,
@@ -77,6 +83,68 @@ class DahuaWebhookTest extends TestCase
             ]);
     }
 
+    public function test_active_camera_can_send_webhook_with_url_token_without_basic_auth(): void
+    {
+        $camera = Camera::factory()->create([
+            'channel' => 13,
+            'is_active' => true,
+        ]);
+
+        Queue::fake();
+
+        $this->get('/webhooks/dahua?' . http_build_query([
+            'camera' => $camera->id,
+            'token' => $camera->webhook_token,
+            'event' => 'ivs',
+            'channel' => 13,
+            'rule' => 'perimeter',
+        ]))
+            ->assertOk()
+            ->assertContent('OK');
+
+        $cameraEvent = CameraEvent::query()->firstOrFail();
+
+        $this->assertSame($camera->id, $cameraEvent->camera_id);
+        $this->assertSame('perimeter', $cameraEvent->rule);
+
+        Queue::assertPushed(
+            ProcessCameraEvent::class,
+            fn (ProcessCameraEvent $job): bool => $job->cameraId === $camera->id
+                && $job->cameraEventId === $cameraEvent->id,
+        );
+    }
+
+    public function test_wrong_webhook_url_token_is_rejected(): void
+    {
+        $camera = Camera::factory()->create([
+            'channel' => 13,
+            'is_active' => true,
+        ]);
+
+        Queue::fake();
+        Log::spy();
+
+        $this->get('/webhooks/dahua?' . http_build_query([
+            'camera' => $camera->id,
+            'token' => 'wrong-token',
+            'event' => 'ivs',
+            'channel' => 13,
+            'rule' => 'perimeter',
+        ]))
+            ->assertUnauthorized()
+            ->assertContent('Unauthorized');
+
+        Queue::assertNothingPushed();
+        $this->assertDatabaseEmpty('camera_events');
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->with('Dahua webhook rejected', [
+                'reason' => 'credentials_invalid',
+                'authorization_scheme' => 'token',
+            ]);
+    }
+
     public function test_queued_job_payload_does_not_contain_integration_secrets(): void
     {
         $webhookUsername = 'sensitive-webhook-username';
@@ -85,7 +153,9 @@ class DahuaWebhookTest extends TestCase
         $dahuaPassword = 'sensitive-dahua-password';
         $maxToken = 'sensitive-max-token';
 
-        Camera::factory()->create([
+        $camera = Camera::factory()->create([
+            'snapshot_username' => $dahuaUsername,
+            'snapshot_password' => $dahuaPassword,
             'webhook_username' => $webhookUsername,
             'webhook_password' => $webhookPassword,
             'is_active' => true,
@@ -93,8 +163,6 @@ class DahuaWebhookTest extends TestCase
 
         config([
             'queue.default' => 'database',
-            'services.dahua.username' => $dahuaUsername,
-            'services.dahua.password' => $dahuaPassword,
             'services.max.token' => $maxToken,
         ]);
 
@@ -110,6 +178,7 @@ class DahuaWebhookTest extends TestCase
         $this->assertSame(ProcessCameraEvent::class, $decodedPayload['displayName']);
         $this->assertStringNotContainsString($webhookUsername, $payload);
         $this->assertStringNotContainsString($webhookPassword, $payload);
+        $this->assertStringNotContainsString($camera->webhook_token, $payload);
         $this->assertStringNotContainsString($dahuaUsername, $payload);
         $this->assertStringNotContainsString($dahuaPassword, $payload);
         $this->assertStringNotContainsString($maxToken, $payload);
@@ -119,11 +188,21 @@ class DahuaWebhookTest extends TestCase
     {
         $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
 
+        Log::spy();
+
         $response = $this->get($url);
 
         $response->assertStatus(401);
 
         $response->assertContent('Unauthorized');
+        $response->assertHeader('WWW-Authenticate', 'Basic realm="max-notify"');
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->with('Dahua webhook rejected', [
+                'reason' => 'credentials_missing_or_unsupported',
+                'authorization_scheme' => 'none',
+            ]);
     }
 
     public function test_unknown_webhook_username_is_rejected(): void
@@ -145,6 +224,7 @@ class DahuaWebhookTest extends TestCase
         $response->assertStatus(401);
 
         $response->assertContent('Unauthorized');
+        $response->assertHeader('WWW-Authenticate', 'Basic realm="max-notify"');
     }
 
     public function test_wrong_webhook_password_is_rejected(): void
@@ -161,11 +241,21 @@ class DahuaWebhookTest extends TestCase
             'is_active' => true,
         ]);
 
+        Log::spy();
+
         $response = $this->withBasicAuth($username, 'Новый пароль')->get($url);
 
         $response->assertStatus(401);
 
         $response->assertContent('Unauthorized');
+        $response->assertHeader('WWW-Authenticate', 'Basic realm="max-notify"');
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->with('Dahua webhook rejected', [
+                'reason' => 'credentials_invalid',
+                'authorization_scheme' => 'basic',
+            ]);
     }
 
     public function test_inactive_camera_is_rejected(): void
@@ -229,6 +319,30 @@ class DahuaWebhookTest extends TestCase
         $response->assertStatus(400);
 
         $response->assertContent('Invalid webhook request');
+    }
+
+    public function test_authenticated_request_rejects_channel_that_does_not_belong_to_camera(): void
+    {
+        $username = 'user';
+        $password = 'password';
+
+        Camera::factory()->create([
+            'channel' => 13,
+            'webhook_username' => $username,
+            'webhook_password' => $password,
+            'is_active' => true,
+        ]);
+
+        Queue::fake();
+
+        $response = $this->withBasicAuth($username, $password)
+            ->get('/webhooks/dahua?event=ivs&channel=14&rule=line_crossed');
+
+        $response->assertBadRequest();
+        $response->assertContent('Invalid webhook request');
+
+        Queue::assertNothingPushed();
+        $this->assertDatabaseEmpty('camera_events');
     }
 
     public function test_authenticated_request_rejects_missing_rule(): void

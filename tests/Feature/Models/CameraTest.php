@@ -97,6 +97,19 @@ class CameraTest extends TestCase
         $this->assertArrayNotHasKey('webhook_password', $camera->toArray());
     }
 
+    public function test_snapshot_password_is_encrypted_and_hidden(): void
+    {
+        $password = 'snapshot-password';
+
+        $camera = Camera::factory()->create([
+            'snapshot_password' => $password,
+        ]);
+
+        $this->assertSame($password, $camera->snapshot_password);
+        $this->assertNotSame($password, $camera->getRawOriginal('snapshot_password'));
+        $this->assertArrayNotHasKey('snapshot_password', $camera->toArray());
+    }
+
     public function test_webhook_username_must_be_unique(): void
     {
         Camera::factory()->create([
@@ -126,6 +139,23 @@ class CameraTest extends TestCase
         $this->assertDatabaseHas('cameras', [
             'notify_from' => '21:00',
             'notify_until' => '06:00',
+        ]);
+    }
+
+    public function test_device_channel_pair_is_unique(): void
+    {
+        $camera = Camera::factory()->create([
+            'snapshot_base_url' => 'http://nvr.test',
+            'channel' => 13,
+        ]);
+
+        $this->assertSame(13, $camera->channel);
+
+        $this->expectException(QueryException::class);
+
+        Camera::factory()->create([
+            'snapshot_base_url' => 'http://nvr.test',
+            'channel' => 13,
         ]);
     }
 }

@@ -1,120 +1,427 @@
-# max-notify — Deployment Plan
+# Установка max-notify на чистый Ubuntu Server
 
-Status: target architecture agreed in principle; production files are not implemented yet.
+Эта инструкция описывает первоначальную production-установку на MiniPC с Ubuntu Server 26.04 LTS в одной локальной сети с Dahua. Публичный домен и входящие подключения из интернета не требуются.
 
-## Confirmed target
+Production-схема отделена от Sail-разработки:
 
-- hardware: MiniPC MA01, Intel N150, 16 GB RAM, 512 GB storage;
-- operating system: Ubuntu Server 26.04.1 LTS;
-- location: on premises next to the Dahua NVR;
-- network: application server and NVR are on the same LAN;
-- public domain: none;
-- server state: clean installation, so the required runtime may be installed deliberately;
-- external requirement: the server still needs outbound DNS and verified HTTPS access to the MAX API and package/image repositories;
-- timezone: `Europe/Moscow`, with host clock synchronization enabled.
+- Caddy принимает HTTPS-запросы панели на порту `443` и выдаёт сертификат от собственной локальной CA;
+- Caddy принимает на порту `80` только `/webhooks/dahua`, не записывая URL с секретным webhook-токеном в access log; PHP-FPM access log также отключён;
+- PHP-FPM выполняет Laravel-код и не публикуется в локальную сеть;
+- отдельные контейнеры выполняют очередь и Laravel Scheduler;
+- PostgreSQL хранится в Docker volume и не публикует порт `5432`;
+- frontend собирается при создании неизменяемого application image;
+- Adminer, Vite, Xdebug, bind mount исходников и `artisan serve` в production отсутствуют.
 
-The hardware is sufficient for the current low-volume installation. Start with one web application instance and one queue worker; add concurrency only after measured queue delay demonstrates a need.
+`compose.yaml` предназначен только для локальной разработки. На сервере используется исключительно `compose.production.yaml`.
 
-## Chosen runtime direction
+## 1. Что подготовить заранее
 
-Use Docker Engine from Docker's official Ubuntu repository plus the Docker Compose plugin. Ubuntu 26.04 LTS is an officially supported Docker Engine target.
+До установки запишите:
 
-Do not deploy the current `compose.yaml`. It is a Sail development environment and currently includes development-only behavior:
+- постоянный IP MiniPC, например `10.10.0.50`;
+- маску/подсеть, шлюз и DNS локальной сети;
+- IP камеры или NVR;
+- Git URL проекта и проверенный commit/тег;
+- email и длинный пароль первого администратора;
+- место для резервных копий **на другом физическом устройстве**.
 
-- application source bind-mounted from the host;
-- the PHP development server (`artisan serve`);
-- a published Vite port;
-- PostgreSQL published to the host;
-- publicly reachable Adminer;
-- Xdebug/Sail-specific environment;
-- development user-ID mapping.
+Лучше закрепить IP MiniPC в DHCP-настройках роутера по MAC-адресу. Если используется статический Netplan, сначала узнайте имя интерфейса командой `ip -br address`, затем меняйте существующий файл в `/etc/netplan/`. Не копируйте чужое имя интерфейса или адреса вслепую. После `sudo netplan try` подтверждайте конфигурацию, только если SSH-соединение сохранилось.
 
-Create a separate production image and Compose file after the remaining network decisions are known. The production topology should contain:
+Сервер должен иметь:
 
-1. a reverse proxy / web server;
-2. an immutable application image running PHP-FPM;
-3. one container from the same application image running the database queue worker;
-4. one container from the same application image running Laravel's scheduler;
-5. PostgreSQL with a named persistent volume and no published database port.
+- исходящий DNS и HTTPS-доступ к GitHub, Docker Hub, репозиториям Ubuntu и `platform-api2.max.ru`;
+- сетевой доступ к HTTP API каждой настроенной камеры/NVR;
+- входящий доступ от камеры/NVR к TCP `80`;
+- входящий доступ администраторских компьютеров к TCP `443` и SSH;
+- правильное время и часовой пояс `Europe/Moscow`.
 
-Adminer and Node/Vite development servers must not run in production. Frontend assets are built while creating the application image.
-
-## Queue and scheduler
-
-The initial worker topology is one process for the `database` connection and `default` queue. Its effective command should preserve the job's existing timeout and single-attempt policy, for example:
+Проверьте время:
 
 ```bash
-php artisan queue:work database --queue=default --sleep=3 --tries=1 --timeout=80 --max-time=3600
+timedatectl
+sudo timedatectl set-timezone Europe/Moscow
+sudo timedatectl set-ntp true
 ```
 
-The container/process stop grace period must be longer than the longest job timeout. The worker must restart automatically after exit and be restarted gracefully after each deployment because Laravel queue workers are long-lived and do not automatically load changed code.
+## 2. Базовая подготовка Ubuntu
 
-Run exactly one scheduler process. Its first production responsibility will be the documented 30-day failed-job pruning policy. Do not schedule pruning until the production Compose lifecycle is implemented and verified.
+Войдите под обычным пользователем с `sudo`, обновите систему и установите вспомогательные пакеты:
 
-## Network exposure
+```bash
+sudo apt update
+sudo apt full-upgrade -y
+sudo apt install -y ca-certificates curl git openssl
+sudo reboot
+```
 
-Only the reverse proxy may publish host ports. PostgreSQL, application PHP, worker, and scheduler remain on an internal Docker network.
+После перезагрузки снова подключитесь по SSH. Желательно использовать SSH-ключ, запретить вход `root` по SSH и не выставлять SSH или веб-порты в интернет на роутере.
 
-The NVR needs access only to the Dahua webhook path. If the recorder cannot validate a private HTTPS certificate, provide a dedicated HTTP listener restricted by firewall and reverse-proxy rules to the NVR source IP and `/webhooks/dahua`; do not expose the administration UI over that listener.
+Запишите фактические сведения о сервере — они пригодятся при диагностике и настройке сети:
 
-The administration UI carries login credentials and session cookies and should use HTTPS even on the LAN. A public domain is not required: a private CA can issue a certificate for a stable local hostname or IP address, with that CA installed on administrator devices. Plain HTTP for the administration UI requires an explicit acceptance of the LAN credential/session interception risk.
+```bash
+cat /etc/os-release
+uname -m
+ip -br address
+ip route
+free -h
+df -h /
+```
 
-Docker-published ports can bypass uncomplicated UFW expectations. Host firewall design must account for Docker's `DOCKER-USER` chain rather than assuming a UFW deny rule protects published container ports.
+Для MiniPC ожидается архитектура `x86_64`/`amd64`. До изменения SSH-настроек сначала проверьте вход по ключу во втором отдельном терминале, иначе можно потерять удалённый доступ.
 
-## Production environment
+## 3. Установка Docker Engine из официального репозитория
 
-Production values belong in an uncommitted, root/operator-readable environment file. At minimum:
+Удалите только действительно установленные конфликтующие пакеты. На чистом сервере список может оказаться пустым — это нормально:
 
-- `APP_ENV=production`;
-- `APP_DEBUG=false`;
-- a stable `APP_KEY` that is backed up securely;
-- an `APP_URL` matching the final local HTTPS hostname/IP;
-- strong PostgreSQL credentials;
-- `QUEUE_CONNECTION=database`, `CACHE_STORE=database`, and `SESSION_DRIVER=database`;
-- the real Dahua and MAX integration settings;
-- `LOG_CHANNEL=stderr` or another container-aware channel with host-level rotation;
-- secure session cookies when the administration UI uses HTTPS.
+```bash
+conflicting_packages="$(dpkg --get-selections \
+  docker.io docker-compose docker-compose-v2 docker-doc docker-buildx \
+  podman-docker containerd runc 2>/dev/null | awk '{print $1}')"
 
-Never bake `.env` or real credentials into the image or Git history.
+if [ -n "$conflicting_packages" ]; then
+  sudo apt remove -y $conflicting_packages
+fi
+```
 
-## Persistent data and backup boundary
+Подключите официальный Docker-репозиторий:
 
-The PostgreSQL volume is the primary persistent application state. A Docker volume on the same 512 GB SSD is not a backup.
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-Phase 25 must add and restore-test a scheduled PostgreSQL logical backup copied to a different physical device or protected network destination. The final backup schedule, encryption, retention, and destination remain open until that destination is selected. The production environment file and `APP_KEY` also require a secure recovery copy separate from the MiniPC.
+sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
 
-## Deployment lifecycle to implement
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo docker run --rm hello-world
+sudo docker compose version
+```
 
-The eventual deployment procedure must be explicit and repeatable:
+Ubuntu 26.04 LTS сейчас входит в официальный список поддерживаемых Docker Engine систем. Не используйте `curl https://get.docker.com | sh` для production-сервера: официальный convenience script предназначен прежде всего для разработки и тестирования.
 
-1. fetch the reviewed Git revision;
-2. build the immutable application image and frontend assets;
-3. run the automated quality gate before replacing the running release;
-4. place the application in maintenance mode when a migration requires it;
-5. apply migrations with `--force`;
-6. refresh Laravel production caches;
-7. replace/reload web, worker, and scheduler containers;
-8. gracefully restart queue workers;
-9. leave maintenance mode;
-10. verify `/up`, authenticated administration access, queue health, and a controlled end-to-end event;
-11. retain a rollback path for the previous image and a database restore path.
+Добавьте своего пользователя в группу Docker и **полностью выйдите из SSH-сеанса**, затем войдите снова:
 
-## Information still required
+```bash
+sudo usermod -aG docker "$USER"
+exit
+```
 
-Before production files are created, record:
+После повторного входа проверьте `docker ps` без `sudo`. Членство в группе `docker` практически даёт root-доступ, поэтому добавляйте туда только доверенных операторов.
 
-- the MiniPC's reserved/static LAN IP;
-- the NVR's reserved/static LAN IP;
-- which devices/subnet may open the administration UI;
-- whether a private-CA certificate can be installed on those administrator devices;
-- whether the NVR supports HTTPS with a private CA; otherwise confirm the restricted HTTP webhook listener;
-- the router/firewall arrangement and whether inbound access from outside the LAN is blocked;
-- the off-device PostgreSQL backup destination;
-- whether power-loss protection (UPS) is available.
+## 4. Получение проекта
 
-## Primary references
+На сервере:
 
-- [Docker Engine installation on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
-- [Laravel 13 deployment](https://laravel.com/docs/13.x/deployment)
-- [Laravel 13 queues](https://laravel.com/docs/13.x/queues)
-- [Laravel 13 task scheduling](https://laravel.com/docs/13.x/scheduling)
+```bash
+sudo mkdir -p /opt/max-notify
+sudo chown "$USER":"$USER" /opt/max-notify
+git clone https://github.com/papinomoloko1917/laravel-max-notify.git /opt/max-notify/app
+cd /opt/max-notify/app
+git status
+git log -1 --oneline
+test -f compose.production.yaml
+test -f .env.production.example
+test -f docker/production/Dockerfile
+```
+
+Устанавливайте только commit, в котором уже есть `compose.production.yaml`, `docker/production/` и `.env.production.example`. Незакоммиченные файлы с другого компьютера Git не переносит: сначала они должны пройти тесты, попасть в осмысленный commit и быть отправлены в GitHub.
+
+## 5. Production-переменные
+
+Создайте закрытый файл окружения:
+
+```bash
+cp .env.production.example .env.production
+chmod 600 .env.production
+nano .env.production
+```
+
+Обязательно замените:
+
+- `SERVER_IP` — постоянный IP MiniPC;
+- `APP_URL` — `https://<IP MiniPC>`;
+- `DAHUA_WEBHOOK_BASE_URL` — `http://<IP MiniPC>`;
+- `DB_PASSWORD` — отдельный длинный случайный пароль;
+- при необходимости имя БД и пользователя.
+
+Сгенерировать пароль PostgreSQL можно так:
+
+```bash
+openssl rand -base64 36
+```
+
+Оставьте `APP_KEY=` пустым до отдельного шага ниже. Не копируйте ключ с dev-машины. `MAX_TOKEN` тоже можно оставить пустым: после входа его безопаснее проверить и сохранить через страницу настройки MAX-бота.
+
+Проверьте важные production-значения:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://10.10.0.50
+APP_TIMEZONE=Europe/Moscow
+LOG_CHANNEL=stderr
+DB_HOST=pgsql
+SESSION_ENCRYPT=true
+SESSION_SECURE_COOKIE=true
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+DAHUA_WEBHOOK_BASE_URL=http://10.10.0.50
+```
+
+Не добавляйте `.env.production` в Git, не отправляйте его в чат и не храните вместе с обычной копией репозитория.
+
+## 6. Сборка образов и APP_KEY
+
+Проверьте итоговую Compose-конфигурацию и соберите образы:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml config --quiet
+docker compose --env-file .env.production -f compose.production.yaml build
+```
+
+Сгенерируйте ключ Laravel внутри собранного образа:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml run --rm --no-deps app php artisan key:generate --show
+```
+
+Скопируйте всю строку `base64:...` в `APP_KEY` файла `.env.production`. Этот ключ нельзя менять после начала работы: им зашифрованы Digest-пароли камер, webhook-токены и токен MAX. Потеря `APP_KEY` означает потерю доступа к этим значениям.
+
+Сохраните защищённую копию `.env.production` отдельно от MiniPC.
+
+## 7. Первый запуск и база данных
+
+Сначала запустите PostgreSQL и PHP-приложение:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml up -d pgsql app
+docker compose --env-file .env.production -f compose.production.yaml ps
+```
+
+Примените миграции и создайте production-кеши Laravel:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan migrate --force
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan optimize
+```
+
+Не запускайте `db:seed`: тестовый пользователь создаётся только в `local`, а production-администратор создаётся интерактивной командой:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan admin:create
+```
+
+Команда запросит имя, email и дважды пароль. Пароль не является аргументом командной строки и не попадёт в shell history. Минимальная длина — 12 символов.
+
+Теперь запустите весь набор сервисов:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml up -d
+docker compose --env-file .env.production -f compose.production.yaml ps
+```
+
+Ожидаемое состояние: `app`, `queue`, `scheduler`, `web`, `pgsql` работают; PostgreSQL имеет статус healthy. Наружу опубликованы только `80` и `443` на `SERVER_IP`.
+
+## 8. Доверие локальному HTTPS-сертификату
+
+Caddy создаёт собственный локальный корневой сертификат и выдаёт сертификат для IP MiniPC. Храните экспортируемую копию вне Git-репозитория и копируйте **только публичный root certificate**:
+
+```bash
+mkdir -p /opt/max-notify/certificates
+chmod 700 /opt/max-notify/certificates
+
+docker compose --env-file .env.production -f compose.production.yaml \
+  cp web:/data/caddy/pki/authorities/local/root.crt \
+  /opt/max-notify/certificates/max-notify-local-ca.crt
+
+chmod 644 /opt/max-notify/certificates/max-notify-local-ca.crt
+```
+
+Передайте `/opt/max-notify/certificates/max-notify-local-ca.crt` на каждый доверенный администраторский компьютер по защищённому каналу.
+
+На Windows запустите `certmgr.msc` для текущего пользователя или `mmc` → Certificates для компьютера, импортируйте сертификат в «Доверенные корневые центры сертификации», затем полностью перезапустите браузер. Устанавливайте этот root CA только на устройствах, которым вы доверяете.
+
+На Ubuntu-клиенте:
+
+```bash
+sudo cp max-notify-local-ca.crt /usr/local/share/ca-certificates/max-notify-local-ca.crt
+sudo update-ca-certificates
+```
+
+После установки CA откройте:
+
+```text
+https://<IP MiniPC>/login
+```
+
+Не обходите предупреждение браузера на постоянной основе. Если certificate warning остаётся, проверьте, что `SERVER_IP`, `APP_URL` и адрес в браузере совпадают буквально.
+
+## 9. Первичная настройка приложения
+
+В панели выполните последовательно:
+
+1. Войдите под созданным администратором.
+2. Откройте настройку MAX-бота, введите токен и дождитесь успешной проверки `GET /me`.
+3. Создайте клиента и укажите его MAX chat ID.
+4. Создайте камеру: название, активность, адрес устройства вида `http://10.10.0.181` без `/cgi-bin/snapshot.cgi`, Digest login/password и канал снимка.
+5. Назначьте клиента камере.
+6. На странице правил камеры добавьте нужные типы событий.
+7. Скопируйте целиком готовый URL. Благодаря `DAHUA_WEBHOOK_BASE_URL` он будет HTTP, хотя панель работает по HTTPS.
+8. В Dahua вставьте URL в «Отправить команду» и отключите device-side Authentication: секретный токен уже находится в URL.
+
+HTTP-порт не показывает панель и для любого пути кроме `/webhooks/dahua` возвращает `404`. Access logs HTTP listener и PHP-FPM отключены, а HTTPS listener пропускает webhook-запросы при журналировании, чтобы query-параметр `token` не сохранялся. Безопасные прикладные результаты продолжают попадать в Laravel log без секретов.
+
+## 10. Проверка после установки
+
+Проверьте health route с администраторского компьютера:
+
+```bash
+curl --cacert max-notify-local-ca.crt https://<IP MiniPC>/up
+```
+
+Ожидается ответ `200` и текст `Application up`.
+
+Проверьте процессы и журналы:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml ps
+docker compose --env-file .env.production -f compose.production.yaml logs --tail=100 app
+docker compose --env-file .env.production -f compose.production.yaml logs --tail=100 queue
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan queue:failed
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan schedule:list
+```
+
+До сохранения реального MAX-токена отдельно проверьте TLS из контейнера очереди:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml exec queue \
+  php artisan tinker --execute="dump(\Illuminate\Support\Facades\Http::get(config('services.max.base_url').'/me')->status());"
+```
+
+Без токена ожидается HTTP-статус `401`. Он означает, что HTTPS-соединение и проверка сертификата состоялись, а MAX ожидаемо отклонил неаутентифицированный запрос. Ошибка `cURL error 60` означает, что образ собран без актуального доверенного CA. На чистом сервере повторите сборку без кеша и пересоздайте контейнеры:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml build --no-cache
+docker compose --env-file .env.production -f compose.production.yaml up -d --force-recreate
+```
+
+Затем выполните одно контролируемое Dahua-событие и убедитесь, что:
+
+- событие появилось в истории;
+- статус перешёл из «Ожидает» в итоговый;
+- очередь снова пуста;
+- клиент получил текст и снимок в MAX;
+- новые строки не появились в `failed_jobs`.
+
+## 11. Firewall и границы локальной сети
+
+Ни `5432`, ни `9000` production Compose не публикует. Порты `80` и `443` привязаны только к `SERVER_IP`, но по умолчанию доступны всей сети, имеющей маршрут к этому IP.
+
+Минимально обеспечьте на роутере отсутствие port forwarding из интернета. В идеале разрешите:
+
+- TCP `80` только от IP камеры/NVR;
+- TCP `443` только от администраторской подсети/устройств;
+- SSH только от администраторских устройств.
+
+Важно: опубликованные Docker-порты могут обходить обычные ожидания от UFW. Ограничения контейнерных портов нужно проектировать через Docker firewall (`DOCKER-USER` при iptables backend либо соответствующую nftables-цепочку). Не вставляйте готовое правило до выяснения имени LAN-интерфейса, реальной подсети администратора и IP всех источников Dahua: ошибка может отрезать webhook или SSH. Эти значения остаются обязательной частью финального hardening сервера.
+
+## 12. Резервные копии
+
+Docker volume на том же SSD не является резервной копией. Нужен внешний диск, NAS или другой защищённый узел.
+
+Пример ручной логической копии PostgreSQL в уже смонтированный каталог `/mnt/max-notify-backups`:
+
+```bash
+mkdir -p /mnt/max-notify-backups
+docker compose --env-file .env.production -f compose.production.yaml exec -T pgsql \
+  pg_dump -U max_notify -d max_notify --format=custom \
+  > "/mnt/max-notify-backups/max-notify-$(date +%F-%H%M%S).dump"
+```
+
+Если вы изменили `DB_USERNAME` или `DB_DATABASE`, измените их и в этой команде. Проверяйте, что файл не пуст и копируется с MiniPC на другой носитель.
+
+Отдельно и безопасно сохраните:
+
+- `.env.production`, особенно `APP_KEY`;
+- дамп PostgreSQL;
+- Caddy volume или локальный root CA, чтобы после восстановления не переустанавливать новый CA на всех компьютерах;
+- точный Git commit приложения.
+
+Резервная копия считается рабочей только после проверенного восстановления на отдельной тестовой БД/машине. Автоматический график, шифрование, срок хранения и конкретное внешнее место нельзя выбрать до определения backup destination.
+
+## 13. Обновление приложения
+
+Перед обновлением убедитесь, что изменения протестированы и отправлены в Git. На сервере:
+
+```bash
+cd /opt/max-notify/app
+git fetch --prune
+git status
+git pull --ff-only
+git log -1 --oneline
+docker compose --env-file .env.production -f compose.production.yaml build
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan down
+docker compose --env-file .env.production -f compose.production.yaml stop queue scheduler
+docker compose --env-file .env.production -f compose.production.yaml run --rm app php artisan migrate --force
+docker compose --env-file .env.production -f compose.production.yaml up -d --remove-orphans
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan optimize
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan queue:restart
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan up
+docker compose --env-file .env.production -f compose.production.yaml ps
+```
+
+При миграциях сначала создавайте резервную копию. Откат Git-кода не всегда откатывает схему БД, поэтому rollback должен учитывать совместимость миграций и восстановление дампа.
+
+## 14. Обычные команды оператора
+
+Все команды выполняются из `/opt/max-notify/app`:
+
+```bash
+# Состояние
+docker compose --env-file .env.production -f compose.production.yaml ps
+
+# Последние журналы
+docker compose --env-file .env.production -f compose.production.yaml logs --tail=200 app queue web
+
+# Следить за worker в реальном времени
+docker compose --env-file .env.production -f compose.production.yaml logs -f queue
+
+# Перезапустить только worker
+docker compose --env-file .env.production -f compose.production.yaml restart queue
+
+# Остановить контейнеры, сохранив БД и CA
+docker compose --env-file .env.production -f compose.production.yaml down
+
+# Запустить снова
+docker compose --env-file .env.production -f compose.production.yaml up -d
+```
+
+Никогда не выполняйте `docker compose down -v`: ключ `-v` удалит volumes, включая PostgreSQL. Не запускайте `queue:retry` для `ProcessCameraEvent`: после частичной доставки это может повторно отправить уведомления. Подробности находятся в `docs/OPERATIONS.md`.
+
+## 15. Что ещё нужно завершить перед окончательным вводом в эксплуатацию
+
+Технический deployment теперь воспроизводим, но конкретная площадка всё ещё требует зафиксировать:
+
+- постоянные IP MiniPC и NVR/камер;
+- разрешённую администраторскую подсеть;
+- постоянные Docker firewall-правила и их восстановление после reboot;
+- внешний backup destination, расписание, шифрование и тест восстановления;
+- наличие UPS и поведение после потери питания;
+- контроль свободного места и оповещение о неработающем worker/росте `failed_jobs`.
+
+## Официальные справочные материалы
+
+- [Установка Docker Engine на Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+- [Docker firewall и UFW](https://docs.docker.com/engine/network/packet-filtering-firewalls/)
+- [Laravel 13: production deployment](https://laravel.com/docs/13.x/deployment)
+- [Laravel 13: queues](https://laravel.com/docs/13.x/queues)
+- [Laravel 13: scheduler](https://laravel.com/docs/13.x/scheduling)

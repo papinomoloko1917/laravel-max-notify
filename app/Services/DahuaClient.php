@@ -7,11 +7,12 @@ use UnexpectedValueException;
 
 class DahuaClient
 {
-    public function snapshot(int $channel): string
-    {
-        $baseUrl = (string) config('services.dahua.base_url');
-        $username = (string) config('services.dahua.username');
-        $password = (string) config('services.dahua.password');
+    public function snapshot(
+        string $baseUrl,
+        string $username,
+        string $password,
+        int $channel,
+    ): string {
         $connectTimeout = (int) config('services.dahua.connect_timeout');
         $timeout = (int) config('services.dahua.timeout');
 

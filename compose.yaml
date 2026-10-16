@@ -23,6 +23,36 @@ services:
       - sail
     depends_on:
       - pgsql
+  queue:
+    image: 'sail-8.5/app'
+    command: php artisan queue:work database --queue=default --sleep=3 --tries=1 --timeout=80
+    restart: unless-stopped
+    stop_grace_period: 90s
+    environment:
+      WWWUSER: '${WWWUSER}'
+      LARAVEL_SAIL: 1
+    volumes:
+      - '.:/var/www/html'
+    networks:
+      - sail
+    depends_on:
+      pgsql:
+        condition: service_healthy
+  scheduler:
+    image: 'sail-8.5/app'
+    command: php artisan schedule:work
+    restart: unless-stopped
+    stop_grace_period: 15s
+    environment:
+      WWWUSER: '${WWWUSER}'
+      LARAVEL_SAIL: 1
+    volumes:
+      - '.:/var/www/html'
+    networks:
+      - sail
+    depends_on:
+      pgsql:
+        condition: service_healthy
   pgsql:
     image: 'postgres:18-alpine'
     ports:

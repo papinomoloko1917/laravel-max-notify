@@ -24,6 +24,10 @@ class DatabaseIndexesTest extends TestCase
             $cameraEventIndexes['camera_events_status_id_index']['columns'],
         );
         $this->assertSame(
+            ['status', 'created_at'],
+            $cameraEventIndexes['camera_events_status_created_at_index']['columns'],
+        );
+        $this->assertSame(
             ['client_id'],
             $cameraClientIndexes['camera_client_client_id_index']['columns'],
         );

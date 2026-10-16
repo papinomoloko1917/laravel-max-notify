@@ -3,6 +3,7 @@
 namespace Tests\Feature\Services;
 
 use App\Services\MaxClient;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -11,6 +12,57 @@ use UnexpectedValueException;
 
 class MaxClientTest extends TestCase
 {
+    use RefreshDatabase;
+
+    public function test_it_inspects_a_bot_token(): void
+    {
+        Http::preventStrayRequests();
+
+        config(['services.max.base_url' => 'https://max.test']);
+
+        Http::fake([
+            'https://max.test/me' => Http::response([
+                'user_id' => 12345,
+                'name' => 'Notify Bot',
+                'username' => 'notify_bot',
+                'is_bot' => true,
+            ]),
+        ]);
+
+        $bot = app(MaxClient::class)->inspectBot('candidate-token');
+
+        $this->assertSame([
+            'user_id' => 12345,
+            'name' => 'Notify Bot',
+            'username' => 'notify_bot',
+        ], $bot);
+
+        Http::assertSent(
+            fn (Request $request): bool => $request->method() === 'GET'
+                && $request->url() === 'https://max.test/me'
+                && $request->hasHeader('Authorization', 'candidate-token'),
+        );
+    }
+
+    public function test_it_rejects_invalid_bot_information(): void
+    {
+        Http::preventStrayRequests();
+
+        config(['services.max.base_url' => 'https://max.test']);
+
+        Http::fake([
+            'https://max.test/me' => Http::response([
+                'user_id' => 12345,
+                'name' => 'Not a bot',
+                'is_bot' => false,
+            ]),
+        ]);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        app(MaxClient::class)->inspectBot('candidate-token');
+    }
+
     public function test_it_creates_an_image_upload_url(): void
     {
         Http::preventStrayRequests();
@@ -27,7 +79,7 @@ class MaxClientTest extends TestCase
             ),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $uploadUrl = $client->createImageUploadUrl();
 
@@ -59,7 +111,7 @@ class MaxClientTest extends TestCase
             ),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $this->expectException(RequestException::class);
 
@@ -82,7 +134,7 @@ class MaxClientTest extends TestCase
             ),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $this->expectException(UnexpectedValueException::class);
 
@@ -110,7 +162,7 @@ class MaxClientTest extends TestCase
                 ], ]),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $actualMediaToken = $client->uploadImage(
             $uploadUrl,
@@ -144,7 +196,7 @@ class MaxClientTest extends TestCase
             ),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $this->expectException(RequestException::class);
 
@@ -171,7 +223,7 @@ class MaxClientTest extends TestCase
             ),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $this->expectException(UnexpectedValueException::class);
 
@@ -217,7 +269,7 @@ class MaxClientTest extends TestCase
             ]),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $actualMessageId = $client->sendImageMessage(
             $chatId,
@@ -249,7 +301,7 @@ class MaxClientTest extends TestCase
             'https://max.test/messages*' => Http::response([], 500),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $this->expectException(RequestException::class);
 
@@ -277,7 +329,7 @@ class MaxClientTest extends TestCase
             ]),
         ]);
 
-        $client = new MaxClient;
+        $client = app(MaxClient::class);
 
         $this->expectException(UnexpectedValueException::class);
 

@@ -7,7 +7,7 @@ This runbook covers the current PostgreSQL-backed queue. It is intended for trus
 - The Dashboard shows only the number of rows in `jobs` and `failed_jobs`.
 - Queue payloads and exception text are restricted operational data. Do not expose them through the web UI, paste them into public chats, or attach them to public issues.
 - Retain failed-job diagnostics for 30 days (`720` hours). This is long enough for the current low-volume installation to investigate delayed reports without keeping exception details indefinitely.
-- Retention remains a manual maintenance action until the production scheduler lifecycle is designed in Phase 25.
+- Failed-job retention remains a reviewed manual maintenance action; production Scheduler currently automates only CameraEvent retention.
 
 ## Investigating a failure
 
@@ -54,6 +54,22 @@ Prune diagnostics older than 30 days during planned maintenance:
 
 Review the failed-job list before pruning. Do not use `queue:flush` as routine cleanup because it deletes every failed-job diagnostic, and do not use `queue:clear` because it deletes pending work.
 
-## Production follow-up
+## Camera-event history retention
 
-Phase 25 must define the persistent worker, scheduler, monitoring, database backup, and restore lifecycle for the actual deployment target. Only then should the 30-day prune command be scheduled automatically.
+Processed `camera_events` rows (`completed`, `skipped`, and `failed`) are retained for 30 days by default. The development scheduler runs the following command daily at 03:00:
+
+```bash
+./vendor/bin/sail artisan camera-events:prune
+```
+
+Set a different positive period with `CAMERA_EVENT_RETENTION_DAYS`. Pending rows are deliberately excluded because a queued job may still reference them. The authenticated event-history page also offers a confirmed “Очистить обработанную историю” action; it applies the same terminal-status boundary and never clears the Laravel queue or `failed_jobs` diagnostics.
+
+## Production commands
+
+Production runs one supervised database worker and one Laravel Scheduler container through `compose.production.yaml`. Replace the Sail prefix in the commands above with:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml exec app php artisan
+```
+
+For example, list failures with `... artisan queue:failed` and remove one investigated diagnostic with `... artisan queue:forget <uuid>`. Failed-job pruning remains a reviewed operator action; only CameraEvent retention is scheduled. Monitoring, the off-device backup schedule, and a restore rehearsal remain site-specific follow-up described in `docs/DEPLOYMENT.md`.

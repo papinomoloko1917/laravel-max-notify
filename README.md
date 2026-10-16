@@ -1,38 +1,82 @@
 # max-notify
 
-Laravel application that receives Dahua camera events and notifies configured MAX Messenger recipients with camera snapshots.
+`max-notify` — приложение на Laravel, которое принимает события от камер и регистраторов Dahua, получает снимок с соответствующего устройства и отправляет уведомление с изображением назначенным получателям в MAX.
 
-The project is being built incrementally. The roadmap describes future direction rather than features that must all be installed in advance.
+Проект развивается последовательно. [План разработки](docs/ROADMAP.md) описывает направление развития, а не список технологий, которые должны быть установлены заранее.
 
-## Current status
+## Текущее состояние
 
-- Laravel 13 with the official Livewire Starter Kit;
-- Livewire 4, Flux UI, and Tailwind CSS 4;
+В проекте используются:
+
+- PHP 8.5 и Laravel 13;
+- официальный Livewire Starter Kit, Livewire 4 и Flux UI;
+- Tailwind CSS 4 и Vite+;
 - PostgreSQL 18;
-- Laravel Sail with Laravel, PostgreSQL, and local Adminer services;
-- Pest, Pint, and Larastan;
-- authenticated Camera and Client administration with tested many-to-many assignments;
-- authenticated Dahua IVS webhook with per-Camera notification windows;
-- tested Dahua snapshot client using Digest authentication and explicit request limits;
-- tested MAX Messenger client for upload-URL creation, JPEG upload, and image-message delivery;
-- asynchronous snapshot delivery through the PostgreSQL-backed Laravel queue;
-- atomic duplicate-event suppression through the PostgreSQL-backed Laravel cache;
-- persisted CameraEvent history, operational Dashboard, and read-only queue-health counts;
-- a published Sail 8.5 image with the trusted CA chain required by the current MAX HTTPS endpoints.
+- Laravel Sail для локальной разработки;
+- Pest, Pint и Larastan;
+- отдельная серверная топология Docker с Caddy, PHP-FPM, PostgreSQL, обработчиком очереди и Laravel Scheduler.
 
-Camera and Client administration, including many-to-many assignment editing and validated Camera notification-window configuration, is implemented. The IVS endpoint authenticates active Cameras through HTTP Basic, validates static metadata, applies the configured notification window, suppresses immediate duplicates, persists a pending CameraEvent, and dispatches slow Dahua/MAX work to the database queue. The worker retrieves and uploads one snapshot and sends it to every assigned Client while updating event history. Redis remains deliberately deferred because PostgreSQL currently satisfies the observed queue and cache requirements.
+Уже реализованы:
 
-See [Development Handoff](docs/DEVELOPMENT.md) for the exact current state and verification baseline.
+- закрытый административный интерфейс без публичной регистрации;
+- управление камерами и клиентами, включая связь «многие ко многим»;
+- отдельные для каждой камеры адрес снимка, канал и Digest-учётные данные;
+- несколько правил событий для одной камеры;
+- подготовленный список распространённых событий и пользовательские коды правил;
+- формирование готовых webhook URL для камер и регистраторов;
+- два варианта аутентификации webhook: Basic Auth или индивидуальный URL-токен камеры;
+- ограничения времени отправки уведомлений;
+- защита от немедленной повторной обработки одинакового события;
+- асинхронная обработка через очередь Laravel на PostgreSQL;
+- получение JPEG-снимка через Dahua HTTP API с Digest-аутентификацией;
+- загрузка изображения и отправка сообщения через MAX API;
+- один настраиваемый MAX-бот с проверкой токена и зашифрованным хранением;
+- отправка одного снимка всем клиентам, назначенным камере;
+- журнал событий, статусы обработки, панель мониторинга и показатели состояния очереди;
+- автоматическая очистка завершённых событий старше заданного срока;
+- конфигурация рабочего сервера и подробная инструкция установки на отдельный MiniPC.
 
-## Local development
+Каждая камера хранит собственное подключение к устройству. Поэтому приложение может работать с несколькими IP-камерами и регистраторами с разными адресами, а одинаковые номера каналов допустимы на разных устройствах. Digest-пароль камеры, webhook-токен и токен MAX шифруются с использованием `APP_KEY`. Basic-пароль входящего webhook хранится только в виде хеша.
 
-Prerequisites:
+Точная контрольная точка, результаты последних проверок и следующий шаг находятся в [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+## Как работает событие
+
+```text
+Dahua камера или регистратор
+        |
+        v
+GET /webhooks/dahua
+        |
+        +--> аутентификация камеры
+        +--> проверка event, channel и rule
+        +--> проверка временного окна
+        +--> защита от дублей
+        +--> создание CameraEvent
+        |
+        v
+очередь Laravel
+        |
+        +--> получение JPEG-снимка с выбранной камеры
+        +--> создание URL загрузки в MAX
+        +--> однократная загрузка изображения
+        +--> отправка сообщения всем назначенным клиентам
+        |
+        v
+обновление журнала событий
+```
+
+Webhook быстро подтверждает приём события, а медленные обращения к Dahua и MAX выполняются обработчиком очереди. Redis пока не используется: при текущей нагрузке PostgreSQL обеспечивает базу данных, очередь, кеш и атомарную защиту от дублей.
+
+## Локальная разработка
+
+### Требования
 
 - Git;
-- Docker with Docker Compose;
-- PHP and Composer for the initial dependency installation.
+- Docker с Docker Compose;
+- PHP и Composer для первоначальной установки зависимостей.
 
-Initial setup:
+### Первый запуск
 
 ```bash
 composer install
@@ -41,49 +85,118 @@ cp .env.example .env
 ./vendor/bin/sail up -d
 ./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate
-./vendor/bin/sail npm install
+./vendor/bin/sail npm ci
 ./vendor/bin/sail npm run build
 ```
 
-Development services:
+Локальные сервисы:
 
-- application: `http://localhost` by default;
-- Adminer: `http://localhost:8080` by default;
-- PostgreSQL host from Sail containers: `pgsql`.
+- приложение: `http://localhost`;
+- Adminer: `http://localhost:8080`;
+- PostgreSQL внутри Docker-сети: `pgsql`;
+- обработчик очереди базы данных запускается автоматически;
+- Laravel Scheduler запускается автоматически.
 
-Keep `.env`, camera credentials, API tokens, and production secrets out of Git.
+Значения портов и адресов можно изменить в `.env`.
 
-This installation expects `APP_TIMEZONE=Europe/Moscow`. Dahua snapshot access uses the local-only `DAHUA_BASE_URL`, `DAHUA_USERNAME`, and `DAHUA_PASSWORD` values described by `.env.example`; the base URL must contain only the recorder origin, without `/cgi-bin`. MAX access uses the local-only `MAX_TOKEN`. Never commit real credentials or tokens. The default Dahua connection and overall request limits are 3 and 10 seconds.
+### Важные переменные окружения
 
-The application image is built from the committed `docker/8.5` runtime. Rebuild `laravel.test` after pulling changes to that Dockerfile or its certificates. TLS verification must remain enabled.
+`APP_URL` — адрес административного интерфейса.
 
-## Focused integration checks
+`DAHUA_WEBHOOK_BASE_URL` — адрес Laravel-сервера, доступный камере или регистратору. В локальном окружении по умолчанию используется `APP_URL`. Сформированные webhook URL не должны содержать `localhost`, `127.0.0.1` или имя Docker-контейнера, если Dahua находится на другом устройстве.
+
+`APP_TIMEZONE=Europe/Moscow` — часовой пояс установки.
+
+`MAX_TOKEN` — первоначальный или резервный токен MAX-бота. После сохранения проверенного токена в административном интерфейсе зашифрованное значение из базы данных имеет приоритет.
+
+`CAMERA_EVENT_RETENTION_DAYS` — срок хранения завершённых событий. По умолчанию используется 30 дней; ожидающие обработки события автоматически не удаляются.
+
+`DAHUA_CONNECT_TIMEOUT` и `DAHUA_TIMEOUT`, а также соответствующие параметры MAX ограничивают время внешних HTTP-запросов. Текущие значения по умолчанию — 3 секунды на соединение и 10 секунд на весь запрос.
+
+Никогда не добавляйте в Git `.env`, реальные токены, пароли камер, webhook-секреты, учётные данные рабочего сервера или приватные ключи. После начала эксплуатации нельзя заменять или терять `APP_KEY`: без него приложение не сможет расшифровать сохранённые пароли и токены.
+
+## Настройка камер и событий
+
+В административном интерфейсе для каждой камеры задаются:
+
+- название и состояние активности;
+- адрес устройства без `/cgi-bin/snapshot.cgi` и параметра `channel`;
+- номер канала;
+- Digest-логин и пароль для исходящего запроса снимка;
+- при необходимости Basic-логин и пароль входящего webhook;
+- окно времени отправки уведомлений;
+- назначенные клиенты;
+- одно или несколько правил событий.
+
+Страница правил формирует полный webhook URL с идентификатором камеры, индивидуальным токеном, `event`, `channel` и `rule`. Для устройства, которое не отправляет HTTP Authorization, нужно скопировать полный URL в действие Dahua и отключить аутентификацию на стороне устройства. Сам URL содержит секретный токен, поэтому его нельзя публиковать или записывать в открытые access-логи.
+
+Basic-учётные данные webhook и Digest-учётные данные снимка решают разные задачи:
+
+- Basic Auth подтверждает входящий запрос от Dahua к Laravel;
+- Digest Auth используется Laravel для получения снимка с камеры или регистратора.
+
+## Сертификаты MAX
+
+Локальный образ `docker/8.5` содержит доверенные корневой и промежуточный сертификаты, необходимые для проверки текущей TLS-цепочки MAX. После изменения Dockerfile или сертификатов пересоберите образ:
 
 ```bash
-./vendor/bin/sail artisan test tests/Feature/Models/CameraTest.php
-./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
-./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
-./vendor/bin/sail artisan test tests/Feature/Services/MaxClientTest.php
-./vendor/bin/sail pint --test \
-  app/Services/DahuaClient.php \
-  tests/Feature/Services/DahuaClientTest.php \
-  config/services.php
+./vendor/bin/sail build --no-cache laravel.test
+./vendor/bin/sail up -d
 ```
 
-The full quality command is:
+TLS-проверка должна оставаться включённой. Отключение проверки сертификатов не является допустимым решением.
+
+## Проверка проекта
+
+Полная проверка:
 
 ```bash
 ./vendor/bin/sail composer test
 ```
 
-It runs Pint, Larastan, and the full automated test suite. The current baseline passes without ignored static-analysis findings.
+Команда запускает Pint, Larastan и весь набор автоматических тестов. Текущий проверочный результат: 170 тестов, 647 утверждений и 0 ошибок статического анализа.
 
-## Project documentation
+Проверка клиентской сборки:
 
-- [Development roadmap](docs/ROADMAP.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Development handoff](docs/DEVELOPMENT.md)
-- [Operations runbook](docs/OPERATIONS.md)
-- [Deployment plan](docs/DEPLOYMENT.md)
-- [Codex and Git workflow](docs/CODEX_WORKFLOW.md)
-- [Agent rules](AGENTS.md)
+```bash
+./vendor/bin/sail npm run build
+./vendor/bin/sail npm audit --audit-level=high
+```
+
+Текущая клиентская часть собирается успешно, а `npm audit` не обнаруживает известных уязвимостей.
+
+Некоторые целевые интеграционные проверки:
+
+```bash
+./vendor/bin/sail artisan test tests/Feature/DahuaWebhookTest.php
+./vendor/bin/sail artisan test tests/Feature/Jobs/ProcessCameraEventTest.php
+./vendor/bin/sail artisan test tests/Feature/Services/DahuaClientTest.php
+./vendor/bin/sail artisan test tests/Feature/Services/MaxClientTest.php
+./vendor/bin/sail artisan test tests/Feature/CameraRulesTest.php
+./vendor/bin/sail artisan test tests/Feature/Settings/MaxBotSettingsTest.php
+```
+
+В автоматических тестах внешние сервисы подменяются через `Http::fake()`. Реальные запросы к устройствам и MAX используются только для контролируемой ручной проверки HTTP-контрактов.
+
+## Установка на рабочий сервер
+
+На рабочем сервере не используется локальный `compose.yaml` от Sail. В репозитории подготовлен отдельный [compose.production.yaml](compose.production.yaml), который запускает:
+
+- Caddy с HTTPS для административного интерфейса;
+- отдельный HTTP-вход только для `/webhooks/dahua`;
+- PHP-FPM приложение;
+- один обработчик очереди;
+- Laravel Scheduler;
+- PostgreSQL без опубликованного наружу порта.
+
+Подробная пошаговая инструкция для чистого Ubuntu Server находится в [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Перед установкой необходимо зафиксировать и отправить текущие изменения в Git, выбрать постоянный LAN-адрес MiniPC и подготовить защищённое внешнее хранение резервных копий.
+
+## Документация
+
+- [План разработки](docs/ROADMAP.md)
+- [Архитектура](docs/ARCHITECTURE.md)
+- [Контрольная точка между сессиями и компьютерами](docs/DEVELOPMENT.md)
+- [Эксплуатация и очередь](docs/OPERATIONS.md)
+- [Установка на рабочий сервер](docs/DEPLOYMENT.md)
+- [Работа с Codex и Git](docs/CODEX_WORKFLOW.md)
+- [Правила для AI-агента](AGENTS.md)
