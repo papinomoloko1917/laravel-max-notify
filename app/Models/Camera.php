@@ -48,7 +48,7 @@ class Camera extends Model
     protected static function booted(): void
     {
         static::creating(function (Camera $camera): void {
-            $camera->webhook_token ??= Str::random(64);
+            $camera->webhook_token ??= Str::random(24);
         });
     }
 

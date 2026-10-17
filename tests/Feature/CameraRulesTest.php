@@ -121,7 +121,7 @@ class CameraRulesTest extends TestCase
         $camera->refresh();
 
         $this->assertIsString($camera->webhook_token);
-        $this->assertSame(64, strlen($camera->webhook_token));
+        $this->assertSame(24, strlen($camera->webhook_token));
         $this->assertNotSame($oldToken, $camera->webhook_token);
         $this->assertNotSame($oldCiphertext, $camera->getRawOriginal('webhook_token'));
     }

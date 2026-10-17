@@ -149,7 +149,7 @@ new #[Title('Правила камеры')] class extends Component
     public function rotateWebhookToken(): void
     {
         $this->camera->update([
-            'webhook_token' => Str::random(64),
+            'webhook_token' => Str::random(24),
         ]);
 
         $this->camera->refresh();
