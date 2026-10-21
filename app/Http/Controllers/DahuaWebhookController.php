@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Jobs\ProcessCameraEvent;
 use App\Models\Camera;
 use App\Models\CameraEvent;
+use App\Services\CameraEventSnapshotStore;
+use App\Services\DahuaClient;
 use App\Services\NotificationWindow;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -12,14 +14,19 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Throwable;
+use UnexpectedValueException;
 
 class DahuaWebhookController extends Controller
 {
     /**
      * Handle the incoming request.
      */
-    public function __invoke(Request $request): Response
-    {
+    public function __invoke(
+        Request $request,
+        DahuaClient $dahuaClient,
+        CameraEventSnapshotStore $snapshotStore,
+    ): Response {
         $username = $request->getUser();
 
         $password = $request->getPassword();
@@ -157,7 +164,47 @@ class DahuaWebhookController extends Controller
             'rule_title' => is_string($ruleTitle) ? $ruleTitle : $validated['rule'],
         ]);
 
-        ProcessCameraEvent::dispatch($camera->id, (int) $validated['channel'], $cameraEvent->id);
+        try {
+            if (
+                ! is_string($camera->snapshot_base_url)
+                || $camera->snapshot_base_url === ''
+                || ! is_string($camera->snapshot_username)
+                || $camera->snapshot_username === ''
+                || ! is_string($camera->snapshot_password)
+                || $camera->snapshot_password === ''
+            ) {
+                throw new UnexpectedValueException('Camera snapshot connection is not configured.');
+            }
+
+            $jpeg = $dahuaClient->snapshot(
+                $camera->snapshot_base_url,
+                $camera->snapshot_username,
+                $camera->snapshot_password,
+                (int) $validated['channel'],
+            );
+
+            $snapshotStore->put($cameraEvent->id, $jpeg);
+
+            ProcessCameraEvent::dispatch($camera->id, (int) $validated['channel'], $cameraEvent->id);
+        } catch (Throwable $exception) {
+            $snapshotStore->delete($cameraEvent->id);
+            Cache::forget($duplicateKey);
+
+            $cameraEvent->update([
+                'status' => 'failed',
+                'failure_type' => $exception::class,
+                'processed_at' => now(),
+            ]);
+
+            Log::error('Dahua webhook snapshot capture failed', [
+                'camera_event_id' => $cameraEvent->id,
+                'camera_id' => $camera->id,
+                'failure_type' => $exception::class,
+            ]);
+
+            return response('Snapshot unavailable', 503)
+                ->header('Content-Type', 'text/plain');
+        }
 
         Log::info('Dahua IVS webhook accepted', [
             'camera_id' => $camera->id,

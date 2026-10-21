@@ -5,16 +5,34 @@ namespace Tests\Feature;
 use App\Jobs\ProcessCameraEvent;
 use App\Models\Camera;
 use App\Models\CameraEvent;
+use App\Services\CameraEventSnapshotStore;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class DahuaWebhookTest extends TestCase
 {
     use RefreshDatabase;
+
+    /** @var list<mixed> */
+    private array $snapshotResponses = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('local');
+        Http::preventStrayRequests();
+        Http::fake(function () {
+            return array_shift($this->snapshotResponses)
+                ?? Http::response('early-jpeg', 200, ['Content-Type' => 'image/jpeg']);
+        });
+    }
 
     public function test_active_camera_can_send_authenticated_ivs_webhook(): void
     {
@@ -65,6 +83,20 @@ class DahuaWebhookTest extends TestCase
             'processed_at' => null,
         ]);
 
+        Storage::disk('local')->assertExists(
+            app(CameraEventSnapshotStore::class)->path((int) $cameraEvent->id),
+        );
+
+        $this->assertSame(
+            'early-jpeg',
+            Storage::disk('local')->get(
+                app(CameraEventSnapshotStore::class)->path((int) $cameraEvent->id),
+            ),
+        );
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+            && $request->url() === 'http://camera.test/cgi-bin/snapshot.cgi?channel=13');
+
         Queue::assertPushed(
             ProcessCameraEvent::class,
             fn (ProcessCameraEvent $job): bool => $job->cameraId === $camera->id
@@ -112,6 +144,63 @@ class DahuaWebhookTest extends TestCase
             fn (ProcessCameraEvent $job): bool => $job->cameraId === $camera->id
                 && $job->cameraEventId === $cameraEvent->id,
         );
+    }
+
+    public function test_snapshot_failure_is_recorded_without_dispatch_and_can_be_retried(): void
+    {
+        $username = 'snapshot-failure-user';
+        $password = 'snapshot-failure-password';
+        $url = '/webhooks/dahua?event=ivs&channel=13&rule=perimeter';
+
+        Camera::factory()->create([
+            'webhook_username' => $username,
+            'webhook_password' => $password,
+            'is_active' => true,
+        ]);
+
+        $this->snapshotResponses = [
+            Http::response('Invalid Authority!', 401, ['Content-Type' => 'text/plain']),
+            Http::response('retry-jpeg', 200, ['Content-Type' => 'image/jpeg']),
+        ];
+
+        Queue::fake();
+        Log::spy();
+
+        $failedResponse = $this->withBasicAuth($username, $password)->get($url);
+
+        $failedResponse->assertStatus(503);
+        $failedResponse->assertContent('Snapshot unavailable');
+        Queue::assertNothingPushed();
+
+        $failedEvent = CameraEvent::query()->firstOrFail();
+
+        $this->assertSame('failed', $failedEvent->status);
+        $this->assertNotNull($failedEvent->failure_type);
+        $this->assertNotNull($failedEvent->processed_at);
+        Storage::disk('local')->assertMissing(
+            app(CameraEventSnapshotStore::class)->path((int) $failedEvent->id),
+        );
+
+        $retryResponse = $this->withBasicAuth($username, $password)->get($url);
+
+        $retryResponse->assertOk();
+        $retryResponse->assertContent('OK');
+        Queue::assertPushed(ProcessCameraEvent::class, 1);
+        $this->assertDatabaseCount('camera_events', 2);
+
+        $retriedEvent = CameraEvent::query()->latest('id')->firstOrFail();
+
+        Storage::disk('local')->assertExists(
+            app(CameraEventSnapshotStore::class)->path((int) $retriedEvent->id),
+        );
+
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->with('Dahua webhook snapshot capture failed', [
+                'camera_event_id' => $failedEvent->id,
+                'camera_id' => $failedEvent->camera_id,
+                'failure_type' => $failedEvent->failure_type,
+            ]);
     }
 
     public function test_wrong_webhook_url_token_is_rejected(): void
@@ -182,6 +271,7 @@ class DahuaWebhookTest extends TestCase
         $this->assertStringNotContainsString($dahuaUsername, $payload);
         $this->assertStringNotContainsString($dahuaPassword, $payload);
         $this->assertStringNotContainsString($maxToken, $payload);
+        $this->assertStringNotContainsString('early-jpeg', $payload);
     }
 
     public function test_request_without_basic_credentials_is_rejected(): void

@@ -32,7 +32,7 @@ services:
       - queue:work
       - database
       - --queue=default
-      - --sleep=3
+      - --sleep=${QUEUE_SLEEP:-1}
       - --tries=1
       - --timeout=80
       - --max-time=3600

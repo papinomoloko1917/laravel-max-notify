@@ -73,3 +73,15 @@ docker compose --env-file .env.production -f compose.production.yaml exec app ph
 ```
 
 For example, list failures with `... artisan queue:failed` and remove one investigated diagnostic with `... artisan queue:forget <uuid>`. Failed-job pruning remains a reviewed operator action; only CameraEvent retention is scheduled. Monitoring, the off-device backup schedule, and a restore rehearsal remain site-specific follow-up described in `docs/DEPLOYMENT.md`.
+
+## Notification latency
+
+The database worker polls for new jobs using `QUEUE_SLEEP=1`. After changing this value, recreate the queue container; restarting only the Laravel worker process does not change its Compose command:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml up -d --force-recreate queue
+```
+
+For a controlled event, compare `camera_events.created_at` with `processed_at`. This measures processing after Laravel accepted the webhook. It does not measure a delay inside the Camera/NVR before the HTTP request, because the current static Dahua callback does not include the device's detection timestamp. If `jobs` builds up above zero during simultaneous events, investigate worker capacity; do not add Redis or workers based only on one event's external Dahua/MAX request time.
+
+The webhook now captures one JPEG before queue dispatch. A normal response therefore waits for the Camera/NVR snapshot request, but not for MAX. HTTP `503 Snapshot unavailable` means no job was dispatched; the corresponding event is terminally failed and the duplicate claim was released so the device or operator can retry. Pending jobs own files under the private `camera-event-snapshots/` storage directory. Do not clear that directory while jobs are pending. Normal success, skip, exception, and queue failure paths delete their own file; persistent files with no matching pending job indicate an interrupted handoff and should be investigated before manual removal.

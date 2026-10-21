@@ -25,7 +25,7 @@ services:
       - pgsql
   queue:
     image: 'sail-8.5/app'
-    command: php artisan queue:work database --queue=default --sleep=3 --tries=1 --timeout=80
+    command: php artisan queue:work database --queue=default --sleep=${QUEUE_SLEEP:-1} --tries=1 --timeout=80
     restart: unless-stopped
     stop_grace_period: 90s
     environment:

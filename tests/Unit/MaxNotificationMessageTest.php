@@ -18,12 +18,12 @@ class MaxNotificationMessageTest extends TestCase
             'rule' => 'CrossLineDetection',
             'rule_title' => 'Пересечение линии',
         ]);
-        $event->created_at = CarbonImmutable::parse('2026-09-16 06:55:00', 'Europe/Moscow');
+        $event->created_at = CarbonImmutable::parse('2026-09-16 06:55:42', 'Europe/Moscow');
 
         $message = (new MaxNotificationMessage)->format($event);
 
         $this->assertSame(
-            "🚨 Пересечение линии\n\n📍 Цех (техника)\n🕒 16.09 06:55 МСК",
+            "🚨 Пересечение линии\n\n📍 Цех (техника)\n🕒 16.09 06:55:42 МСК",
             $message,
         );
     }

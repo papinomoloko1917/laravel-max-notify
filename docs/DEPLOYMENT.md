@@ -8,6 +8,7 @@ Production-схема отделена от Sail-разработки:
 - Caddy принимает на порту `80` только `/webhooks/dahua`, не записывая URL с секретным webhook-токеном в access log; PHP-FPM access log также отключён;
 - PHP-FPM выполняет Laravel-код и не публикуется в локальную сеть;
 - отдельные контейнеры выполняют очередь и Laravel Scheduler;
+- PHP-FPM и worker используют общий закрытый volume `app-storage`: webhook временно сохраняет в нём ранний JPEG, а worker читает и удаляет этот же файл;
 - PostgreSQL хранится в Docker volume и не публикует порт `5432`;
 - frontend собирается при создании неизменяемого application image;
 - Adminer, Vite, Xdebug, bind mount исходников и `artisan serve` в production отсутствуют.
@@ -174,8 +175,11 @@ SESSION_ENCRYPT=true
 SESSION_SECURE_COOKIE=true
 CACHE_STORE=database
 QUEUE_CONNECTION=database
+QUEUE_SLEEP=1
 DAHUA_WEBHOOK_BASE_URL=http://10.10.0.50
 ```
+
+`QUEUE_SLEEP=1` заставляет простаивающий database-worker проверять новые задания раз в секунду. Это уменьшает задержку уведомления по сравнению с прежними тремя секундами и подходит для текущей небольшой нагрузки.
 
 Не добавляйте `.env.production` в Git, не отправляйте его в чат и не храните вместе с обычной копией репозитория.
 
@@ -346,10 +350,13 @@ docker compose --env-file .env.production -f compose.production.yaml up -d --for
 Затем выполните одно контролируемое Dahua-событие и убедитесь, что:
 
 - событие появилось в истории;
+- webhook не вернул `503 Snapshot unavailable`;
 - статус перешёл из «Ожидает» в итоговый;
 - очередь снова пуста;
 - клиент получил текст и снимок в MAX;
 - новые строки не появились в `failed_jobs`.
+
+Снимок получается до ответа webhook и должен соответствовать раннему моменту события. Ответ обычно занимает время одного Digest-запроса к Camera/NVR по локальной сети. `503 Snapshot unavailable` означает, что JPEG получить или сохранить не удалось, job не создан, а ошибка уже отражена в истории событий. Не удаляйте volume `app-storage` и каталог `camera-event-snapshots` при наличии ожидающих jobs.
 
 ## 11. Firewall и границы локальной сети
 
@@ -407,6 +414,8 @@ docker compose --env-file .env.production -f compose.production.yaml exec app ph
 docker compose --env-file .env.production -f compose.production.yaml exec app php artisan up
 docker compose --env-file .env.production -f compose.production.yaml ps
 ```
+
+Изменение `QUEUE_SLEEP` применяется к команде контейнера, поэтому одного `queue:restart` недостаточно: после изменения значения пересоздайте worker командой `docker compose --env-file .env.production -f compose.production.yaml up -d --force-recreate queue`.
 
 При миграциях сначала создавайте резервную копию. Откат Git-кода не всегда откатывает схему БД, поэтому rollback должен учитывать совместимость миграций и восстановление дампа.
 

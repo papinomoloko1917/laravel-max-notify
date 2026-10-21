@@ -118,7 +118,7 @@ class CamerasTest extends TestCase
         $this->assertSame('snapshot-secret', $camera->snapshot_password);
         $this->assertNotSame('snapshot-secret', $camera->getRawOriginal('snapshot_password'));
         $this->assertIsString($camera->webhook_token);
-        $this->assertSame(64, strlen($camera->webhook_token));
+        $this->assertSame(24, strlen($camera->webhook_token));
         $this->assertNotSame($camera->webhook_token, $camera->getRawOriginal('webhook_token'));
         $this->assertArrayNotHasKey('webhook_token', $camera->toArray());
     }

@@ -42,15 +42,19 @@ Phase 24 — Complete for the current application. Authorization uses a closed-r
 
 Phase 25 — Production baseline implemented and locally verified. The deployment target remains the dedicated MiniPC MA01 with Intel N150, 16 GB RAM, 512 GB storage, Ubuntu Server 26.04.1 LTS, and a LAN connection to Dahua without a public domain. The dedicated production topology uses Caddy + immutable PHP-FPM app + one database queue worker + one scheduler + internal PostgreSQL. Caddy provides private-CA HTTPS for administration and an HTTP listener restricted at the application-proxy boundary to the log-suppressed webhook path. The repository now includes a production environment template, separate Compose/Docker files, an interactive administrator-creation command, and a detailed Russian installation runbook. Real MiniPC installation, fixed-address firewall rules, off-device backup automation/restore rehearsal, UPS behavior, and monitoring remain open site-specific work.
 
-Phase 26 — Implemented in the current working tree. One password-confirmed settings page validates a replacement MAX token through `GET /me`, stores it encrypted in the singleton bot record, and exposes only safe bot identity. Each Camera owns a snapshot device origin, Digest login/encrypted password, channel, multiple exact rule-code/title mappings, an encrypted/rotatable URL webhook token, and optional Basic webhook credentials. Common event types are selected from a prepared catalog, while custom identifiers remain available under a URL-safe validation rule. Each saved rule renders a complete copyable token URL. Stored secrets are hidden from serialization; authentication failures advertise a standards-compliant Basic challenge and emit safe reason/scheme diagnostics without credential values. The webhook validates configured channel ownership and snapshots the resolved title into `CameraEvent` with a raw-code fallback; the worker resolves the selected Camera's snapshot connection and sends a deterministic title, Camera location/name, and accepted-event time together with the image.
+Phase 26 — Complete and committed through `9943f5a`; the follow-up 24-character Dahua webhook token compatibility change is committed in `3068c6a`.
+
+Phase 27 — In the current working tree. Recent event history showed three-to-five-second acceptance-to-completion latency with no queued backlog. The database worker's former three-second idle polling interval was a confirmed avoidable component, so development and production now default `QUEUE_SLEEP` to one second. MAX notification acceptance time now includes seconds. The current Dahua callback has no device timestamp, so delay between physical detection and Laravel receiving the webhook cannot yet be measured from application data alone.
+
+Phase 28 — Implemented in the current working tree. The webhook now captures and privately stores one JPEG before database-queue dispatch. `ProcessCameraEvent` uploads that exact file instead of requesting a later frame and removes it on success, skip, exception, and failed-callback paths. Capture/storage failure records a terminal safe failure, deletes partial state, releases duplicate suppression for retry, returns `503`, and creates no job. Existing development bind mounts and the production shared `app-storage` volume already provide the required app/worker handoff.
 
 ## Current repository state
 
-Checkpoint date: 2026-10-16.
+Checkpoint date: 2026-10-21.
 
 - branch: `main`;
-- committed `main` matches `origin/main` at `4afd010` (`docs: define production deployment target`);
-- the current uncommitted working tree combines the complete Phase 26 MAX-bot/rule/message/webhook-token slice with the production deployment baseline, the Russian README, and the aligned `vite-plus`/Vite core `0.3.3` dependency update;
+- committed `main` matches `origin/main` at `3068c6a` (`fix: shorten Dahua webhook tokens and update docs`);
+- the current uncommitted Phase 27/28 slice reduces database-queue polling from three seconds to a configurable one-second default, displays notification time with seconds, captures one early JPEG before queue dispatch, cleans it up after every job outcome, adds focused regression coverage, and synchronizes operational documentation;
 - commit `4ad0ee6` removes the ineffective `verified` middleware while retaining `auth` and `password.confirm`, and documents the closed-registration single-role administration model with focused tests;
 - commit `1f05e9d` switches project collaboration to agent-led development; commits and pushes remain user-controlled unless explicitly requested;
 - commit `148fe7a` adds configurable per-username and aggregate-IP webhook limits with focused coverage and no change to accepted-event behavior;
@@ -159,7 +163,7 @@ Checkpoint date: 2026-10-16.
 - focused Livewire tests cover saving `21:00–06:00` and clearing an existing window;
 - Camera form validation accepts only unrestricted `null/null` or two distinct `H:i` boundaries; partial and equal-boundary windows are rejected before persistence.
 
-Redis and Mailpit remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. After authentication, metadata validation, notification-window acceptance, and a five-second atomic duplicate claim, the webhook snapshots the configured per-Camera rule title and dispatches `ProcessCameraEvent`. Its handler receives the integration clients and message formatter from the container, performs current-state guards, retrieves one snapshot, requests one upload URL, uploads the JPEG once, and sends one formatted text-and-image message to each currently assigned Client using the shared media token. The event acceptance time, not worker execution time, appears in that message. The resulting operational history is visible through the authenticated read-only event page.
+Redis and Mailpit remain intentionally postponed. Laravel's database queue configuration and tables already exist from the Starter Kit. After authentication, metadata validation, notification-window acceptance, and a five-second atomic duplicate claim, the webhook snapshots the configured per-Camera rule title, immediately retrieves one Camera JPEG, stores it on the private local disk, and dispatches `ProcessCameraEvent`. Its handler receives the storage boundary, MAX client, and message formatter from the container, performs current-state guards, reads and uploads the saved JPEG once, and sends one formatted text-and-image message to each currently assigned Client using the shared media token. Cleanup runs for success, skip, exception, and failure callback. The event acceptance time, not worker execution time, appears in that message. The resulting operational history is visible through the authenticated read-only event page.
 
 ## Confirmed MAX Messenger behavior
 
@@ -270,7 +274,9 @@ The temporary probe logged only request metadata and header names, not header va
 - current Camera/webhook authentication regression: **41 passing tests and 179 assertions**;
 - per-Camera snapshot connection regression across Camera UI/model, Dahua client, webhook, and job tests: **62 passing tests and 262 assertions**;
 - Camera-rule coverage verifies that generated webhook URLs use configured `DAHUA_WEBHOOK_BASE_URL` rather than `APP_URL` or the current browser host, contain the selected Camera's encrypted-at-rest token, support explicit rotation, and present optional Basic Username separately without disclosing the password;
-- full Sail `composer test`: Pint passes, Larastan reports **0 errors**, and Pest reports **170 passing tests and 647 assertions**, with no skipped or risky tests;
+- full Sail `composer test`: Pint passes, Larastan reports **0 errors**, and Pest reports **172 passing tests and 672 assertions**, with no skipped or risky tests;
+- Phase 27 focused message/job run: **9 passing tests and 41 assertions**; local and production Compose interpolation both resolve the worker to `--sleep=1`, and the local queue container was recreated with that exact command;
+- Phase 28 focused webhook/job run: **30 passing tests and 160 assertions**, covering early private-file capture, secret/JPEG-free job serialization, capture-failure retry, reuse of the exact saved bytes, and cleanup after success, skip, MAX exception, and failed callbacks;
 - `schedule:list` registers `camera-events:prune` daily at **03:00**, and both development `queue` and `scheduler` Compose services are running;
 - current combined webhook/job run: **18 passing tests and 79 assertions**;
 - current CameraEvent model/webhook/job regression: **24 passing tests and 102 assertions**;
@@ -289,13 +295,11 @@ The temporary probe logged only request metadata and header names, not header va
 
 ## Next exact development block
 
-The newest Camera-channel migration is applied on this machine, and local `APP_URL` uses the confirmed Camera-reachable address `http://10.10.0.141`. The local `laravel.test` image was rebuilt on 2026-10-15 after the MAX-token check exposed a stale container without the committed Russian Trusted Root/Sub certificates. A verified HTTPS request from the rebuilt container reaches `GET https://platform-api2.max.ru/me`, and the real MAX bot is now stored in the singleton settings record.
+Trigger one controlled real Dahua event. Record the Camera/NVR detection time, webhook response duration, `camera_events.created_at` and `processed_at`, visible MAX arrival time, and whether the resulting frame still contains the vehicle. The response now intentionally waits for one early Dahua snapshot but never waits for MAX. Confirm that a normal event returns `200 OK`; `503 Snapshot unavailable` indicates a Camera/network/storage failure before queue handoff.
 
-Real authenticated webhook requests are accepted and create event-history rows. Development Compose keeps both the database worker and Laravel Scheduler running. The current Camera `#3` retrieves channel `1` directly from `http://10.10.0.181`; a post-credential-update smoke request returned a valid 327,567-byte JPEG. Two earlier jobs failed with Dahua `401 Invalid Authority` before those Digest credentials were corrected and must not be retried. A real request observation on 2026-10-15 proved that the tested direct Camera stored its HTTP-action username/password but sent four webhook attempts with no Authorization header. The token migration is applied locally, Camera `#3` has an encrypted/hidden 64-character token, and its generated rule URL is ready to be copied into the device with device-side Authentication disabled.
+Do not add Redis or a second worker unless observation shows queued backlog during concurrent Camera events. One additional worker can improve concurrency but cannot shorten the sequential snapshot, upload-URL, image-upload, and message-send chain for one event. Redis would reduce queue polling latency further, but its operational cost is not yet justified by the current one-second database polling baseline.
 
-The production baseline is now ready for a controlled installation rehearsal. Before installing on the MiniPC, commit and push the complete Phase 26/deployment working tree, choose its fixed LAN IP, and fill `.env.production` from the committed example. During the rehearsal follow `docs/DEPLOYMENT.md`, import the Caddy root certificate on an administrator device, run one controlled token-authenticated event, and record the real firewall source addresses. Do not treat the installation as recoverable until an off-device PostgreSQL dump and `.env.production`/`APP_KEY` recovery copy have been created and restored in a test environment.
-
-The clean-server runbook was rechecked on 2026-10-16 against the current official Docker Engine Ubuntu instructions. It now uses Docker's deb822 `docker.sources` repository format, exports Caddy's public local CA outside the Git checkout, and includes a queue-container MAX TLS probe. The latter explicitly guards against the stale-image failure observed in development, where accepted events reached the worker but every MAX upload request failed with `cURL error 60` until the Sail image and containers were rebuilt.
+The production baseline remains ready for a controlled installation rehearsal. During installation follow `docs/DEPLOYMENT.md`, preserve `QUEUE_SLEEP=1`, import the Caddy root certificate on an administrator device, run one controlled token-authenticated event, and record the real firewall source addresses. Do not treat the installation as recoverable until an off-device PostgreSQL dump and `.env.production`/`APP_KEY` recovery copy have been created and restored in a test environment.
 
 Do not run a real worker merely as an automated test: the current job delivers real notifications to every Client assigned to the Camera. Use a controlled Camera/Client setup when manually observing the worker.
 
@@ -318,7 +322,7 @@ Do not run a real worker merely as an automated test: the current job delivers r
 
 ## Moving to another machine
 
-Committed `main` still ends at `4afd010`. The current working tree combines the complete Phase 26 bot/rule/message/webhook-token work with the production deployment baseline; it must be reviewed, committed, and pushed before another machine or the clean server can receive it. The site-specific IPs, firewall scope, off-device backup destination, and UPS decision intentionally remain outside committed secrets/configuration.
+Committed `main` and `origin/main` end at `3068c6a`. The current uncommitted Phase 27 latency/timestamp slice must be reviewed, committed, and pushed before another machine or the clean server can receive it. The site-specific IPs, firewall scope, off-device backup destination, and UPS decision intentionally remain outside committed secrets/configuration.
 
 On the other machine:
 
